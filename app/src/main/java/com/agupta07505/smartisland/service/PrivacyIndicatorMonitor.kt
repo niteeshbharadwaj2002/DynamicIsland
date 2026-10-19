@@ -71,7 +71,6 @@ class PrivacyIndicatorMonitor(
             Source.AppOps
         } else if (com.agupta07505.smartisland.util.ShizukuManager.hasPermission()) {
             startFallback()
-            startShizukuAppOpsPolling()
             Source.ShizukuDumpsys
         } else {
             startFallback()
@@ -84,26 +83,38 @@ class PrivacyIndicatorMonitor(
         shizukuPollJob?.cancel()
         shizukuPollJob = monitorScope.launch {
             while (isActive) {
+                if (usage.microphone.isEmpty() && usage.camera.isEmpty()) {
+                    break
+                }
                 try {
                     if (com.agupta07505.smartisland.util.ShizukuManager.hasPermission()) {
                         if (usage.microphone.isNotEmpty()) {
                             val activeMicPackages = com.agupta07505.smartisland.util.ShizukuManager.queryActiveAppOps("RECORD_AUDIO")
                             val user = activeMicPackages.firstOrNull { it != ownPackage }
                             if (user != null && user != PrivacyUsage.UNKNOWN_USER) {
-                                update(usage.copy(microphone = setOf(user)))
+                                val updatedUsage = usage.copy(microphone = setOf(user))
+                                if (updatedUsage != usage) {
+                                    usage = updatedUsage
+                                    publish()
+                                }
                             }
                         }
                         if (usage.camera.isNotEmpty()) {
                             val activeCamPackages = com.agupta07505.smartisland.util.ShizukuManager.queryActiveAppOps("CAMERA")
                             val user = activeCamPackages.firstOrNull { it != ownPackage }
                             if (user != null && user != PrivacyUsage.UNKNOWN_USER) {
-                                update(usage.copy(camera = setOf(user)))
+                                val updatedUsage = usage.copy(camera = setOf(user))
+                                if (updatedUsage != usage) {
+                                    usage = updatedUsage
+                                    publish()
+                                }
                             }
                         }
                     }
                 } catch (_: Throwable) {}
                 delay(3000L)
             }
+            shizukuPollJob = null
         }
     }
 
@@ -201,10 +212,25 @@ class PrivacyIndicatorMonitor(
         update(usage.copy(microphone = if (recording) setOf(PrivacyUsage.UNKNOWN_USER) else emptySet()))
     }
 
-    private fun update(next: PrivacyUsage) {
-        if (next == usage) return
-        usage = next
+    fun updateUsageAndPoll(newUsage: PrivacyUsage) {
+        if (newUsage == usage) return
+        usage = newUsage
+        if (source == Source.ShizukuDumpsys || com.agupta07505.smartisland.util.ShizukuManager.hasPermission()) {
+            if (usage.microphone.isNotEmpty() || usage.camera.isNotEmpty()) {
+                if (shizukuPollJob?.isActive != true) {
+                    startShizukuAppOpsPolling()
+                }
+            } else {
+                // Immediately halt CPU polling when sensors are idle
+                shizukuPollJob?.cancel()
+                shizukuPollJob = null
+            }
+        }
         publish()
+    }
+
+    private fun update(next: PrivacyUsage) {
+        updateUsageAndPoll(next)
     }
 
     private fun publish() {
