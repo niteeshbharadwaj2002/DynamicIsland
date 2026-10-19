@@ -130,6 +130,61 @@ object OemDeviceRules {
         "recording in progress", "recording active", "voice recorder", "audio recorder"
     )
 
+    /**
+     * Voice / sound recorder apps (Rule_Book §4.3). Several also sit in the screen-recorder sets above (which
+     * the FLAG_SECURE capture guard reads), so `toIslandMode` checks [isVoiceRecording] first.
+     */
+    private val VOICE_RECORDER_PACKAGES = setOf(
+        "com.sec.android.app.voicenote",
+        "com.samsung.android.app.soundrecorder",
+        "com.samsung.android.voicenote",
+        "com.google.android.apps.recorder",
+        "com.miui.soundrecorder",
+        "com.android.soundrecorder",
+        "com.android.bbksoundrecorder",
+        "com.vivo.soundrecorder",
+        "com.bbk.record",
+        "com.coloros.soundrecorder",
+        "com.oplus.soundrecorder",
+        "com.realme.soundrecorder",
+        "com.oneplus.soundrecorder",
+        "com.heytap.soundrecorder",
+        "com.huawei.soundrecorder",
+        "com.hihonor.soundrecorder",
+        "com.motorola.soundrecorder",
+        "com.transsion.soundrecorder",
+        "com.transsion.recorder",
+        "cn.nubia.soundrecorder",
+        "cn.nubia.recorder",
+        "com.zte.recorder",
+        "com.asus.soundrecorder",
+        "com.sonymobile.androidapp.audiorecorder",
+        "com.media.bestrecorder.audiorecorder",
+        "com.github.axet.audiorecorder",
+        "com.dimowner.audiorecorder"
+    )
+
+    private val VOICE_RECORDING_KEYWORDS = listOf(
+        "voice recording", "voice recorder", "audio recording", "audio recorder", "recording audio",
+        "sound recorder", "voice memo", "recording voice", "recording call", "call recording"
+    )
+
+    /** Words a screen recorder's notification uses and a voice recorder's never does. */
+    private val SCREEN_ONLY_WORDS = listOf("screen", "s-capture", "smart capture", "capturing", "video")
+
+    /**
+     * A voice recorder's notification (Rule_Book §4.3): a known recorder app, or a voice-recording phrase,
+     * as long as nothing says it records the screen.
+     */
+    fun isVoiceRecording(packageName: String, titleText: String): Boolean {
+        val lowerText = titleText.lowercase()
+        if (SCREEN_ONLY_WORDS.any { lowerText.contains(it) }) return false
+        return packageName in VOICE_RECORDER_PACKAGES || VOICE_RECORDING_KEYWORDS.any { lowerText.contains(it) }
+    }
+
+    /** A known voice recorder app; its notifications are checked before the timer/stopwatch heuristics. */
+    fun isVoiceRecorderPackage(packageName: String): Boolean = packageName in VOICE_RECORDER_PACKAGES
+
     private val SAMSUNG_INCALL_PACKAGES = setOf(
         "com.samsung.android.incallui",
         "com.samsung.android.dialer",
@@ -270,6 +325,12 @@ object OemDeviceRules {
         }
     }
 
+    /**
+     * A call from the phone's own dialer / in-call UI. Every other call (WhatsApp, Meet, Telegram) is VoIP and
+     * gets the app badge on the caller's avatar (Rule_Book §4.7).
+     */
+    fun isDialerCall(packageName: String): Boolean = packageName in ALL_OEM_INCALL_PACKAGES
+
     fun isHotspot(
         packageName: String,
         titleText: String
@@ -342,5 +403,28 @@ object OemDeviceRules {
         } catch (_: Throwable) { }
 
         return intents
+    }
+
+    /**
+     * OEM-specific status-bar margin profiles for dynamic width budget (Rule_Book §10.2).
+     */
+    data class OemWidthProfile(
+        val leftMarginDp: Float,
+        val rightMarginDp: Float,
+        val maxPillWidthDp: Float = 280f
+    )
+
+    fun getOemWidthProfile(deviceType: String? = null): OemWidthProfile {
+        val device = resolveEffectiveDevice(deviceType)
+        return when (device) {
+            OemDeviceType.SAMSUNG -> OemWidthProfile(leftMarginDp = 76f, rightMarginDp = 92f, maxPillWidthDp = 280f)
+            OemDeviceType.XIAOMI_REDMI_POCO -> OemWidthProfile(leftMarginDp = 70f, rightMarginDp = 86f, maxPillWidthDp = 275f)
+            OemDeviceType.REALME_OPPO_ONEPLUS -> OemWidthProfile(leftMarginDp = 68f, rightMarginDp = 84f, maxPillWidthDp = 280f)
+            OemDeviceType.VIVO_IQOO -> OemWidthProfile(leftMarginDp = 70f, rightMarginDp = 88f, maxPillWidthDp = 280f)
+            OemDeviceType.GOOGLE_PIXEL -> OemWidthProfile(leftMarginDp = 72f, rightMarginDp = 88f, maxPillWidthDp = 280f)
+            OemDeviceType.HUAWEI_HONOR -> OemWidthProfile(leftMarginDp = 74f, rightMarginDp = 90f, maxPillWidthDp = 280f)
+            OemDeviceType.MOTOROLA -> OemWidthProfile(leftMarginDp = 68f, rightMarginDp = 84f, maxPillWidthDp = 280f)
+            else -> OemWidthProfile(leftMarginDp = 72f, rightMarginDp = 88f, maxPillWidthDp = 280f)
+        }
     }
 }

@@ -10,6 +10,7 @@ package com.agupta07505.smartisland.service
 import com.agupta07505.smartisland.util.isCallEnded
 import com.agupta07505.smartisland.util.isDownloadComplete
 import com.agupta07505.smartisland.util.isScreenRecordingComplete
+import com.agupta07505.smartisland.util.PermissionRecoveryNotifier
 import com.agupta07505.smartisland.util.runCatchingLogged
 import com.agupta07505.smartisland.util.runSuspendCatchingLogged
 import com.agupta07505.smartisland.util.toIslandMode
@@ -43,6 +44,17 @@ import com.agupta07505.smartisland.model.IslandMode
 import com.agupta07505.smartisland.model.IslandNotification
 import com.agupta07505.smartisland.model.IslandNotificationAction
 import com.agupta07505.smartisland.util.NotificationCooldownManager
+import com.agupta07505.smartisland.alert.AlertSource
+import com.agupta07505.smartisland.alert.LockscreenPrivacy
+import com.agupta07505.smartisland.alert.RecoveredTimer
+import com.agupta07505.smartisland.alert.TimerAnchor
+import com.agupta07505.smartisland.alert.TimerKind
+import com.agupta07505.smartisland.alert.TimerRecovery
+import com.agupta07505.smartisland.data.IslandRestoreState
+import com.agupta07505.smartisland.data.TimerAnchorStore
+import com.agupta07505.smartisland.util.TimerStopwatchParser
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -76,9 +88,32 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
     private val cooldownReleaseJobs = ConcurrentHashMap<String, Job>()
     private var lastSoundPlayedTimeMs = 0L
     private var lastAutoExpandTimeMs = 0L
+    private val timerAnchors by lazy { TimerAnchorStore(this) }
+
+    /** A listener callback waiting to reach the repository; see [ListenerEventBuffer]. */
+    private sealed interface ListenerEvent {
+        val sbn: StatusBarNotification
+
+        class Posted(override val sbn: StatusBarNotification, val rankingMap: RankingMap?) : ListenerEvent
+        class Removed(override val sbn: StatusBarNotification, val reason: Int?) : ListenerEvent
+    }
+
+    // Bounded (10, oldest post dropped first) and drained by one consumer, so bursts cannot pile up (Rule_Book 5).
+    private val listenerEvents = ListenerEventBuffer<ListenerEvent>(
+        keyOf = { it.sbn.key },
+        isRemoval = { it is ListenerEvent.Removed }
+    )
 
     override fun onCreate() {
         super.onCreate()
+        listenerEvents.consumeIn(serviceScope) { event ->
+            runSuspendCatchingLogged(TAG, "Listener event handling failed") {
+                when (event) {
+                    is ListenerEvent.Posted -> processPosted(event.sbn, event.rankingMap)
+                    is ListenerEvent.Removed -> processRemoved(event.sbn, event.reason)
+                }
+            }
+        }
         serviceScope.launch {
             runSuspendCatchingLogged(TAG, "Settings collector failed") {
                 repository.settings.collect { settings ->
@@ -153,6 +188,7 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
         pendingRemovals.clear()
         pendingSuppressionJobs.values.forEach { it.cancel() }
         pendingSuppressionJobs.clear()
+        listenerEvents.clear()
         suppressedKeys.clear()
         iconCache.evictAll()
         serviceScope.cancel()
@@ -232,19 +268,47 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
         // Cancel any pending removal job for this key to keep island copy
         pendingRemovals.remove(sbn.key)?.cancel()
 
-        serviceScope.launch {
-            runSuspendCatchingLogged(TAG, "NotificationPosted async failed") {
-                if (shouldSuppressFromIsland(sbn, rankingMap)) return@runSuspendCatchingLogged
-
-                val settings = repository.settings.first()
-                currentSettings = settings
-                if (!settings.enabled) return@runSuspendCatchingLogged
-
-                android.util.Log.d(TAG, "Processing island-only async: key=${sbn.key}")
-                handleNotificationPosted(sbn, settings)
-            }
+        // Bounded and ordered from here on (Rule_Book 5): a burst cannot pile up, and this key's events stay in order.
+        listenerEvents.offer(ListenerEvent.Posted(sbn, rankingMap))
         }
+    }
+
+    /** The queued half of [onNotificationPosted]; runs on the single [listenerEvents] consumer. */
+    private suspend fun processPosted(sbn: StatusBarNotification, rankingMap: RankingMap?) {
+        if (shouldSuppressFromIsland(sbn, rankingMap)) return
+
+        val settings = repository.settings.first()
+        currentSettings = settings
+        if (!settings.enabled) return
+
+        android.util.Log.d(TAG, "Processing island-only async: key=${sbn.key}")
+        handleNotificationPosted(sbn, settings)
+    }
+
+    /**
+     * The queued half of a removal, after its 350ms debounce. [reason] is null when the OEM only called the
+     * reason-less overload.
+     */
+    private fun processRemoved(sbn: StatusBarNotification, reason: Int?) {
+        val now = SystemClock.elapsedRealtime()
+        val lastSuppressedTime = suppressedKeys[sbn.key] ?: 0L
+        val isRecentInitialSuppression = (now - lastSuppressedTime) < INITIAL_SUPPRESSION_WINDOW_MS
+
+        // Cancelling a group summary makes the system auto-cancel its children with
+        // REASON_GROUP_SUMMARY_CANCELED; that is our own doing, not the user dismissing them.
+        val cancelledByUs = reason == null || reason == REASON_LISTENER_CANCEL || reason == REASON_GROUP_SUMMARY_CANCELED
+        if (cancelledByUs && isRecentInitialSuppression) {
+            // Smart Island just suppressed this notification from system shade < 1.5s ago.
+            // Keep the island copy alive during initial suppression.
+            android.util.Log.d(TAG, "Recent listener-cancel (<1.5s), keeping island: ${sbn.key} reason=$reason")
+            return
         }
+
+        // Removed by posting app, user, framework timeout, or after initial suppression window.
+        android.util.Log.d(TAG, "Genuinely removed, cleaning up: ${sbn.key}")
+        clearSuppressed(sbn.key)
+        timerAnchors.remove(sbn.key)
+        notificationRepository.removeNotification(sbn.key)
     }
 
     /**
@@ -262,25 +326,8 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
             runSuspendCatchingLogged(TAG, "NotificationRemoved handling failed") {
                 delay(350L)
                 if (sbn.packageName == packageName) return@runSuspendCatchingLogged
-
-                val now = SystemClock.elapsedRealtime()
-                val lastSuppressedTime = suppressedKeys[sbn.key] ?: 0L
-                val isRecentInitialSuppression = (now - lastSuppressedTime) < INITIAL_SUPPRESSION_WINDOW_MS
-
-                // Cancelling a group summary makes the system auto-cancel its children with
-                // REASON_GROUP_SUMMARY_CANCELED; that is our own doing, not the user dismissing them.
-                val cancelledByUs = reason == REASON_LISTENER_CANCEL || reason == REASON_GROUP_SUMMARY_CANCELED
-                if (cancelledByUs && isRecentInitialSuppression) {
-                    // Smart Island just suppressed this notification from system shade < 1.5s ago.
-                    // Keep the island copy alive during initial suppression.
-                    android.util.Log.d(TAG, "Recent listener-cancel (<1.5s), keeping island: ${sbn.key}")
-                    return@runSuspendCatchingLogged
-                }
-
-                // Removed by posting app, user, framework timeout, or after initial suppression window.
-                android.util.Log.d(TAG, "Genuinely removed, cleaning up: ${sbn.key}")
-                clearSuppressed(sbn.key)
-                notificationRepository.removeNotification(sbn.key)
+                // Joins the same ordered queue as posts; a removal is never dropped from it.
+                listenerEvents.offer(ListenerEvent.Removed(sbn, reason))
             }
             pendingRemovals.remove(sbn.key)
         }
@@ -299,19 +346,7 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
             runSuspendCatchingLogged(TAG, "NotificationRemoved (no reason) handling failed") {
                 delay(350L)
                 if (sbn.packageName == packageName) return@runSuspendCatchingLogged
-
-                val now = SystemClock.elapsedRealtime()
-                val lastSuppressedTime = suppressedKeys[sbn.key] ?: 0L
-                val isRecentInitialSuppression = (now - lastSuppressedTime) < INITIAL_SUPPRESSION_WINDOW_MS
-
-                if (isRecentInitialSuppression) {
-                    android.util.Log.d(TAG, "Suppressed key recently (<1.5s), keeping island: ${sbn.key}")
-                    return@runSuspendCatchingLogged
-                }
-
-                android.util.Log.d(TAG, "Removing from island repo: ${sbn.key}")
-                clearSuppressed(sbn.key)
-                notificationRepository.removeNotification(sbn.key)
+                listenerEvents.offer(ListenerEvent.Removed(sbn, reason = null))
             }
             pendingRemovals.remove(sbn.key)
         }
@@ -322,43 +357,56 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
     override fun onListenerConnected() {
         super.onListenerConnected()
         isSystemConnected = true
+        PermissionRecoveryNotifier.cancelIfRestored(this)
         runCatchingLogged(TAG, "onListenerConnected callback failed") {
             android.util.Log.d(TAG, "onListenerConnected")
-            serviceScope.launch {
-                runSuspendCatchingLogged(TAG, "ListenerConnected failed") {
-                    val settings = repository.settings.first()
-                    currentSettings = settings
-                    if (!settings.enabled) return@runSuspendCatchingLogged
+            rehydrateFromActiveNotifications()
+        }
+        // Whatever happened, the overlay must stop waiting for this sync (see RestoreSnap).
+        IslandRestoreState.markSynced()
+    }
 
-                    val overlayReady = ensureOverlayServiceRunning()
-                    val active = runCatchingLogged(TAG, "Failed to get active notifications") {
-                        activeNotifications?.toList()
-                    }?.filter { it.packageName != packageName }
-                        ?.filterNot { shouldSuppressFromIsland(it) }
-                        .orEmpty()
+    /**
+     * Process-death rehydration (Rule_Book §7.3). The repository never relies on in-memory state alone: as soon as
+     * the listener is connected (the earliest point `getActiveNotifications()` may be called; it throws before),
+     * it synchronously pulls the OS's active notifications and feeds the ongoing ones to the repository, so the
+     * engine has rebuilt both slots by the time the overlay draws. Stale one-off messages are not imported
+     * (a restart must not flood the island). Timers and stopwatches come back on their stored absolute anchors.
+     */
+    private fun rehydrateFromActiveNotifications() {
+        // The settings are usually loaded already; on a cold start wait briefly for DataStore, never long.
+        val settings = runCatchingLogged(TAG, "Reading settings for rehydration failed") {
+            runBlocking { withTimeoutOrNull(REHYDRATE_SETTINGS_WAIT_MS) { repository.settings.first() } }
+        } ?: currentSettings
+        currentSettings = settings
+        if (!settings.enabled) return
 
-                    android.util.Log.d(TAG, "ListenerConnected: ${active.size} active, overlayReady=$overlayReady")
+        val overlayReady = ensureOverlayServiceRunning()
+        val active = runCatchingLogged(TAG, "Failed to get active notifications") {
+            activeNotifications?.toList()
+        }?.filter { it.packageName != packageName }
+            ?.filterNot { shouldSuppressFromIsland(it) }
+            .orEmpty()
 
-                    active.forEach { sbn ->
-                        val mode = sbn.notification.toIslandMode(
-                            sbn,
-                            settings.liveActivitiesEnabled,
-                            settings.navigationEnabled,
-                            settings.deviceType
-                        )
-                        // On initial listener connect or rebind, only restore persistent ongoing activities.
-                        // Stale standard notifications from the notification shade are not imported to avoid sudden floods.
-                        if (!isPersistentIslandMode(mode)) {
-                            return@forEach
-                        }
-                        if (settings.hideFromNotificationShade &&
-                            shouldBeIslandOnly(sbn.notification, mode)
-                        ) {
-                            suppressSystemNotification(sbn.key)
-                        }
-                        handleNotificationPosted(sbn, settings, isInitialSync = true)
-                    }
+        android.util.Log.d(TAG, "Rehydrate: ${active.size} active, overlayReady=$overlayReady")
+        timerAnchors.retainOnly(active.mapTo(HashSet()) { it.key })
+
+        active.forEach { sbn ->
+            runCatchingLogged(TAG, "Rehydrating ${sbn.key} failed") {
+                val mode = sbn.notification.toIslandMode(
+                    sbn,
+                    settings.liveActivitiesEnabled,
+                    settings.navigationEnabled,
+                    settings.deviceType
+                )
+                // Only ongoing activities come back; stale standard notifications in the shade are not imported.
+                if (!isPersistentIslandMode(mode)) return@runCatchingLogged
+                if (settings.hideFromNotificationShade &&
+                    shouldBeIslandOnly(sbn.notification, mode)
+                ) {
+                    suppressSystemNotification(sbn.key)
                 }
+                handleNotificationPosted(sbn, settings, isInitialSync = true)
             }
         }
     }
@@ -366,6 +414,19 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
     override fun onListenerDisconnected() {
         isSystemConnected = false
         super.onListenerDisconnected()
+        // Disconnected because notification access was revoked (not a transient unbind): offer the way back.
+        runCatchingLogged(TAG, "Recovery check failed") {
+            if (currentSettings.enabled && !PermissionRecoveryNotifier.isNotificationListenerEnabled(this)) {
+                PermissionRecoveryNotifier.notify(this, PermissionRecoveryNotifier.Reason.NotificationAccessRevoked)
+            }
+        }
+        // Notification access is gone (revoked, or the system unbound us): alerts that came from the shade can no
+        // longer be updated or removed, so they leave the island now. Internal tools (battery, Bluetooth,
+        // flashlight) stay. Ongoing ones come back through rehydration when the listener reconnects.
+        runCatchingLogged(TAG, "Flushing listener alerts failed") {
+            AlertSource.listenerSourcedKeys(notificationRepository.notifications.value)
+                .forEach(notificationRepository::removeNotification)
+        }
         runCatchingLogged(TAG, "Notification-listener self-rebind failed") {
             requestRebind(
                 android.content.ComponentName(
@@ -502,13 +563,38 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
                     title = title,
                     pendingIntent = action.actionIntent,
                     isQuickReply = isReply,
-                    remoteInputKey = remoteInput?.resultKey ?: "key_text_reply"
+                    remoteInputKey = remoteInput?.resultKey ?: "key_text_reply",
+                    semanticAction = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) action.semanticAction else 0
                 )
             }
         }.orEmpty()
         val isNowRinging = actions.any { it.title.lowercase().let { t -> t.contains("answer") || t.contains("accept") || t.contains("take") } }
 
+        // A running chronometer's base (`when` + showChronometer) is the true start of a call or a recording.
+        val chronometerStart = runCatchingLogged(TAG, "Reading chronometer failed") {
+            notification.`when`.takeIf {
+                extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER, false) &&
+                    !extras.getBoolean(Notification.EXTRA_CHRONOMETER_COUNT_DOWN, false) &&
+                    it in 1..System.currentTimeMillis()
+            }
+        }
         val computedTimeMillis = when {
+            // An answered call counts from its own chronometer when it shows one (Rule_Book §4.7, Active Call).
+            mode == IslandMode.IncomingCall && !isNowRinging && chronometerStart != null -> chronometerStart
+            // Voice recorder (Rule_Book §4.3): the chronometer, else the shown "00:42" counted back from now.
+            mode == IslandMode.VoiceRecording -> {
+                val shown = listOf(Notification.EXTRA_TEXT, Notification.EXTRA_TITLE, Notification.EXTRA_SUB_TEXT)
+                    .firstNotNullOfOrNull { field ->
+                        extras.getCharSequence(field)?.toString()?.takeIf { it.isNotBlank() }
+                            ?.let(TimerStopwatchParser::parseTimeStringToSeconds)
+                    }
+                com.agupta07505.smartisland.util.VoiceRecordingClock.startMillis(
+                    nowMs = System.currentTimeMillis(),
+                    chronometerWhenMs = chronometerStart,
+                    shownElapsedSeconds = shown,
+                    previousStartMs = existingNotif?.takeIf { it.mode == IslandMode.VoiceRecording }?.timeMillis
+                )
+            }
             mode == IslandMode.IncomingCall && existingNotif != null && existingNotif.isCallRinging && !isNowRinging -> {
                 System.currentTimeMillis()
             }
@@ -543,10 +629,28 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
             else -> sbn.postTime
         }
 
+        // Timers and stopwatches are pinned to an absolute anchor that survives the process (Rule_Book §7.3).
+        val recoveredClock = anchorClockTool(sbn.key, mode, notification, computedTimeMillis, isInitialSync)
+        val islandTimeMillis = recoveredClock?.epochMs ?: computedTimeMillis
+        // A timer that ran out while the process was dead rings as Critical (Tier 0).
+        val islandCategory = if (recoveredClock?.promoteToCritical == true) Notification.CATEGORY_ALARM else notification.category
+
         val notifTitle = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
             ?: extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString()
             ?: (if (mode == IslandMode.Stopwatch) "Stopwatch" else if (mode == IslandMode.Timer) "Timer" else "")
-        val notifText = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()
+        // A ride's BigTextStyle text holds the driver, vehicle and plate (Rule_Book 4.14); the short text often doesn't.
+        val isRide = mode == IslandMode.Navigation && com.agupta07505.smartisland.util.NavigationParser.isRideApp(sbn.packageName)
+        val rideText = if (isRide) {
+            val big = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()?.trim().orEmpty()
+            val short = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()?.trim().orEmpty()
+            when {
+                big.isEmpty() -> null
+                short.isEmpty() || big.contains(short) -> big
+                else -> "$big • $short"
+            }
+        } else null
+        val notifText = rideText
+            ?: extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()
             ?: extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
             ?: extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString()
             ?: extras.getCharSequence(Notification.EXTRA_INFO_TEXT)?.toString()
@@ -560,11 +664,11 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
                 appName = appName,
                 title = notifTitle,
                 text = notifText,
-                timeMillis = computedTimeMillis,
+                timeMillis = islandTimeMillis,
                 icon = loadAppIconBitmap(sbn.packageName),
                 largeIcon = mediaInfo?.artwork ?: notification.loadLargeIconBitmap(),
                 actionIntents = actions,
-                category = notification.category,
+                category = islandCategory,
                 progress = extras.getInt(Notification.EXTRA_PROGRESS, 0),
                 progressMax = extras.getInt(Notification.EXTRA_PROGRESS_MAX, 0),
                 mediaPositionMs = mediaInfo?.positionMs,
@@ -580,7 +684,9 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
                     }
                 },
                 mode = mode,
-                contentIntent = notification.contentIntent
+                contentIntent = notification.contentIntent,
+                groupId = notification.group,
+                lockscreenVisibility = lockscreenVisibilityOf(sbn)
             ),
             autoExpand = if (!isInitialSync && shouldIslandOnly && settings.autoExpandOnNotification) {
                 val now = SystemClock.elapsedRealtime()
@@ -689,6 +795,60 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
         }
     }
 
+    /**
+     * Pins a timer (end time) or stopwatch (start time) to its absolute epoch anchor and saves it, so a restart
+     * rebuilds it from that instead of from text that may be minutes old. Null for every other mode.
+     */
+    private fun anchorClockTool(
+        key: String,
+        mode: IslandMode,
+        notification: Notification,
+        freshEpochMs: Long,
+        isRestore: Boolean
+    ): RecoveredTimer? {
+        val kind = when (mode) {
+            IslandMode.Timer -> TimerKind.Timer
+            IslandMode.Stopwatch -> TimerKind.Stopwatch
+            else -> return null
+        }
+        return runCatchingLogged(TAG, "Anchoring $mode failed") {
+            val paused = if (kind == TimerKind.Timer) TimerStopwatchParser.isTimerPaused(notification)
+            else TimerStopwatchParser.isStopwatchPaused(notification)
+            val recovered = TimerRecovery.recover(
+                stored = timerAnchors.get(key),
+                kind = kind,
+                freshEpochMs = freshEpochMs,
+                nowMs = System.currentTimeMillis(),
+                isRestore = isRestore,
+                paused = paused
+            )
+            // A paused clock has no fixed anchor; keep the last running one for when it resumes.
+            if (!paused) timerAnchors.put(key, TimerAnchor(kind, recovered.epochMs))
+            recovered
+        }
+    }
+
+    /**
+     * What the lockscreen may show of [sbn] (Rule_Book §8.1): the app's visibility, tightened by its channel's
+     * lockscreen override and by the OS-wide "show notifications on the lockscreen" switch.
+     */
+    private fun lockscreenVisibilityOf(sbn: StatusBarNotification): Int {
+        val channelVisibility = runCatchingLogged(TAG, "Reading channel visibility failed") {
+            val ranking = Ranking()
+            // The resolved lockscreen override is only exposed from Android 12; older versions use the app's value.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && currentRanking?.getRanking(sbn.key, ranking) == true) {
+                // The user's per-channel / per-app lockscreen choice, as the system resolved it.
+                ranking.lockscreenVisibilityOverride.takeIf { it != Ranking.VISIBILITY_NO_OVERRIDE }
+            } else {
+                null
+            }
+        }
+        val osShowsNotifications = runCatchingLogged(TAG, "Reading lockscreen setting failed") {
+            Settings.Secure.getInt(contentResolver, LOCK_SCREEN_SHOW_NOTIFICATIONS, 1) != 0
+        } ?: true
+        return LockscreenPrivacy.effectiveVisibility(sbn.notification.visibility, channelVisibility, osShowsNotifications)
+    }
+
     internal fun isBlockedByDoNotDisturb(
         sbn: StatusBarNotification,
         rankingMap: RankingMap? = null,
@@ -716,7 +876,9 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
 
         // Music playback and ongoing system hardware states (Hotspot, ScreenRecording)
         // are not intrusive notification alerts and must not be blocked by DND.
-        if (mode == IslandMode.Music || mode == IslandMode.Hotspot || mode == IslandMode.ScreenRecording) {
+        if (mode == IslandMode.Music || mode == IslandMode.Hotspot || mode == IslandMode.ScreenRecording ||
+            mode == IslandMode.VoiceRecording
+        ) {
             return false
         }
 
@@ -770,6 +932,8 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
         if (mode == IslandMode.Music || mode == IslandMode.Navigation || mode == IslandMode.Timer || mode == IslandMode.Stopwatch) {
             return false // Media/Music, Navigation, Timer & Stopwatch notifications must NOT be cancelled from system shade by default
         }
+        // A ringing alarm and a running recorder keep their own notification (and its full-screen / FGS UI).
+        if (mode == IslandMode.Alarm || mode == IslandMode.VoiceRecording) return false
         // All others: island-only
         return true
     }
@@ -1095,7 +1259,9 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
             mode == IslandMode.LiveActivity ||
             mode == IslandMode.DownloadUpload ||
             mode == IslandMode.Hotspot ||
-            mode == IslandMode.ScreenRecording
+            mode == IslandMode.ScreenRecording ||
+            mode == IslandMode.VoiceRecording ||
+            mode == IslandMode.Alarm
     }
 
     companion object {
@@ -1111,5 +1277,7 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
         private const val INITIAL_SUPPRESSION_WINDOW_MS = 1500L
         private const val SOUND_DEBOUNCE_MS = 1200L
         private const val AUTO_EXPAND_DEBOUNCE_MS = 1500L
+        private const val REHYDRATE_SETTINGS_WAIT_MS = 400L
+        private const val LOCK_SCREEN_SHOW_NOTIFICATIONS = "lock_screen_show_notifications"
     }
 }

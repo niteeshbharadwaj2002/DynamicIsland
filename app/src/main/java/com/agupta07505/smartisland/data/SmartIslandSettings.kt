@@ -7,6 +7,13 @@
 
 package com.agupta07505.smartisland.data
 
+import com.agupta07505.smartisland.buddy.model.MascotLook
+import com.agupta07505.smartisland.buddy.model.MascotPalette
+import com.agupta07505.smartisland.buddy.model.MascotShape
+import com.agupta07505.smartisland.buddy.model.MascotSide
+import com.agupta07505.smartisland.buddy.model.MascotStyle
+import com.agupta07505.smartisland.buddy.model.MascotVisitFrequency
+import com.agupta07505.smartisland.ui.SpringPreset
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -76,8 +83,32 @@ data class SmartIslandSettings(
     val pillSwipeDownAction: String = "Expand",
     val pillSwipeLeftAction: String = "PreviousNotification",
     val pillSwipeRightAction: String = "NextNotification",
-    val circlePosition: String = CIRCLE_POSITION_RIGHT
+    val circlePosition: String = CIRCLE_POSITION_RIGHT,
+    // Buddy (the resting mascot). Stored as stable ids; unknown ids fall back to the default.
+    val buddyEnabled: Boolean = false,
+    val buddyStyle: String = MascotStyle.Minimal.id,
+    val buddyShape: String = MascotShape.Ball.id,
+    val buddyPalette: String = MascotPalette.Pearl.id,
+    val buddySide: String = MascotSide.Left.id,
+    val buddyVisits: String = MascotVisitFrequency.Normal.id,
+    /** [com.agupta07505.smartisland.ui.SpringPreset] id: how the island's size springs behave. */
+    val springPreset: String = SpringPreset.Standard.id,
+    /** Whether a faint glow flares while the island is moving fast ([com.agupta07505.smartisland.ui.KineticGlow]). */
+    val kineticGlow: Boolean = true,
+    val buddyReacts: Boolean = true,
+    val buddyHidesWhenIdle: Boolean = true,
+    val aodEnabled: Boolean = false,
+    val secureAppPackages: Set<String> = emptySet()
 ) {
+    val buddyLook: MascotLook
+        get() = MascotLook(
+            MascotStyle.fromId(buddyStyle),
+            MascotShape.fromId(buddyShape),
+            MascotPalette.fromId(buddyPalette)
+        )
+    val buddySideValue: MascotSide get() = MascotSide.fromId(buddySide)
+    val buddyVisitFrequency: MascotVisitFrequency get() = MascotVisitFrequency.fromId(buddyVisits)
+
     fun toJson(appVersion: String = ""): String {
         val root = JSONObject()
         root.put("formatVersion", BACKUP_FORMAT_VERSION)
@@ -169,6 +200,20 @@ data class SmartIslandSettings(
         settingsObj.put("pillSwipeLeftAction", pillSwipeLeftAction)
         settingsObj.put("pillSwipeRightAction", pillSwipeRightAction)
         settingsObj.put("circlePosition", circlePosition)
+        settingsObj.put("buddyEnabled", buddyEnabled)
+        settingsObj.put("buddyStyle", buddyStyle)
+        settingsObj.put("buddyShape", buddyShape)
+        settingsObj.put("buddyPalette", buddyPalette)
+        settingsObj.put("buddySide", buddySide)
+        settingsObj.put("buddyVisits", buddyVisits)
+        settingsObj.put("springPreset", springPreset)
+        settingsObj.put("kineticGlow", kineticGlow)
+        settingsObj.put("buddyReacts", buddyReacts)
+        settingsObj.put("buddyHidesWhenIdle", buddyHidesWhenIdle)
+        settingsObj.put("aodEnabled", aodEnabled)
+        val secureAppsArray = JSONArray()
+        secureAppPackages.forEach { secureAppsArray.put(it) }
+        settingsObj.put("secureAppPackages", secureAppsArray)
 
         root.put("settings", settingsObj)
         return root.toString(2)
@@ -320,7 +365,19 @@ data class SmartIslandSettings(
                 pillSwipeRightAction = obj.optString("pillSwipeRightAction", defaults.pillSwipeRightAction),
                 circlePosition = obj.optString("circlePosition", defaults.circlePosition).let {
                     if (it == CIRCLE_POSITION_LEFT || it == CIRCLE_POSITION_RIGHT) it else defaults.circlePosition
-                }
+                },
+                buddyEnabled = obj.optBoolean("buddyEnabled", defaults.buddyEnabled),
+                buddyStyle = MascotStyle.fromId(obj.optString("buddyStyle", defaults.buddyStyle)).id,
+                buddyShape = MascotShape.fromId(obj.optString("buddyShape", defaults.buddyShape)).id,
+                buddyPalette = MascotPalette.fromId(obj.optString("buddyPalette", defaults.buddyPalette)).id,
+                buddySide = MascotSide.fromId(obj.optString("buddySide", defaults.buddySide)).id,
+                buddyVisits = MascotVisitFrequency.fromId(obj.optString("buddyVisits", defaults.buddyVisits)).id,
+                springPreset = SpringPreset.fromId(obj.optString("springPreset", defaults.springPreset)).id,
+                kineticGlow = obj.optBoolean("kineticGlow", defaults.kineticGlow),
+                buddyReacts = obj.optBoolean("buddyReacts", defaults.buddyReacts),
+                buddyHidesWhenIdle = obj.optBoolean("buddyHidesWhenIdle", defaults.buddyHidesWhenIdle),
+                aodEnabled = obj.optBoolean("aodEnabled", defaults.aodEnabled),
+                secureAppPackages = safeStringSet("secureAppPackages", defaults.secureAppPackages)
             )
         }
     }

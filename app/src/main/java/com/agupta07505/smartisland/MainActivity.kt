@@ -15,11 +15,14 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.core.content.ContextCompat
 import com.agupta07505.smartisland.data.INotificationRepository
 import com.agupta07505.smartisland.data.SmartIslandSettingsRepository
 import com.agupta07505.smartisland.ui.SmartIslandHomeScreen
 import com.agupta07505.smartisland.ui.SmartIslandTheme
+import com.agupta07505.smartisland.util.PermissionRecoveryNotifier
+import com.agupta07505.smartisland.util.PermissionGate
 import com.agupta07505.smartisland.util.SystemServiceRecovery
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -33,16 +36,24 @@ class MainActivity : ComponentActivity() {
     private val bluetoothPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
+    // Bumped whenever a foreground check finds the overlay or notification access missing (Rule_Book §7.1).
+    private val permissionRouteRequest = mutableIntStateOf(0)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         SystemServiceRecovery.requestRecovery(this)
         requestBluetoothPermissionIfNeeded()
 
+        // Launched from the "Restore Smart Island Permissions" notification.
+        val openPermissions = intent?.getBooleanExtra(PermissionRecoveryNotifier.EXTRA_OPEN_PERMISSIONS, false) == true
+
         setContent {
             SmartIslandTheme {
                 SmartIslandHomeScreen(
                     repository = settingsRepository,
-                    notificationRepository = notificationRepository
+                    notificationRepository = notificationRepository,
+                    openPermissionsOnStart = openPermissions,
+                    permissionRouteRequest = permissionRouteRequest.intValue
                 )
             }
         }
@@ -51,6 +62,8 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         SystemServiceRecovery.requestRecovery(this)
+        // Either grant can be revoked while the app is away; send the user back to setup if one is gone.
+        if (PermissionGate.check(this).needsSetup) permissionRouteRequest.intValue += 1
     }
 
     private fun requestBluetoothPermissionIfNeeded() {

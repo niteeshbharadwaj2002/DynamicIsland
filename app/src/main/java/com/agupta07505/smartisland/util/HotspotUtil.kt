@@ -16,7 +16,33 @@ import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
 
+/** Hotspot on/off as reported by `WIFI_AP_STATE_CHANGED`; the in-between states are [Changing]. */
+enum class HotspotApState { On, Off, Changing }
+
 object HotspotUtil {
+    /**
+     * `WifiManager.WIFI_AP_STATE_CHANGED_ACTION` and its extras are hidden in the SDK, so they are spelled out.
+     * The broadcast is sticky and protected (only the system can send it), and is sent whether or not the
+     * hotspot has a notification (Rule_Book 4.8).
+     */
+    const val ACTION_WIFI_AP_STATE_CHANGED = "android.net.wifi.WIFI_AP_STATE_CHANGED"
+    const val EXTRA_WIFI_AP_STATE = "wifi_state"
+    const val WIFI_AP_STATE_DISABLING = 10
+    const val WIFI_AP_STATE_DISABLED = 11
+    const val WIFI_AP_STATE_ENABLING = 12
+    const val WIFI_AP_STATE_ENABLED = 13
+    const val WIFI_AP_STATE_FAILED = 14
+
+    /** Key of the island's own hotspot alert, posted when the hotspot is on but no app notification shows it. */
+    const val SYSTEM_HOTSPOT_KEY = "system_hotspot"
+
+    /** Maps the broadcast's state; an unknown value is treated as a transition so nothing changes. */
+    fun apState(wifiApState: Int): HotspotApState = when (wifiApState) {
+        WIFI_AP_STATE_ENABLED -> HotspotApState.On
+        WIFI_AP_STATE_DISABLED, WIFI_AP_STATE_FAILED -> HotspotApState.Off
+        else -> HotspotApState.Changing
+    }
+
     private val CLIENT_COUNT_PATTERN_3 = Regex("""\b(\d+)\s+connected\s+devices?\b""", RegexOption.IGNORE_CASE)
     private val CLIENT_COUNT_PATTERN_2 = Regex("""\b(?:devices?|connected|clients?)\s*[:=]?\s*(\d+)\b""", RegexOption.IGNORE_CASE)
     private val CLIENT_COUNT_PATTERN_1 = Regex("""\b(\d+)\s*(?:device|connected|client)s?\b""", RegexOption.IGNORE_CASE)
@@ -39,6 +65,25 @@ object HotspotUtil {
 
         return 0
     }
+
+    private val SSID_PATTERN = Regex(
+        """(?:network\s*name|hotspot\s*name|wi-?fi\s*name|ssid)\s*[:：]\s*([^•·|\n]+)""",
+        RegexOption.IGNORE_CASE
+    )
+    private val TURN_OFF_PATTERN = Regex("""(?i)\b(turn\s*off|switch\s*off|disable|stop)\b""")
+
+    /**
+     * The hotspot's network name when the tethering notification spells it out ("Network name: Pixel_1234").
+     * Apps cannot read the soft-AP configuration without system permissions, so this is the only source;
+     * null means the card falls back to its generic subtitle.
+     */
+    fun parseSsid(title: String?, text: String?): String? {
+        val fullText = "${title.orEmpty()}\n${text.orEmpty()}"
+        return SSID_PATTERN.find(fullText)?.groupValues?.get(1)?.trim()?.takeIf { it.isNotEmpty() }
+    }
+
+    /** True for a notification action that switches the hotspot off ("Turn off", "Stop", "Disable"). */
+    fun isTurnOffAction(actionTitle: String): Boolean = TURN_OFF_PATTERN.containsMatchIn(actionTitle)
 
     /**
      * Opens the device's Hotspot & Tethering configuration page.

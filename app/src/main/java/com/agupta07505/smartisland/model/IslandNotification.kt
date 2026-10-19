@@ -28,7 +28,22 @@ data class IslandNotification(
     val mediaIsPlaying: Boolean = false,
     val mediaToken: android.media.session.MediaSession.Token? = null,
     val mode: IslandMode = IslandMode.Notification,
-    val contentIntent: PendingIntent? = null
+    val contentIntent: PendingIntent? = null,
+    /** The app's own group id (`Notification.getGroup()`), or null; alerts sharing one are folded together. */
+    val groupId: String? = null,
+    /** How many alerts this entry stands for; above 1 only on a grouped entry built by the alert engine. */
+    val groupCount: Int = 1,
+    /** Keys of every alert folded into this entry (empty for a plain, ungrouped alert). */
+    val memberKeys: List<String> = emptyList(),
+    /** Up to three sender avatars or app icons of the folded alerts, newest last, for the stacked pill. */
+    val groupIcons: List<Bitmap> = emptyList(),
+    /**
+     * The app's lockscreen visibility (`Notification.visibility`), one of [LockscreenVisibility]. Internal
+     * alerts (battery, Bluetooth, flashlight, demos) are public.
+     */
+    val lockscreenVisibility: Int = LockscreenVisibility.PUBLIC,
+    /** True on a copy the alert engine stripped for the lockscreen: title is a fallback, text is empty. */
+    val isMasked: Boolean = false
 ) {
     // Derived: no need to store separately
     val actions: List<String>
@@ -41,9 +56,18 @@ data class IslandNotification(
         }
 }
 
+/** Mirrors `Notification.VISIBILITY_*` so the alert engine can stay free of Android. */
+object LockscreenVisibility {
+    const val PUBLIC = 1
+    const val PRIVATE = 0
+    const val SECRET = -1
+}
+
 data class IslandNotificationAction(
     val title: String,
     val pendingIntent: PendingIntent?,
     val isQuickReply: Boolean = false,
-    val remoteInputKey: String? = null
+    val remoteInputKey: String? = null,
+    /** `Notification.Action.getSemanticAction()` (0 when the app gave none); see `SemanticAction`. */
+    val semanticAction: Int = 0
 )

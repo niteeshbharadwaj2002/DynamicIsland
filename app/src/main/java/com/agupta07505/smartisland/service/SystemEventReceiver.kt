@@ -7,6 +7,8 @@
 
 package com.agupta07505.smartisland.service
 
+import com.agupta07505.smartisland.buddy.runtime.MascotEvents
+import com.agupta07505.smartisland.buddy.runtime.MascotMoment
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothClass
 import android.bluetooth.BluetoothDevice
@@ -20,6 +22,8 @@ import android.os.PowerManager
 import com.agupta07505.smartisland.data.INotificationRepository
 import com.agupta07505.smartisland.model.IslandMode
 import com.agupta07505.smartisland.model.IslandNotification
+import com.agupta07505.smartisland.util.HotspotApState
+import com.agupta07505.smartisland.util.HotspotUtil
 import com.agupta07505.smartisland.util.runCatchingLogged
 
 class SystemEventReceiver(
@@ -138,7 +142,11 @@ class SystemEventReceiver(
                         notificationRepository.removeNotification("system_bluetooth")
                     }
                 }
+                HotspotUtil.ACTION_WIFI_AP_STATE_CHANGED -> {
+                    onHotspotState(HotspotUtil.apState(intent.getIntExtra(HotspotUtil.EXTRA_WIFI_AP_STATE, -1)))
+                }
                 Intent.ACTION_POWER_CONNECTED -> {
+                    MascotEvents.post(MascotMoment.Charging)
                     if (!settingsProvider().enableBatteryMode) {
                         notificationRepository.removeNotification("system_battery")
                         return@runCatchingLogged
@@ -155,6 +163,7 @@ class SystemEventReceiver(
                     updateBatteryState(context, intent, autoExpand = false)
                 }
                 Intent.ACTION_BATTERY_LOW -> {
+                    MascotEvents.post(MascotMoment.BatteryLow)
                     if (!settingsProvider().enableBatteryMode) {
                         notificationRepository.removeNotification("system_battery")
                         return@runCatchingLogged
@@ -197,6 +206,41 @@ class SystemEventReceiver(
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Rule_Book 4.8. On: the island shows the hotspot even when the OS posts no notification for it (an app's
+     * own hotspot notification, if any, stands in for ours). Off: every hotspot alert leaves, including a
+     * tethering notification the system has not withdrawn yet.
+     */
+    private fun onHotspotState(state: HotspotApState) {
+        when (state) {
+            HotspotApState.On -> {
+                val shown = notificationRepository.notifications.value.any {
+                    it.mode == IslandMode.Hotspot && !it.key.startsWith("demo_")
+                }
+                if (!shown) {
+                    notificationRepository.postNotification(
+                        IslandNotification(
+                            key = HotspotUtil.SYSTEM_HOTSPOT_KEY,
+                            packageName = "com.android.settings",
+                            appName = "Hotspot",
+                            title = "Hotspot",
+                            text = "On",
+                            mode = IslandMode.Hotspot,
+                            timeMillis = System.currentTimeMillis()
+                        ),
+                        autoExpand = false
+                    )
+                }
+            }
+            HotspotApState.Off -> {
+                notificationRepository.notifications.value
+                    .filter { it.mode == IslandMode.Hotspot && !it.key.startsWith("demo_") }
+                    .forEach { notificationRepository.removeNotification(it.key) }
+            }
+            HotspotApState.Changing -> Unit
         }
     }
 

@@ -7,6 +7,9 @@
 
 package com.agupta07505.smartisland.ui.expanded
 
+import com.agupta07505.smartisland.R
+import androidx.compose.ui.res.stringResource
+import com.agupta07505.smartisland.ui.IslandPalette
 import android.content.Intent
 import android.provider.Settings
 import android.widget.Toast
@@ -27,11 +30,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Devices
+import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.WifiTethering
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import com.agupta07505.smartisland.util.HotspotTrafficMonitor
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -77,11 +86,42 @@ fun HotspotExpanded(
             .ifBlank { "Sharing mobile data" }
     }
 
+    // The network name only when the tethering notification shows it; apps cannot read the soft-AP config.
+    val ssid = remember(notification.title, notification.text) {
+        HotspotUtil.parseSsid(notification.title, notification.text)
+    }
+
+    val turnOffAction = remember(notification.actionIntents) {
+        notification.actionIntents.firstOrNull { it.pendingIntent != null && HotspotUtil.isTurnOffAction(it.title) }
+    }
+
     val extraActionIntents = remember(notification.actionIntents) {
         notification.actionIntents.filterNot { action ->
             val titleLower = action.title.lowercase()
-            titleLower.contains("hotspot") || titleLower.contains("setting")
+            titleLower.contains("hotspot") || titleLower.contains("setting") || HotspotUtil.isTurnOffAction(action.title)
         }
+    }
+
+    val coroutineScope = rememberCoroutineScope()
+    val trafficMonitor = remember { HotspotTrafficMonitor() }
+    val throughputSnapshot by trafficMonitor.throughput.collectAsState()
+
+    DisposableEffect(Unit) {
+        trafficMonitor.start(coroutineScope)
+        onDispose { trafficMonitor.stop() }
+    }
+
+    // Rule_Book §4.8: the toggle turns the hotspot off and drops the island to IDLE. Apps cannot switch tethering
+    // off themselves, so this fires the notification's own "Turn off" action when it has one, otherwise opens the
+    // tethering settings for the user to finish there.
+    val turnOffHotspot: () -> Unit = {
+        if (turnOffAction != null) {
+            triggerAction(context, notification.packageName, turnOffAction.pendingIntent, turnOffAction.title, notification.contentIntent)
+        } else {
+            HotspotUtil.openHotspotSettings(context)
+        }
+        SmartIslandRepositories.notificationRepository(context).removeNotification(notification.key)
+        onCollapse()
     }
 
     Column(
@@ -111,7 +151,7 @@ fun HotspotExpanded(
             ) {
                 Icon(
                     imageVector = Icons.Rounded.WifiTethering,
-                    contentDescription = "Hotspot",
+                    contentDescription = stringResource(R.string.a11y_hotspot),
                     tint = Color.White,
                     modifier = Modifier.size(24.dp)
                 )
@@ -129,8 +169,8 @@ fun HotspotExpanded(
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = cleanSubtitle,
-                    color = Color(0xFFD5DAE0),
+                    text = ssid?.let { "Network: $it" } ?: cleanSubtitle,
+                    color = IslandPalette.secondaryLabel,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     fontSize = 13.sp,
@@ -170,49 +210,84 @@ fun HotspotExpanded(
 
                 Text(
                     text = formatNotificationTime(notification.timeMillis),
-                    color = Color(0xFFB7C0CA),
+                    color = IslandPalette.secondaryLabel,
                     fontSize = 11.sp
                 )
             }
         }
 
-        // Connected Devices Detail Card
+        // Connected Devices & Throughput Detail Card
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(12.dp))
-                .background(Color(0x22FFFFFF))
+                .background(IslandPalette.fill)
                 .padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Row(
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Devices,
-                        contentDescription = "Devices",
-                        tint = accentColor,
-                        modifier = Modifier.size(18.dp)
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Devices,
+                            contentDescription = stringResource(R.string.a11y_devices),
+                            tint = accentColor,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = "Connected Devices",
+                            color = Color.White,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
                     Text(
-                        text = "Connected Devices",
-                        color = Color.White,
+                        text = deviceCountText,
+                        color = accentColor,
                         fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Bold
                     )
                 }
 
-                Text(
-                    text = deviceCountText,
-                    color = accentColor,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                // Live Hotspot Throughput (Item 10)
+                if (throughputSnapshot.totalBytesPerSec > 0 || throughputSnapshot.rxBytesPerSec > 0 || throughputSnapshot.txBytesPerSec > 0) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Throughput",
+                            color = IslandPalette.secondaryLabel,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Normal
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                text = throughputSnapshot.formatTx(),
+                                color = IslandPalette.secondaryLabel,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = throughputSnapshot.formatRx(),
+                                color = accentColor,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
             }
         }
 
@@ -224,30 +299,38 @@ fun HotspotExpanded(
         ) {
             Box(
                 modifier = Modifier
-                    .height(28.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(Color(0xFFE2E8F0))
-                    .bounceClick {
-                        HotspotUtil.openHotspotSettings(context, notification.contentIntent)
-                        onCollapse()
-                    }
+                    .height(40.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(IslandPalette.fill)
+                    .bounceClick(turnOffHotspot)
                     .padding(horizontal = 12.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "Hotspot Settings",
-                    color = Color(0xFF1F2937),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.PowerSettingsNew,
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = if (turnOffAction != null) "Turn Off Hotspot" else "Turn Off in Settings",
+                        color = IslandPalette.label,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
 
             extraActionIntents.forEach { action ->
                 Box(
                     modifier = Modifier
-                        .height(28.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(Color(0x33FFFFFF))
+                        .height(40.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(IslandPalette.fillStrong)
                         .bounceClick {
                             if (action.pendingIntent != null) {
                                 triggerAction(context, notification.packageName, action.pendingIntent, action.title, notification.contentIntent)

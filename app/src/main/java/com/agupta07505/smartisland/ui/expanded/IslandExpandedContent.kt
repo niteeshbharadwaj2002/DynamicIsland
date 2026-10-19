@@ -9,11 +9,23 @@
 
 package com.agupta07505.smartisland.ui.expanded
 
+import com.agupta07505.smartisland.ui.IslandPalette
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -28,6 +40,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -82,7 +95,7 @@ fun IslandExpandedContent(
                 .onSizeChanged {
                     val measuredHeight = with(density) { it.height.toDp() }
                     if (measuredHeight > 0.dp) {
-                        val clamped = measuredHeight.coerceIn(80.dp, 180.dp)
+                        val clamped = measuredHeight.coerceIn(LARGE_IDLE_MIN_HEIGHT, LARGE_IDLE_MAX_HEIGHT)
                         onHeightMeasured(clamped)
                     }
                 }
@@ -104,7 +117,12 @@ fun IslandExpandedContent(
                         )
                 )
             }
-            EmptyExpanded(settings = settings, apps = launcherApps, onLaunchApp = onLaunchApp)
+            IdleDashboard(
+                apps = launcherApps,
+                onLaunchApp = onLaunchApp,
+                onCollapse = onCollapse,
+                onInputStateChanged = onReplyStateChanged
+            )
         }
         return
     }
@@ -155,49 +173,26 @@ fun IslandExpandedContent(
 
     Column(modifier = modifier.fillMaxWidth().wrapContentHeight()) {
 
-        // Interpolate height between pages based on swipe progress
-        // FIX: Clamp battery/call heights to match music/notification style to avoid
-        // glitch where battery/call expand more (taller) than other modes.
-        val currentPage = pagerState.currentPage
-        val offsetFraction = pagerState.currentPageOffsetFraction
-        val currentNotification = notifications.getOrNull(currentPage)
-
-        fun clampHeightForMode(notif: IslandNotification?, height: Dp): Dp {
-            return when (notif?.mode) {
-                IslandMode.Battery, IslandMode.IncomingCall -> height.coerceIn(72.dp, 125.dp)
-                IslandMode.Notification -> height.coerceIn(95.dp, 145.dp)
-                IslandMode.Music -> height.coerceIn(115.dp, 180.dp)
-                IslandMode.LiveActivity -> height.coerceIn(140.dp, 205.dp)
-                IslandMode.Navigation -> height.coerceIn(135.dp, 195.dp)
-                IslandMode.DownloadUpload -> height.coerceIn(120.dp, 195.dp)
-                IslandMode.Hotspot -> height.coerceIn(120.dp, 195.dp)
-                IslandMode.Bluetooth -> height.coerceIn(72.dp, 130.dp)
-                IslandMode.Flashlight -> height.coerceIn(72.dp, 130.dp)
-                IslandMode.ScreenRecording -> height.coerceIn(72.dp, 130.dp)
-                IslandMode.Timer -> height.coerceIn(72.dp, 130.dp)
-                IslandMode.Stopwatch -> height.coerceIn(72.dp, 130.dp)
-                else -> height.coerceIn(80.dp, 160.dp)
+        // Interpolate height between pages based on swipe progress. The swipe offset changes every frame of a
+        // drag; derivedStateOf (Rule_Book §5) recomposes this card only when the resulting height changes, so
+        // swiping between two cards of the same height costs no recomposition at all.
+        val targetHeight by remember(notifications) {
+            derivedStateOf {
+                val currentPage = pagerState.currentPage
+                val offsetFraction = pagerState.currentPageOffsetFraction
+                val currentNotification = notifications.getOrNull(currentPage)
+                val currentPageHeight = pageHeightOrEstimate(currentNotification, pageHeights)
+                val nextPage = if (offsetFraction > 0f) {
+                    (currentPage + 1).coerceAtMost(notifications.lastIndex)
+                } else if (offsetFraction < 0f) {
+                    (currentPage - 1).coerceAtLeast(0)
+                } else {
+                    currentPage
+                }
+                val nextHeight = pageHeightOrEstimate(notifications.getOrNull(nextPage), pageHeights)
+                val fraction = kotlin.math.abs(offsetFraction)
+                (currentPageHeight + (nextHeight - currentPageHeight) * fraction).coerceIn(72.dp, 300.dp)
             }
-        }
-
-        val currentPageHeightRaw = currentNotification?.let { pageHeights[it.key] }
-        val currentPageHeight = currentPageHeightRaw?.let { clampHeightForMode(currentNotification, it) }
-            ?: com.agupta07505.smartisland.ui.defaultEstimatedHeightForMode(currentNotification?.mode)
-
-        val targetHeight = run {
-            val nextPage = if (offsetFraction > 0f) {
-                (currentPage + 1).coerceAtMost(notifications.lastIndex)
-            } else if (offsetFraction < 0f) {
-                (currentPage - 1).coerceAtLeast(0)
-            } else {
-                currentPage
-            }
-            val nextNotification = notifications.getOrNull(nextPage)
-            val nextHeightRaw = nextNotification?.let { pageHeights[it.key] }
-            val nextHeight = (nextHeightRaw?.let { clampHeightForMode(nextNotification, it) }
-                ?: com.agupta07505.smartisland.ui.defaultEstimatedHeightForMode(nextNotification?.mode))
-            val fraction = kotlin.math.abs(offsetFraction)
-            (currentPageHeight + (nextHeight - currentPageHeight) * fraction).coerceIn(72.dp, 205.dp)
         }
 
         LaunchedEffect(targetHeight) {
@@ -228,12 +223,16 @@ fun IslandExpandedContent(
                                     pageHeights = pageHeights.toMutableMap().apply { put(notification.key, heightDp) }
                                 }
                             }
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) {
-                                onOpenNotification(notification)
-                            }
+                            .then(
+                                // The music card is interactive: only its header opens the app.
+                                if (notification.mode == IslandMode.Music) Modifier
+                                else Modifier.clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) {
+                                    onOpenNotification(notification)
+                                }
+                            )
                     ) {
                         if (settings.enableNotificationBackdrop && notification.mode != IslandMode.Music) {
                             NotificationBackdrop(
@@ -243,7 +242,12 @@ fun IslandExpandedContent(
                             )
                         }
 
-                        when (notification.mode) {
+                        AnimatedContent(
+                            targetState = notification.mode,
+                            transitionSpec = { islandContentTransition() },
+                            label = "islandModeContent"
+                        ) { mode ->
+                        when (mode) {
                             IslandMode.Notification -> NotificationExpanded(
                                 notification = notification,
                                 bottomPadding = bottomPadding,
@@ -262,6 +266,8 @@ fun IslandExpandedContent(
                             IslandMode.Music -> MusicExpanded(
                                 notification = notification,
                                 bottomPadding = bottomPadding,
+                                onOpenApp = { onOpenNotification(notification) },
+                                onCollapse = onCollapse,
                                 settings = settings
                             )
                             IslandMode.Battery -> BatteryExpanded(
@@ -329,112 +335,33 @@ fun IslandExpandedContent(
                                 onCollapse = onCollapse,
                                 settings = settings
                             )
-                            IslandMode.Empty -> EmptyExpanded(
-                                settings = settings,
+                            IslandMode.Alarm -> AlarmExpanded(
+                                notification = notification,
+                                bottomPadding = bottomPadding,
+                                onCollapse = onCollapse
+                            )
+                            IslandMode.VoiceRecording -> VoiceRecordingExpanded(
+                                notification = notification,
+                                bottomPadding = bottomPadding,
+                                onCollapse = onCollapse
+                            )
+                            IslandMode.PrivacyIndicator -> PrivacyIndicatorExpanded(
+                                notification = notification,
+                                bottomPadding = bottomPadding,
+                                onCollapse = onCollapse
+                            )
+                            IslandMode.Empty -> IdleDashboard(
                                 apps = launcherApps,
-                                onLaunchApp = onLaunchApp
+                                onLaunchApp = onLaunchApp,
+                                onCollapse = onCollapse,
+                                onInputStateChanged = onReplyStateChanged
                             )
                         }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun EmptyExpanded(
-    settings: SmartIslandSettings,
-    apps: List<LaunchableApp>?,
-    onLaunchApp: (String) -> Unit
-) {
-    val context = LocalContext.current
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .wrapContentHeight(unbounded = true)
-            .padding(start = 18.dp, top = 16.dp, end = 18.dp, bottom = 12.dp),
-        verticalArrangement = Arrangement.Center
-    ) {
-        val loadedApps = apps
-        val hasConfiguration = settings.shortcutPackages.isNotEmpty() || settings.showRecentApps
-
-        if (loadedApps == null) {
-            // Keep the configured launcher visually clean while PackageManager and
-            // UsageStats are queried. In particular, do not flash the setup state.
-            Spacer(Modifier.height(84.dp))
-        } else if (loadedApps.isEmpty() && !hasConfiguration) {
-            Text(stringResource(R.string.shortcuts_title), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-            Text(
-                stringResource(R.string.shortcuts_desc),
-                color = Color(0xFFB7C0CA),
-                fontSize = 13.sp
-            )
-            Text(
-                stringResource(R.string.quick_launch_open_settings),
-                color = Color(0xFF67E8F9),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier
-                    .padding(top = 16.dp)
-                    .clickable { onLaunchApp(context.packageName) }
-            )
-        } else if (loadedApps.isEmpty()) {
-            Text(
-                stringResource(R.string.quick_launch_apps_unavailable),
-                color = Color(0xFFB7C0CA),
-                fontSize = 13.sp
-            )
-        } else {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                loadedApps.chunked(4).forEach { rowApps ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        rowApps.forEach { app ->
-                            ShortcutApp(app = app, onClick = { onLaunchApp(app.packageName) })
                         }
-                        repeat(4 - rowApps.size) { Box(Modifier.size(width = 64.dp, height = 1.dp)) }
                     }
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun ShortcutApp(app: LaunchableApp, onClick: () -> Unit) {
-    val context = LocalContext.current
-    val icon = remember(app.packageName) {
-        runCatching {
-            context.packageManager.getApplicationIcon(app.packageName)
-                .toBitmap(width = 96, height = 96)
-                .asImageBitmap()
-        }.getOrNull()
-    }
-    Column(
-        modifier = Modifier
-            .size(width = 64.dp, height = 76.dp)
-            .clickable(onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        if (icon != null) {
-            Image(
-                bitmap = icon,
-                contentDescription = app.label,
-                modifier = Modifier.size(44.dp)
-            )
-        }
-        Text(
-            text = app.label,
-            color = Color.White,
-            fontSize = 10.sp,
-            maxLines = 1
-        )
     }
 }
 
@@ -463,6 +390,9 @@ private fun NotificationBackdrop(
         IslandMode.ScreenRecording -> Color(settings.screenRecordingColor)
         IslandMode.Timer -> Color(settings.timerColor)
         IslandMode.Stopwatch -> Color(settings.stopwatchColor)
+        IslandMode.Alarm -> IslandPalette.warning
+        IslandMode.VoiceRecording -> IslandPalette.danger
+        IslandMode.PrivacyIndicator -> PrivacyColors.camera
         else -> Color(settings.notificationDotColor)
     }
 
@@ -534,3 +464,45 @@ private fun NotificationBackdrop(
     }
 }
 
+
+/**
+ * A page's measured height clamped to its mode's range (so battery/call cards never come out taller than the
+ * music/notification ones), or the mode's estimate until the page has been measured.
+ */
+private fun pageHeightOrEstimate(notif: IslandNotification?, measured: Map<String, Dp>): Dp {
+    val height = notif?.let { measured[it.key] }
+        ?: return com.agupta07505.smartisland.ui.defaultEstimatedHeightForMode(notif?.mode)
+    return when (notif?.mode) {
+        IslandMode.Battery -> height.coerceIn(72.dp, 125.dp)
+        // Ringing: header + caller row; answered: plus the Mute / Speaker / End Call row.
+        IslandMode.IncomingCall -> height.coerceIn(72.dp, 200.dp)
+        IslandMode.Notification -> height.coerceIn(130.dp, 185.dp)
+        IslandMode.Music -> height.coerceIn(150.dp, 260.dp)
+        IslandMode.LiveActivity -> height.coerceIn(140.dp, 205.dp)
+        IslandMode.Navigation -> height.coerceIn(135.dp, 195.dp)
+        IslandMode.DownloadUpload -> height.coerceIn(120.dp, 195.dp)
+        IslandMode.Hotspot -> height.coerceIn(120.dp, 195.dp)
+        IslandMode.Bluetooth -> height.coerceIn(72.dp, 130.dp)
+        IslandMode.Flashlight -> height.coerceIn(72.dp, 130.dp)
+        IslandMode.ScreenRecording -> height.coerceIn(72.dp, 130.dp)
+        IslandMode.Timer -> height.coerceIn(72.dp, 130.dp)
+        IslandMode.Stopwatch -> height.coerceIn(72.dp, 130.dp)
+        IslandMode.Alarm, IslandMode.VoiceRecording, IslandMode.PrivacyIndicator -> height.coerceIn(100.dp, 170.dp)
+        else -> height.coerceIn(80.dp, 160.dp)
+    }
+}
+
+private const val ISLAND_CONTENT_SPRING_DAMPING = 0.86f
+private const val ISLAND_CONTENT_SPRING_STIFFNESS = 224f
+internal val LARGE_IDLE_MIN_HEIGHT = 120.dp
+internal val LARGE_IDLE_MAX_HEIGHT = 320.dp
+
+/**
+ * Cross-fade with a short vertical slide, sized by the same light spring the island shell uses, so
+ * resizing never clips content mid-transition.
+ */
+private fun <S> AnimatedContentTransitionScope<S>.islandContentTransition(): ContentTransform =
+    ((fadeIn(spring(ISLAND_CONTENT_SPRING_DAMPING, ISLAND_CONTENT_SPRING_STIFFNESS)) +
+        slideInVertically(spring(ISLAND_CONTENT_SPRING_DAMPING, ISLAND_CONTENT_SPRING_STIFFNESS)) { it / 12 }) togetherWith
+        (fadeOut(spring(1f, 305f)) + slideOutVertically(spring(1f, 305f)) { -it / 12 })) using
+        SizeTransform(clip = false)

@@ -82,7 +82,9 @@ import com.agupta07505.smartisland.BuildConfig
 import com.agupta07505.smartisland.R
 import com.agupta07505.smartisland.data.SmartIslandSettings
 import com.agupta07505.smartisland.data.SmartIslandSettingsRepository
+import com.agupta07505.smartisland.buddy.MascotAttribution
 import com.agupta07505.smartisland.ui.components.ClickableRowItem
+import androidx.compose.material.icons.rounded.Favorite
 import com.agupta07505.smartisland.util.runCatchingLogged
 import kotlinx.coroutines.launch
 
@@ -102,7 +104,7 @@ fun AboutSection(
         // 4. 100% On-Device & Zero-Telemetry Privacy Shield
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(12.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -130,7 +132,7 @@ fun AboutSection(
                     Text(
                         text = "100% On-Device & Zero Telemetry",
                         style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
@@ -146,16 +148,16 @@ fun AboutSection(
         // 5. Application Information Card
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(12.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            border = null,
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = stringResource(R.string.about_title),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
@@ -205,15 +207,28 @@ fun AboutSection(
                         } ?: Toast.makeText(context, "Cannot open link", Toast.LENGTH_SHORT).show()
                     }
                 )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+
+                ClickableRowItem(
+                    label = stringResource(R.string.about_acknowledgements_title),
+                    subtitle = stringResource(R.string.about_buddy_credit),
+                    icon = Icons.Rounded.Favorite,
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(MascotAttribution.SOURCE_URL))
+                        runCatchingLogged("AboutSection", "Failed to open acknowledgements link") {
+                            context.startActivity(intent)
+                        } ?: Toast.makeText(context, "Cannot open link", Toast.LENGTH_SHORT).show()
+                    }
+                )
             }
         }
 
         // 6. Developer & Contact Card
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(12.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            border = null,
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -221,7 +236,7 @@ fun AboutSection(
                     text = stringResource(R.string.developer_contact_title),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.SemiBold
                 )
                 Spacer(modifier = Modifier.height(14.dp))
 
@@ -365,7 +380,7 @@ private fun LinkedinIcon() {
         Text(
             text = "in",
             color = Color.White,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
             fontSize = 11.sp,
             modifier = Modifier.padding(bottom = 2.dp)
         )

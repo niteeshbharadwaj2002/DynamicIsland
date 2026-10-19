@@ -7,6 +7,10 @@
 
 package com.agupta07505.smartisland.ui.expanded
 
+import com.agupta07505.smartisland.ui.animateFloatCalm
+import com.agupta07505.smartisland.R
+import androidx.compose.ui.res.stringResource
+import com.agupta07505.smartisland.ui.IslandPalette
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -30,7 +34,7 @@ import androidx.compose.material.icons.rounded.AvTimer
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -53,6 +57,9 @@ import com.agupta07505.smartisland.data.SmartIslandSettings
 import com.agupta07505.smartisland.di.SmartIslandRepositories
 import com.agupta07505.smartisland.model.IslandNotification
 import com.agupta07505.smartisland.ui.bounceClick
+import com.agupta07505.smartisland.ui.rememberFrameElapsedMillis
+import com.agupta07505.smartisland.ui.StopwatchReadout
+import androidx.compose.ui.graphics.graphicsLayer
 import com.agupta07505.smartisland.util.TimerStopwatchParser
 
 @Composable
@@ -80,27 +87,13 @@ fun StopwatchExpanded(
         mutableStateOf(notification?.timeMillis ?: System.currentTimeMillis())
     }
 
-    var elapsedSeconds by remember(notification?.key, startTime, isPaused) {
-        mutableStateOf(((System.currentTimeMillis() - startTime) / 1000L).coerceAtLeast(0L))
-    }
+    // Ticks on the frame clock; only the readout reads it, so this card does not recompose every frame.
+    val elapsedMs = rememberFrameElapsedMillis(startTime, running = !isPaused)
 
     var lapCount by remember(notification?.key) { mutableStateOf(1) }
 
-    LaunchedEffect(notification?.key, startTime, isPaused) {
-        if (!isPaused) {
-            while (true) {
-                elapsedSeconds = ((System.currentTimeMillis() - startTime) / 1000L).coerceAtLeast(0L)
-                kotlinx.coroutines.delay(500L)
-            }
-        }
-    }
-
-    val displayTime = remember(elapsedSeconds) {
-        TimerStopwatchParser.formatTime(elapsedSeconds)
-    }
-
     val infiniteTransition = rememberInfiniteTransition(label = "stopwatchAnim")
-    val rotation by infiniteTransition.animateFloat(
+    val rotation by infiniteTransition.animateFloatCalm(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
@@ -132,21 +125,21 @@ fun StopwatchExpanded(
             ) {
                 Icon(
                     imageVector = Icons.Rounded.AvTimer,
-                    contentDescription = "Stopwatch",
+                    contentDescription = stringResource(R.string.a11y_stopwatch),
                     tint = stopwatchColor,
                     modifier = Modifier
                         .size(22.dp)
-                        .then(if (!isPaused) Modifier.rotate(rotation) else Modifier)
+                        // Read in the layer, not in composition, so the spin does not recompose the card.
+                        .graphicsLayer { rotationZ = if (!isPaused) rotation else 0f }
                 )
             }
 
             Column {
-                Text(
-                    text = displayTime,
+                StopwatchReadout(
+                    elapsedMs = elapsedMs,
                     color = Color.White,
                     fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.5.sp
+                    fontWeight = FontWeight.Bold
                 )
                 Spacer(Modifier.height(2.dp))
                 val notifText = notification?.text.orEmpty()
@@ -184,7 +177,7 @@ fun StopwatchExpanded(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF27272A))
+                    .background(IslandPalette.fill)
                     .bounceClick {
                         if (lapAction?.pendingIntent != null && notification != null) {
                             triggerAction(context, notification.packageName, lapAction.pendingIntent, lapAction.title, notification.contentIntent)
@@ -195,8 +188,8 @@ fun StopwatchExpanded(
             ) {
                 Icon(
                     imageVector = Icons.Rounded.Flag,
-                    contentDescription = "Lap",
-                    tint = Color(0xFFE4E4E7),
+                    contentDescription = stringResource(R.string.a11y_lap),
+                    tint = IslandPalette.label,
                     modifier = Modifier.size(16.dp)
                 )
             }
@@ -229,10 +222,11 @@ fun StopwatchExpanded(
                     .clip(CircleShape)
                     .background(stopwatchColor)
                     .bounceClick {
+                        val elapsedNowMs = elapsedMs.longValue
                         val newPaused = !isPaused
                         isPaused = newPaused
                         if (!newPaused) {
-                            startTime = System.currentTimeMillis() - elapsedSeconds * 1000L
+                            startTime = System.currentTimeMillis() - elapsedNowMs
                         }
 
                         if (pauseAction?.pendingIntent != null && notification != null) {
@@ -255,8 +249,8 @@ fun StopwatchExpanded(
                             repo.postNotification(
                                 notification.copy(
                                     title = if (newPaused) "Stopwatch (Paused)" else "Stopwatch",
-                                    text = TimerStopwatchParser.formatTime(elapsedSeconds),
-                                    timeMillis = System.currentTimeMillis() - elapsedSeconds * 1000L,
+                                    text = TimerStopwatchParser.formatTime(elapsedNowMs / 1000L),
+                                    timeMillis = System.currentTimeMillis() - elapsedNowMs,
                                     actionIntents = updatedActions
                                 )
                             )
@@ -272,7 +266,7 @@ fun StopwatchExpanded(
                 )
             }
 
-            // 3. Reset / Stop Button
+            // 3. Stop Button (fires the notification's stop/reset action, then drops the alert)
             val resetAction = notification?.actionIntents?.firstOrNull {
                 val t = it.title.lowercase()
                 t.contains("reset") || t.contains("stop") || t.contains("clear") || t.contains("cancel")
@@ -281,7 +275,7 @@ fun StopwatchExpanded(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF3F3F46))
+                    .background(IslandPalette.fillStrong)
                     .bounceClick {
                         if (resetAction?.pendingIntent != null && notification != null) {
                             triggerAction(context, notification.packageName, resetAction.pendingIntent, resetAction.title, notification.contentIntent)
@@ -293,9 +287,9 @@ fun StopwatchExpanded(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.Refresh,
-                    contentDescription = "Reset",
-                    tint = Color(0xFFE4E4E7),
+                    imageVector = Icons.Rounded.Stop,
+                    contentDescription = stringResource(R.string.a11y_stop),
+                    tint = IslandPalette.label,
                     modifier = Modifier.size(16.dp)
                 )
             }

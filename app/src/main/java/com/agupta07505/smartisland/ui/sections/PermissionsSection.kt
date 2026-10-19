@@ -7,6 +7,8 @@
 
 package com.agupta07505.smartisland.ui.sections
 
+import com.agupta07505.smartisland.ui.semantic
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -31,6 +33,7 @@ import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.FlashOn
 import androidx.compose.material.icons.rounded.Layers
+import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.VisibilityOff
@@ -43,6 +46,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,15 +54,24 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import android.content.ClipData
+import android.content.ClipboardManager
 import com.agupta07505.smartisland.R
 import com.agupta07505.smartisland.ui.PermissionCard
+import com.agupta07505.smartisland.ui.components.SmartIslandSwitch
+import com.agupta07505.smartisland.util.HeadsUpNotificationManager
 import com.agupta07505.smartisland.util.OemAutostartUtil
 import com.agupta07505.smartisland.util.ShizukuManager
 import com.agupta07505.smartisland.util.safeStartActivity
@@ -87,7 +100,7 @@ fun PermissionsSection(
         // Shizuku 1-Tap Auto Setup Card
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(12.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
             ),
@@ -130,7 +143,7 @@ fun PermissionsSection(
                             Text(
                                 text = stringResource(R.string.shizuku_card_title),
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             val shizukuStateText = when {
@@ -142,7 +155,7 @@ fun PermissionsSection(
                             Text(
                                 text = shizukuStateText,
                                 style = MaterialTheme.typography.labelMedium,
-                                color = if (ShizukuManager.hasPermission()) Color(0xFF0F9F6E) else MaterialTheme.colorScheme.primary,
+                                color = if (ShizukuManager.hasPermission()) MaterialTheme.semantic.success else MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
@@ -184,7 +197,7 @@ fun PermissionsSection(
                         Text(
                             text = if (isExecutingShizuku) stringResource(R.string.shizuku_btn_running) else stringResource(R.string.shizuku_btn_run),
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
                 }
@@ -224,14 +237,17 @@ fun PermissionsSection(
             onClick = onBatteryClick
         )
 
+        // Recommended: OEM background lock, pop-up notifications off, permission alerts (Rule_Book 7.2, 10.2)
+        OnboardingExtrasSection()
+
         // Overlay System Warning Card
-        val warningIconColor = if (isOverlayWarningDisabled) Color(0xFF0F9F6E) else MaterialTheme.colorScheme.onSurfaceVariant
-        val warningBgColor = if (isOverlayWarningDisabled) Color(0xFF0F9F6E).copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant
+        val warningIconColor = if (isOverlayWarningDisabled) MaterialTheme.semantic.success else MaterialTheme.colorScheme.onSurfaceVariant
+        val warningBgColor = if (isOverlayWarningDisabled) MaterialTheme.semantic.success.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(12.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            border = null,
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
@@ -266,21 +282,21 @@ fun PermissionsSection(
                             Text(
                                 text = "Suppress System Overlay Warning",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             if (isOverlayWarningDisabled) {
                                 Spacer(Modifier.height(3.dp))
                                 Box(
                                     modifier = Modifier
-                                        .background(Color(0xFF0F9F6E).copy(alpha = 0.12f), shape = RoundedCornerShape(6.dp))
+                                        .background(MaterialTheme.semantic.success.copy(alpha = 0.12f), shape = RoundedCornerShape(6.dp))
                                         .padding(horizontal = 8.dp, vertical = 2.dp)
                                 ) {
                                     Text(
                                         text = "Configured",
-                                        color = Color(0xFF0F9F6E),
+                                        color = MaterialTheme.semantic.success,
                                         fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.SemiBold
                                     )
                                 }
                             }
@@ -315,13 +331,13 @@ fun PermissionsSection(
         }
 
         // OEM Autostart & Kill Protection Card
-        val oemIconColor = if (isOemAutostartEnabled) Color(0xFF0F9F6E) else MaterialTheme.colorScheme.tertiary
-        val oemBgColor = if (isOemAutostartEnabled) Color(0xFF0F9F6E).copy(alpha = 0.12f) else MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)
+        val oemIconColor = if (isOemAutostartEnabled) MaterialTheme.semantic.success else MaterialTheme.colorScheme.tertiary
+        val oemBgColor = if (isOemAutostartEnabled) MaterialTheme.semantic.success.copy(alpha = 0.12f) else MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(12.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            border = null,
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
@@ -356,21 +372,21 @@ fun PermissionsSection(
                             Text(
                                 text = "OEM Autostart & Kill Protection",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             if (isOemAutostartEnabled) {
                                 Spacer(Modifier.height(3.dp))
                                 Box(
                                     modifier = Modifier
-                                        .background(Color(0xFF0F9F6E).copy(alpha = 0.12f), shape = RoundedCornerShape(6.dp))
+                                        .background(MaterialTheme.semantic.success.copy(alpha = 0.12f), shape = RoundedCornerShape(6.dp))
                                         .padding(horizontal = 8.dp, vertical = 2.dp)
                                 ) {
                                     Text(
                                         text = "Configured",
-                                        color = Color(0xFF0F9F6E),
+                                        color = MaterialTheme.semantic.success,
                                         fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.SemiBold
                                     )
                                 }
                             }
@@ -394,7 +410,7 @@ fun PermissionsSection(
                                 shape = RoundedCornerShape(10.dp),
                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
                             ) {
-                                Text("Shizuku", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text("Shizuku", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                             }
                         }
                         OutlinedButton(
@@ -416,6 +432,209 @@ fun PermissionsSection(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     lineHeight = 16.sp
                 )
+            }
+        }
+
+        // OEM Lock in Background Interactive Guide (Item 11)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .background(
+                                MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(12.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Lock,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "Lock in Background Guide",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Pin app in Recents to prevent OEM termination",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Text(
+                    text = "Android does not provide an API to lock apps programmatically. Follow these steps in Recents:",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Medium
+                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "1. Open your Recent Apps (swipe up & hold or tap Recents button)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "2. Press and hold Smart Island\'s app card or tap the app icon header",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "3. Tap \'Lock\' or the Padlock 🔒 icon so the lock icon appears",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                Text(
+                    text = "This tells the system memory cleaner never to clear Smart Island when tapping \'Clear All\'.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 15.sp
+                )
+            }
+        }
+
+        // Heads-Up Notification (HUN) Suppression Card (Item 8)
+        val lifecycleOwner = LocalLifecycleOwner.current
+        var writeSecureGranted by remember { mutableStateOf(HeadsUpNotificationManager.hasWriteSecureSettings(context)) }
+        var hunSuppressed by remember { mutableStateOf(HeadsUpNotificationManager.isHunSuppressed(context)) }
+
+        DisposableEffect(lifecycleOwner, context) {
+            val observer = LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    writeSecureGranted = HeadsUpNotificationManager.hasWriteSecureSettings(context)
+                    hunSuppressed = HeadsUpNotificationManager.isHunSuppressed(context)
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Notifications,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = "Suppress Pop-up Banners",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Hides heads-up banners so only the island renders notifications",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    SmartIslandSwitch(
+                        checked = hunSuppressed,
+                        enabled = writeSecureGranted,
+                        onCheckedChange = { suppress ->
+                            val ok = HeadsUpNotificationManager.setHunSuppressed(context, suppress)
+                            if (ok) {
+                                hunSuppressed = HeadsUpNotificationManager.isHunSuppressed(context)
+                            } else {
+                                android.widget.Toast.makeText(context, "Failed to update heads-up setting", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    )
+                }
+
+                if (!writeSecureGranted) {
+                    val command = HeadsUpNotificationManager.adbGrantCommand(context)
+                    Text(
+                        text = "Requires WRITE_SECURE_SETTINGS via ADB or Shizuku:",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = command,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .padding(10.dp)
+                    )
+                    OutlinedButton(
+                        onClick = {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                            clipboard?.setPrimaryClip(ClipData.newPlainText("adb grant", command))
+                            android.widget.Toast.makeText(context, "Command copied to clipboard", android.widget.Toast.LENGTH_SHORT).show()
+                        },
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(Icons.Rounded.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Copy Command", fontSize = 13.sp)
+                    }
+                }
             }
         }
     }

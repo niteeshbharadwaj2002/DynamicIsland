@@ -22,7 +22,14 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import com.agupta07505.smartisland.alert.AlertClassifier
+import com.agupta07505.smartisland.alert.AlertEngine
+import com.agupta07505.smartisland.alert.AlertTier
+import com.agupta07505.smartisland.alert.ExpansionPolicy
+import com.agupta07505.smartisland.util.KeyguardGate
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -43,15 +50,49 @@ class IslandViewModel(
     val notifications = notificationRepo.notifications
     val foregroundPackage = MutableStateFlow<String?>(null)
 
+    // The rules engine decides what the island shows: it drops passive alerts, orders by priority,
+    // folds messages from one app into a counted entry, and times messages out after seven seconds.
+    private val alertEngine = AlertEngine()
+    private val alertTick = MutableStateFlow(0)
+    private var alertExpiryJob: Job? = null
+    private var alertHoldJob: Job? = null
+
+    /** Keyguard state, kept current by the overlay service; while true the engine applies lockscreen privacy. */
+    val isLocked = MutableStateFlow(false)
+
+    /** Landscape: alerts stay in the small pill or companion bubble, the Medium card never opens (§9.2). */
+    val isLandscape = MutableStateFlow(false)
+
+    /** A `FLAG_SECURE` window is in the foreground: Ephemeral alerts do not auto-expand over it (§8.2). */
+    val foregroundSecure = MutableStateFlow(false)
+
+    private val screenOnState = MutableStateFlow(true)
+
+    /**
+     * Whether the screen is on, kept current by the overlay service from ACTION_SCREEN_ON / ACTION_SCREEN_OFF.
+     * The overlay gates every looping animation and ticker on it (Rule_Book 4.3, 5).
+     */
+    val isScreenOn: StateFlow<Boolean> = screenOnState
+
+    val ambientMode = MutableStateFlow(false)
+    val burnInShiftX = MutableStateFlow(0f)
+    val burnInShiftY = MutableStateFlow(0f)
+
     val visibleNotifications: StateFlow<List<IslandNotification>> = combine(
         notifications,
         foregroundPackage,
-        settings
-    ) { list, fgPkg, s ->
-        list.filterNot { notif ->
+        settings,
+        alertTick,
+        isLocked
+    ) { list, fgPkg, s, _, locked ->
+        val allowed = list.filterNot { notif ->
             (!s.enableBatteryMode && notif.mode == IslandMode.Battery) ||
             (!fgPkg.isNullOrEmpty() && notif.mode == IslandMode.Music && notif.packageName == fgPkg)
         }
+        val now = System.currentTimeMillis()
+        val evaluation = alertEngine.evaluate(allowed, now, isLocked = locked)
+        scheduleAlertExpiry(evaluation.nextExpiryAtMs, now)
+        evaluation.visible
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.Eagerly,
@@ -60,7 +101,6 @@ class IslandViewModel(
 
     val expanded = MutableStateFlow(false)
     val selectedIndex = MutableStateFlow(0)
-    val isLocked = MutableStateFlow(false)
     val isInputActive = MutableStateFlow(false)
 
     val mode: StateFlow<IslandMode> = combine(visibleNotifications, selectedIndex) { list, idx ->
@@ -76,9 +116,15 @@ class IslandViewModel(
     init {
         viewModelScope.launch {
             runSuspendCatchingLogged(TAG, "Notifications collector failed") {
+                var lastPrimaryKey: String? = null
                 visibleNotifications.collect { list ->
+                    // A new main pill (a higher tier arrived, or the old one ended) takes the island back from any
+                    // swap the user made; otherwise their choice stands.
+                    val primaryKey = list.firstOrNull()?.key
+                    val primaryChanged = primaryKey != lastPrimaryKey
+                    lastPrimaryKey = primaryKey
                     selectedIndex.update { currentSelected ->
-                        currentSelected.coerceIn(0, (list.size - 1).coerceAtLeast(0))
+                        if (primaryChanged) 0 else currentSelected.coerceIn(0, (list.size - 1).coerceAtLeast(0))
                     }
                 }
             }
@@ -92,7 +138,25 @@ class IslandViewModel(
                         notif.packageName == foregroundPackage.value
                     if (isFgMusic) return@collect
 
-                    val index = notifications.value.indexOfFirst { it.key == key }
+                    // Collision: a message that arrives during a call, an alarm or another live task never
+                    // takes the primary island; it waits behind it as a secondary alert.
+                    if (AlertClassifier.classify(notif) == AlertTier.Passive) return@collect
+                    // The engine's list can lag the raw one by a beat: wait for this alert to show up in it.
+                    val visible = withTimeoutOrNull(ALERT_VISIBLE_WAIT_MS) {
+                        visibleNotifications.first { list -> list.any { it.key == key || key in it.memberKeys } }
+                    } ?: visibleNotifications.value
+                    // Collision, landscape and secure-window rules all live in ExpansionPolicy.
+                    val primary = visible.firstOrNull()
+                    if (!ExpansionPolicy.allowAutoExpand(
+                            arriving = AlertClassifier.classify(notif),
+                            primary = primary?.let { AlertClassifier.classify(it) },
+                            isLandscape = isLandscape.value,
+                            foregroundIsSecure = foregroundSecure.value
+                        )
+                    ) return@collect
+
+                    // Indexes the paged island list, where a folded entry stands for several keys.
+                    val index = visible.indexOfFirst { it.key == key || key in it.memberKeys }
                     if (index >= 0) {
                         selectedIndex.value = index
                         val isDemo = key.startsWith("demo_")
@@ -104,15 +168,40 @@ class IslandViewModel(
             }
         }
         viewModelScope.launch {
+            runSuspendCatchingLogged(TAG, "Reply-after-unlock collector failed") {
+                // "Reply" tapped on the lockscreen: once unlocked, the card reopens with its reply field open.
+                KeyguardGate.replyRequests.collect { key ->
+                    val index = visibleNotifications.value.indexOfFirst { it.key == key || key in it.memberKeys }
+                    if (index >= 0) {
+                        selectedIndex.value = index
+                        expand()
+                    }
+                }
+            }
+        }
+        viewModelScope.launch {
             runSuspendCatchingLogged(TAG, "Timer-reset collector failed") {
                 notificationRepo.resetTimerEvent.collect {
                     resetAutoCollapseTimer()
+                    onUserInteraction()
                 }
             }
         }
         viewModelScope.launch {
             runSuspendCatchingLogged(TAG, "Expanded-state collector failed") {
                 expanded.collect { isExpanded ->
+                    // While the card is open the seven-second clock is held; it restarts when it closes.
+                    alertHoldJob?.cancel()
+                    if (isExpanded) {
+                        alertHoldJob = viewModelScope.launch {
+                            while (true) {
+                                alertEngine.touch(System.currentTimeMillis())
+                                delay(ALERT_HOLD_INTERVAL_MS)
+                            }
+                        }
+                    } else {
+                        onUserInteraction()
+                    }
                     if (isExpanded) {
                         if (!isInputActive.value) {
                             startAutoCollapseTimer()
@@ -138,12 +227,84 @@ class IslandViewModel(
     }
 
     fun expand() {
+        if (!canExpandNow()) return
         expanded.value = true
+    }
+
+    /** Landscape blocks the Medium card while alerts are on the island; the idle dashboard still opens. */
+    private fun canExpandNow(): Boolean =
+        ExpansionPolicy.canExpand(hasAlerts = visibleNotifications.value.isNotEmpty(), isLandscape = isLandscape.value)
+
+    fun setLocked(locked: Boolean) {
+        isLocked.value = locked
+    }
+
+    /** Called by the overlay service on every orientation change; turning sideways closes an open alert card. */
+    fun setLandscape(landscape: Boolean) {
+        isLandscape.value = landscape
+        if (expanded.value && !canExpandNow()) collapse()
+    }
+
+    fun setScreenOn(on: Boolean) {
+        screenOnState.value = on
+    }
+
+    fun setAmbientMode(active: Boolean, shiftX: Float = 0f, shiftY: Float = 0f) {
+        ambientMode.value = active
+        burnInShiftX.value = shiftX
+        burnInShiftY.value = shiftY
+    }
+
+    /** Set by the foreground secure-window detector (Rule_Book §8.2). */
+    fun setForegroundSecure(secure: Boolean) {
+        foregroundSecure.value = secure
     }
 
     fun collapse() {
         isInputActive.value = false
         expanded.value = false
+    }
+
+    private val immersiveState = MutableStateFlow(false)
+
+    /** A full-screen app has hidden the status bar (Rule_Book 10.1). */
+    val isImmersive: StateFlow<Boolean> = immersiveState
+
+    /** SUPPRESSED: immersive with nothing allowed through, so the island fades out and lets touches pass. */
+    val isSuppressed: StateFlow<Boolean> = combine(immersiveState, visibleNotifications) { immersive, list ->
+        immersive && list.isEmpty()
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    /** Fed by the overlay service's system-bar probe; only alarms and incoming calls show while true. */
+    fun setImmersive(immersive: Boolean) {
+        if (alertEngine.immersive == immersive) return
+        alertEngine.immersive = immersive
+        immersiveState.value = immersive
+        alertTick.update { it + 1 }
+    }
+
+    /** The lock screen's face-unlock window (Rule_Book 8.2): the island holds IDLE while true. */
+    fun setBiometricClearance(active: Boolean) {
+        if (alertEngine.biometricHold == active) return
+        alertEngine.biometricHold = active
+        if (active) collapse()
+        alertTick.update { it + 1 }
+    }
+
+    /** The user touched the island: pending messages get their full seven seconds again. */
+    fun onUserInteraction() {
+        alertEngine.touch(System.currentTimeMillis())
+        alertTick.update { it + 1 }
+    }
+
+    private fun scheduleAlertExpiry(expiresAtMs: Long?, nowMs: Long) {
+        alertExpiryJob?.cancel()
+        alertExpiryJob = null
+        if (expiresAtMs == null) return
+        alertExpiryJob = viewModelScope.launch {
+            delay((expiresAtMs - nowMs).coerceAtLeast(0L) + ALERT_EXPIRY_SLACK_MS)
+            alertTick.update { it + 1 }
+        }
     }
 
     fun setInputActive(active: Boolean) {
@@ -158,14 +319,20 @@ class IslandViewModel(
         val now = System.currentTimeMillis()
         if (now - lastToggleTimeMs < 350L) return
         lastToggleTimeMs = now
+        if (!expanded.value && !canExpandNow()) {
+            // A tap in landscape keeps the alert small, but still counts as an interaction.
+            onUserInteraction()
+            return
+        }
         expanded.update { !it }
     }
 
     private fun startAutoCollapseTimer() {
         autoCollapseJob?.cancel()
         if (isInputActive.value) return
+        val delayMs = if (mode.value == IslandMode.Music) MUSIC_COLLAPSE_DELAY_MS else AUTO_COLLAPSE_DELAY_MS
         autoCollapseJob = viewModelScope.launch {
-            delay(AUTO_COLLAPSE_DELAY_MS)
+            delay(delayMs)
             collapse()
         }
     }
@@ -194,8 +361,12 @@ class IslandViewModel(
         val index = selectedIndex.value
         if (index in list.indices) {
             val notification = list[index]
-            notificationRepo.removeNotification(notification.key)
-            notificationRepo.sendCommand(SmartIslandCommand.CancelNotification(notification.key))
+            // A folded entry dismisses every message it stands for.
+            val keys = notification.memberKeys.ifEmpty { listOf(notification.key) }
+            keys.forEach { key ->
+                notificationRepo.removeNotification(key)
+                notificationRepo.sendCommand(SmartIslandCommand.CancelNotification(key))
+            }
         }
         collapse()
     }
@@ -212,6 +383,10 @@ class IslandViewModel(
     companion object {
         private const val TAG = "IslandViewModel"
         private const val AUTO_COLLAPSE_DELAY_MS = 5000L
+        private const val MUSIC_COLLAPSE_DELAY_MS = 10_000L
+        private const val ALERT_HOLD_INTERVAL_MS = 1_000L
+        private const val ALERT_EXPIRY_SLACK_MS = 20L
+        private const val ALERT_VISIBLE_WAIT_MS = 500L
 
         fun provideFactory(
             settingsRepo: SmartIslandSettingsRepository,

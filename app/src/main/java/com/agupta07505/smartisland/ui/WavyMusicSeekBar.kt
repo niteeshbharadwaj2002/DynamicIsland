@@ -50,10 +50,11 @@ fun WavyMusicSeekBar(
     thumbColor: Color = Color.White,
     waveHeight: Dp = 8.dp,
     trackThickness: Dp = 4.dp,
-    thumbRadius: Dp = 8.dp
+    thumbRadius: Dp = 8.dp,
+    touchHeight: Dp = 44.dp
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "wavySeekBarPhase")
-    val phase by infiniteTransition.animateFloat(
+    val phase by infiniteTransition.animateFloatCalm(
         initialValue = 0f,
         targetValue = if (isPlaying) 6.2831855f else 0f,
         animationSpec = infiniteRepeatable(
@@ -72,7 +73,7 @@ fun WavyMusicSeekBar(
     Canvas(
         modifier = modifier
             .fillMaxWidth()
-            .height(24.dp)
+            .height(touchHeight)
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
                     val newProgress = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)

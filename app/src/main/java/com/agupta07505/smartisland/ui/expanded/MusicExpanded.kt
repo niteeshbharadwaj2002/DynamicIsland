@@ -7,7 +7,22 @@
 
 package com.agupta07505.smartisland.ui.expanded
 
+import com.agupta07505.smartisland.R
+import androidx.compose.ui.res.stringResource
+import com.agupta07505.smartisland.ui.IslandPalette
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,8 +36,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -43,7 +56,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -59,7 +75,10 @@ import com.agupta07505.smartisland.di.SmartIslandRepositories
 import com.agupta07505.smartisland.model.IslandNotification
 import com.agupta07505.smartisland.ui.WavyMusicSeekBar
 import com.agupta07505.smartisland.ui.bounceClick
+import com.agupta07505.smartisland.util.MediaCustomAction
+import com.agupta07505.smartisland.util.MediaLike
 import com.agupta07505.smartisland.util.runCatchingLogged
+import kotlinx.coroutines.launch
 import kotlin.math.sin
 import kotlin.math.cos
 
@@ -67,6 +86,8 @@ import kotlin.math.cos
 fun MusicExpanded(
     notification: IslandNotification?,
     bottomPadding: Dp,
+    onOpenApp: () -> Unit,
+    onCollapse: () -> Unit,
     settings: SmartIslandSettings = SmartIslandSettings.Default
 ) {
     val context = LocalContext.current
@@ -103,7 +124,8 @@ fun MusicExpanded(
         mutableStateOf(getEstimatedPosition(controller, positionMs))
     }
 
-    if (localIsPlaying) {
+    // The 30ms scrubber ticker stops with the screen (Rule_Book 5) and re-reads the position when it wakes.
+    if (localIsPlaying && com.agupta07505.smartisland.ui.LocalScreenOn.current) {
         LaunchedEffect(controller, positionMs) {
             while (true) {
                 if (System.currentTimeMillis() - lastSeekTimeMs > 1500L) {
@@ -120,50 +142,6 @@ fun MusicExpanded(
         notification?.progressMax?.let { it > 0 } == true ->
             (notification.progress.toFloat() / notification.progressMax.toFloat()).coerceIn(0f, 1f)
         else -> 0f
-    }
-
-    val getRepeatModeReflect = remember {
-        { ctrl: android.media.session.MediaController? ->
-            if (ctrl != null) {
-                var mode = -1
-                
-                // 1. Try AndroidX repeat mode extras first (highly accurate for modern apps like Spotify/YT Music)
-                val extras = ctrl.extras
-                if (extras != null && extras.containsKey("androidx.media.MediaSessionCompat.Extras.KEY_REPEAT_MODE")) {
-                    mode = extras.getInt("androidx.media.MediaSessionCompat.Extras.KEY_REPEAT_MODE", -1)
-                }
-                
-                // 2. Try standard framework repeat mode if extras not found or invalid
-                if (mode == -1) {
-                    mode = runCatchingLogged("MusicExpanded", "Failed to getRepeatMode via reflection") {
-                        val method = ctrl.javaClass.getMethod("getRepeatMode")
-                        method.invoke(ctrl) as Int
-                    } ?: -1
-                }
-                
-                // 3. Try custom action states fallback
-                if (mode == -1 || mode == 0) {
-                    val customActions = ctrl.playbackState?.customActions.orEmpty()
-                    val activeRepeatAction = customActions.firstOrNull { action ->
-                        val actionName = action.action.lowercase()
-                        actionName.contains("repeat") || actionName.contains("loop")
-                    }
-                    if (activeRepeatAction != null) {
-                        val title = activeRepeatAction.name.toString().lowercase()
-                        if (title.contains("one") || title.contains("single") || title.contains("track")) {
-                            mode = 1 // loop one
-                        } else if (title.contains("all") || title.contains("playlist") || title.contains("on") || title.contains("enable")) {
-                            mode = 2 // loop all
-                        } else {
-                            mode = 0
-                        }
-                    }
-                }
-                if (mode == -1) 0 else mode
-            } else {
-                0
-            }
-        }
     }
 
     val getIsHeartedReflect = remember {
@@ -184,57 +162,47 @@ fun MusicExpanded(
         }
     }
 
-    val resolveLikeState = remember(getIsHeartedReflect) {
+    // What the player itself reports: true/false when it exposes a favorite toggle (its label says
+    // "Add to…" or "Remove from…") or a heart rating; null when it exposes nothing readable.
+    val readReportedLike = remember(getIsHeartedReflect) {
         { ctrl: android.media.session.MediaController? ->
-            if (ctrl != null) {
-                val ratingIsHearted = getIsHeartedReflect(ctrl.metadata)
-                if (ratingIsHearted) {
-                    true
-                } else {
-                    val customActions = ctrl.playbackState?.customActions.orEmpty()
-                    customActions.any { action ->
-                        val actionName = action.action.lowercase()
-                        val title = action.name.toString().lowercase()
-                        actionName.contains("unlike") || actionName.contains("remove") ||
-                        title.contains("unlike") || title.contains("remove")
-                    }
-                }
-            } else {
-                false
+            val actions = ctrl?.playbackState?.customActions.orEmpty()
+                .map { MediaCustomAction(it.action.orEmpty(), it.name?.toString().orEmpty()) }
+            val likeAction = MediaLike.findAction(actions)
+            val hearted = getIsHeartedReflect(ctrl?.metadata)
+            when {
+                hearted -> true
+                likeAction != null -> MediaLike.isActive(likeAction)
+                else -> null
             }
         }
     }
 
-    var isLiked by remember(notification?.key) { mutableStateOf(false) }
-    var localIsLiked by remember(notification?.key, isLiked) {
-        mutableStateOf(isLiked)
-    }
-    var repeatMode by remember(notification?.key) { mutableStateOf(0) }
+    // `reported` is the player's truth; `optimistic` bridges the moment between the tap and the
+    // player confirming it, and is dropped as soon as the player reports (or fails to).
+    val trackId = notification?.key to notification?.title
+    var reported by remember(trackId) { mutableStateOf<Boolean?>(null) }
+    var optimistic by remember(trackId) { mutableStateOf<Boolean?>(null) }
+    val localIsLiked = optimistic ?: reported ?: false
+    val likeScope = androidx.compose.runtime.rememberCoroutineScope()
 
     DisposableEffect(controller) {
         if (controller == null) return@DisposableEffect onDispose {}
+        val sync = {
+            val now = readReportedLike(controller)
+            reported = now
+            if (now != null) optimistic = null
+        }
         val callback = object : android.media.session.MediaController.Callback() {
             override fun onPlaybackStateChanged(state: android.media.session.PlaybackState?) {
-                repeatMode = getRepeatModeReflect(controller)
-                isLiked = resolveLikeState(controller)
+                sync()
+                localIsPlaying = state?.state == android.media.session.PlaybackState.STATE_PLAYING
             }
             override fun onMetadataChanged(metadata: android.media.MediaMetadata?) {
-                isLiked = resolveLikeState(controller)
-            }
-            override fun onExtrasChanged(extras: android.os.Bundle?) {
-                repeatMode = getRepeatModeReflect(controller)
-            }
-            override fun onQueueChanged(queue: MutableList<android.media.session.MediaSession.QueueItem>?) {
-                repeatMode = getRepeatModeReflect(controller)
-            }
-            // Public method invoked by platform dynamically at runtime via reflection
-            @Suppress("unused")
-            fun onRepeatModeChanged(mode: Int) {
-                repeatMode = mode
+                sync()
             }
         }
-        repeatMode = getRepeatModeReflect(controller)
-        isLiked = resolveLikeState(controller)
+        sync()
         controller.registerCallback(callback)
         onDispose {
             controller.unregisterCallback(callback)
@@ -242,61 +210,49 @@ fun MusicExpanded(
     }
 
     val toggleLike = {
-        val newLike = !localIsLiked
-        localIsLiked = newLike
+        val wasLiked = localIsLiked
+        val target = !wasLiked
         if (controller != null) {
-            runCatchingLogged("MusicExpanded", "Failed to toggleLike / setRating") {
-                controller.transportControls.setRating(
-                    android.media.Rating.newHeartRating(newLike)
-                )
-                val customActions = controller.playbackState?.customActions.orEmpty()
-                val likeAction = customActions.firstOrNull { action ->
-                    val actionName = action.action.lowercase()
-                    val title = action.name.toString().lowercase()
-                    actionName.contains("like") || actionName.contains("favorite") ||
-                    title.contains("like") || title.contains("favorite")
+            val actions = controller.playbackState?.customActions.orEmpty()
+            val action = actions.firstOrNull {
+                MediaLike.findAction(listOf(MediaCustomAction(it.action.orEmpty(), it.name?.toString().orEmpty()))) != null
+            }
+            optimistic = target
+            runCatchingLogged("MusicExpanded", "Failed to toggle like") {
+                if (action != null) {
+                    // One mechanism only: the player's own toggle. Adding a rating as well would flip it twice.
+                    controller.transportControls.sendCustomAction(action, null)
+                } else {
+                    controller.transportControls.setRating(android.media.Rating.newHeartRating(target))
                 }
-                if (likeAction != null) {
-                    controller.transportControls.sendCustomAction(likeAction.action, null)
+            }
+            if (action != null) {
+                // If the player never confirms, show the truth instead of a heart that only looks liked.
+                likeScope.launch {
+                    kotlinx.coroutines.delay(1800)
+                    if (optimistic == target && reported == wasLiked) optimistic = null
                 }
             }
         }
     }
-
-    val toggleLoop = {
-        val nextMode = when (repeatMode) {
-            0 -> 1 // REPEAT_MODE_NONE -> REPEAT_MODE_ONE (Repeat One)
-            1 -> 2 // REPEAT_MODE_ONE -> REPEAT_MODE_ALL (Repeat All)
-            2 -> 0 // REPEAT_MODE_ALL -> REPEAT_MODE_NONE (None)
-            else -> 1
-        }
-        repeatMode = nextMode
+    val coroutineScope = rememberCoroutineScope()
+    val stopSong = {
+        val repo = SmartIslandRepositories.notificationRepository(context)
         if (controller != null) {
-            var standardInvoked = false
-            runCatchingLogged("MusicExpanded", "Failed to setRepeatMode standard") {
-                // 1. Try framework standard repeat mode setter via reflection
-                val transportControls = controller.transportControls
-                val method = transportControls.javaClass.getMethod("setRepeatMode", Int::class.javaPrimitiveType)
-                method.invoke(transportControls, nextMode)
-                standardInvoked = true
+            runCatchingLogged("MusicExpanded", "Failed to stop playback") {
+                controller.transportControls.stop()
             }
-            
-            if (!standardInvoked) {
-                runCatchingLogged("MusicExpanded", "Failed to setRepeatMode custom action fallback") {
-                    // 2. Custom repeat toggle action fallback (only when standard method cannot be resolved)
-                    val customActions = controller.playbackState?.customActions.orEmpty()
-                    val repeatAction = customActions.firstOrNull { action ->
-                        val actionName = action.action.lowercase()
-                        val title = action.name.toString().lowercase()
-                        actionName.contains("repeat") || actionName.contains("loop") ||
-                        title.contains("repeat") || title.contains("loop")
-                    }
-                    if (repeatAction != null) {
-                        controller.transportControls.sendCustomAction(repeatAction.action, null)
-                    }
-                }
+        } else {
+            notification?.sendFirstAction(context, "stop", "close", "dismiss")
+        }
+        val pkg = notification?.packageName
+        if (pkg != null && com.agupta07505.smartisland.util.ShizukuManager.hasPermission()) {
+            coroutineScope.launch {
+                com.agupta07505.smartisland.util.ShizukuManager.forceStopPackage(pkg)
             }
         }
+        notification?.key?.let { repo.removeNotification(it) }
+        onCollapse()
     }
 
     val metadataArtwork = remember(controller, controller?.metadata) {
@@ -309,94 +265,103 @@ fun MusicExpanded(
             }
         } else null
     }
-
     val artwork = notification?.largeIcon ?: metadataArtwork ?: notification?.icon
+    val accent = Color(settings.musicVisualizerColor)
 
+    // Repeat is not part of the MediaController transport API: players expose it either as a custom
+    // playback action or as a notification action. Look for either; with neither, the button is dimmed.
+    val repeatCustomAction = controller?.playbackState?.customActions.orEmpty().firstOrNull {
+        val label = (it.action.orEmpty() + " " + it.name?.toString().orEmpty()).lowercase()
+        label.contains("repeat") || label.contains("loop")
+    }
+    val repeatAvailable = repeatCustomAction != null ||
+        notification?.actionIntents.orEmpty().any { a ->
+            a.title.lowercase().let { it.contains("repeat") || it.contains("loop") }
+        }
+    var repeatOn by remember(notification?.key) { mutableStateOf(false) }
+
+    // The card owns its touches: only the metadata row opens the app. Buttons, scrubber and the empty
+    // space between them never launch it, and each interaction restarts the auto-collapse timer.
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight()
+            .background(Color.Black)
     ) {
-        if (settings.enableMusicArtworkBackground && artwork != null) {
-            Image(
-                bitmap = artwork.asImageBitmap(),
-                contentDescription = "Album artwork background",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .matchParentSize()
-                    .graphicsLayer { alpha = 0.45f }
-            )
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                Color.Black.copy(alpha = 0.35f),
-                                Color.Black.copy(alpha = 0.85f)
-                            )
-                        )
-                    )
-            )
-        }
-
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .wrapContentHeight()
-                .padding(start = 18.dp, top = 20.dp, end = 18.dp, bottom = bottomPadding)
+                .padding(start = 20.dp, top = 14.dp, end = 20.dp, bottom = 12.dp)
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                if (artwork != null) {
-                Image(
-                    bitmap = artwork.asImageBitmap(),
-                    contentDescription = null,
+            // Top row: cover, track + artist, waveform. This is the one region that opens the source app.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .clickable(role = Role.Button, onClick = onOpenApp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(
                     modifier = Modifier
-                        .size(42.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                )
-            } else {
-                Icon(
-                    imageVector = Icons.Rounded.MusicNote,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(settings.musicVisualizerColor))
-                        .padding(8.dp)
-                )
-            }
-            Column(Modifier.weight(1f)) {
-                Text(
-                    notification?.title?.takeIf { it.isNotBlank() } ?: "Song",
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(accent.copy(alpha = 0.35f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (artwork != null) {
+                        Image(
+                            bitmap = artwork.asImageBitmap(),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.matchParentSize()
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Rounded.MusicNote,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = notification?.title?.takeIf { it.isNotBlank() } ?: "Song",
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = notification?.text?.takeIf { it.isNotBlank() } ?: notification?.appName ?: "Artist",
+                        color = IslandPalette.secondaryLabel,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                MusicWaveform(
+                    isPlaying = localIsPlaying,
                     color = Color.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    notification?.text?.takeIf { it.isNotBlank() } ?: notification?.appName ?: "Artist",
-                    color = Color(0xFFD5DAE0),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    fontSize = 12.sp
+                    barCount = 12,
+                    barWidth = 2.5.dp,
+                    gap = 2.dp,
+                    height = 28.dp
                 )
             }
-        }
-        Spacer(Modifier.height(7.dp))
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(formatDuration(livePositionMs), color = Color.White, fontSize = 10.sp)
+
+            val seekDescription = stringResource(R.string.a11y_playback_position)
             WavyMusicSeekBar(
                 progress = progress,
                 isPlaying = localIsPlaying,
                 onSeek = { newProgress ->
+                    SmartIslandRepositories.notificationRepository(context).resetTimer()
                     if (durationMs != null && durationMs > 0) {
                         val newPosition = (newProgress * durationMs).toLong()
                         livePositionMs = newPosition
                         lastSeekTimeMs = System.currentTimeMillis()
-                        SmartIslandRepositories.notificationRepository(context).resetTimer()
                         if (controller != null) {
                             runCatchingLogged("MusicExpanded", "Failed to seekTo position") {
                                 controller.transportControls.seekTo(newPosition)
@@ -410,40 +375,56 @@ fun MusicExpanded(
                         }
                     }
                 },
-                modifier = Modifier.weight(1f)
+                trackColor = Color.White.copy(alpha = 0.28f),
+                waveHeight = 4.dp,
+                trackThickness = 3.dp,
+                thumbRadius = 6.dp,
+                touchHeight = 28.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics { contentDescription = seekDescription }
             )
-            Text(formatDuration(durationMs), color = Color.White, fontSize = 10.sp)
-        }
-        Spacer(Modifier.height(8.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // 1. Song Like Button (left of skip previous)
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .bounceClick {
-                        SmartIslandRepositories.notificationRepository(context).resetTimer()
-                        toggleLike()
-                    },
-                contentAlignment = Alignment.Center
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Icon(
-                    imageVector = if (localIsLiked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                    contentDescription = "Like",
-                    tint = if (localIsLiked) Color(0xFFFF4B72) else Color.White,
-                    modifier = Modifier.size(24.dp)
-                )
+                Text(formatDuration(livePositionMs), color = IslandPalette.secondaryLabel, style = MaterialTheme.typography.labelSmall)
+                Text(formatDuration(durationMs), color = IslandPalette.secondaryLabel, style = MaterialTheme.typography.labelSmall)
             }
-            Spacer(Modifier.width(12.dp))
-            
-            // 2. Skip Previous Button
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .bounceClick {
+
+            // Controls, in order: Repeat, Previous, Play/Pause, Next, End.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                MusicControl(
+                    icon = if (repeatOn) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat,
+                    description = stringResource(R.string.a11y_repeat),
+                    tint = when {
+                        !repeatAvailable -> Color.White.copy(alpha = 0.25f)
+                        repeatOn -> accent
+                        else -> Color.White.copy(alpha = 0.6f)
+                    },
+                    onClick = {
+                        SmartIslandRepositories.notificationRepository(context).resetTimer()
+                        if (repeatAvailable) {
+                            repeatOn = !repeatOn
+                            if (repeatCustomAction != null && controller != null) {
+                                runCatchingLogged("MusicExpanded", "Failed to toggle repeat") {
+                                    controller.transportControls.sendCustomAction(repeatCustomAction, null)
+                                }
+                            } else {
+                                notification.trySendFirstAction(context, "repeat", "loop")
+                            }
+                        }
+                    }
+                )
+                MusicControl(
+                    icon = Icons.Rounded.SkipPrevious,
+                    description = stringResource(R.string.a11y_previous),
+                    iconSize = 28.dp,
+                    onClick = {
                         SmartIslandRepositories.notificationRepository(context).resetTimer()
                         if (controller != null) {
                             runCatchingLogged("MusicExpanded", "Failed to skipToPrevious") {
@@ -452,49 +433,33 @@ fun MusicExpanded(
                         } else {
                             notification.sendFirstAction(context, "previous", "prev", "rewind")
                         }
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Rounded.SkipPrevious, contentDescription = null, tint = Color.White)
-            }
-            Spacer(Modifier.width(16.dp))
-            
-            // 3. Play/Pause Button
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .bounceClick {
+                    }
+                )
+                MusicControl(
+                    icon = if (localIsPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                    description = stringResource(if (localIsPlaying) R.string.a11y_pause else R.string.a11y_play),
+                    size = 46.dp,
+                    iconSize = 28.dp,
+                    filled = true,
+                    onClick = {
                         SmartIslandRepositories.notificationRepository(context).resetTimer()
                         val targetState = !localIsPlaying
                         localIsPlaying = targetState
                         if (controller != null) {
                             runCatchingLogged("MusicExpanded", "Failed to play/pause") {
-                                if (targetState) {
-                                    controller.transportControls.play()
-                                } else {
-                                    controller.transportControls.pause()
-                                }
+                                if (targetState) controller.transportControls.play()
+                                else controller.transportControls.pause()
                             }
                         } else {
                             notification.sendFirstAction(context, "play", "pause", "resume")
                         }
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = if (localIsPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(38.dp)
+                    }
                 )
-            }
-            Spacer(Modifier.width(16.dp))
-            
-            // 4. Skip Next Button
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .bounceClick {
+                MusicControl(
+                    icon = Icons.Rounded.SkipNext,
+                    description = stringResource(R.string.a11y_next),
+                    iconSize = 28.dp,
+                    onClick = {
                         SmartIslandRepositories.notificationRepository(context).resetTimer()
                         if (controller != null) {
                             runCatchingLogged("MusicExpanded", "Failed to skipToNext") {
@@ -503,35 +468,46 @@ fun MusicExpanded(
                         } else {
                             notification.sendFirstAction(context, "next", "skip", "forward")
                         }
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Rounded.SkipNext, contentDescription = null, tint = Color.White)
-            }
-            Spacer(Modifier.width(12.dp))
-            
-            // 5. Song Loop Button (right of skip next)
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .bounceClick {
-                        SmartIslandRepositories.notificationRepository(context).resetTimer()
-                        toggleLoop()
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                val tintColor = when (repeatMode) {
-                    1, 2 -> Color(0xFF1DB954) // spotify green loop active
-                    else -> Color.White
-                }
-                Icon(
-                    imageVector = if (repeatMode == 1) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat,
-                    contentDescription = "Loop",
-                    tint = tintColor,
-                    modifier = Modifier.size(24.dp)
+                    }
+                )
+                // End: (1) stops playback through the session's transport controls, (2) asks the player
+                // to close (a notification "stop/close/dismiss" action when there is no session; a third
+                // party app cannot be force-killed from here), and (3) removes the island's entry and
+                // collapses it. See `stopSong` above, which is where to add anything further.
+                MusicControl(
+                    icon = Icons.Rounded.Close,
+                    description = stringResource(R.string.a11y_stop_playback),
+                    onClick = stopSong
                 )
             }
         }
     }
 }
+
+/** Round transport button: at least 48dp, optionally filled (primary action). */
+@Composable
+private fun MusicControl(
+    icon: ImageVector,
+    description: String,
+    onClick: () -> Unit,
+    size: Dp = 44.dp,
+    iconSize: Dp = 22.dp,
+    tint: Color = Color.White,
+    filled: Boolean = false
+) {
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clip(CircleShape)
+            .then(if (filled) Modifier.background(IslandPalette.fillStrong) else Modifier)
+            .bounceClick(onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = description,
+            tint = tint,
+            modifier = Modifier.size(iconSize)
+        )
+    }
 }
