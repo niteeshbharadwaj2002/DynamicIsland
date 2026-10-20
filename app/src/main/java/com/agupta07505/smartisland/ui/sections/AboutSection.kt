@@ -114,7 +114,7 @@ fun AboutSection(
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Column {
                     Text(
-                        text = "Smart Island",
+                        text = stringResource(R.string.app_name),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface

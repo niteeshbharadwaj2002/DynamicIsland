@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Smart Island Personal</string>
+    <string name="app_name">NotchIQ</string>
     <string name="app_subtitle">Sobreposição dinâmica flutuante</string>
     <string name="app_description">Smart Island reimagina notificações Android com uma bela experiência flutuante, controles interativos e animações fluidas – mantendo tudo importante apenas um olhar de distância.</string>
-    <string name="accessibility_service_label">Serviço de ilha inteligente</string>
+    <string name="accessibility_service_label">Serviço NotchIQ</string>
     <string name="accessibility_service_description">Permite que a sobreposição da Ilha Inteligente se sente em cima da barra de status para que você possa tocar na pílula em torno do recorte da câmera sem interferência de toque.</string>
     <string name="grant_accessibility">Permitir permissão de acessibilidade para iniciar sobreposição da barra de status</string>
     <string name="made_by">Feita com o "O" de Animesh Gupta</string>
@@ -12,7 +12,7 @@
     <string name="tab_settings">Configurações</string>
     <string name="tab_features">Características</string>
     <string name="tab_system">&amp; Sobre o Sistema</string>
-    <string name="master_switch_title">Ilha Inteligente</string>
+    <string name="master_switch_title">NotchIQ</string>
     <string name="master_switch_active_desc">Activo</string>
     <string name="master_switch_ready_desc">Desligado — toque para iniciar</string>
     <string name="master_switch_missing_desc">Permissões necessárias</string>
@@ -112,7 +112,7 @@
     <string name="status_update_available">Nova versão %1$s está disponível</string>
     <string name="btn_download_apk">Baixar APK</string>
     <string name="detail_title_permissions_center">Permissões e Centro de Configuração</string>
-    <string name="detail_title_about_app">Sobre a Ilha Inteligente</string>
+    <string name="detail_title_about_app">Sobre o NotchIQ</string>
     <string name="detail_title_support_community">Suporte e Feedback</string>
     <string name="shizuku_card_title">Configuração Automática Shizuku 1-Tap</string>
     <string name="shizuku_card_desc">Concede permissões através do Shizuku, sem abrir cada página de configurações do sistema. Escolha quanto para conceder.</string>
@@ -421,7 +421,7 @@
     <string name="report_bug_desc">Ficheiro um problema com os detalhes do dispositivo no GitHub</string>
     <string name="license_title">Licença (GNU GPL v3)</string>
     <string name="license_desc">Software de Código Livre e Aberto</string>
-    <string name="about_title">Sobre a Ilha Inteligente</string>
+    <string name="about_title">Sobre o NotchIQ</string>
     <string name="github_update_center_title">Centro de Atualização do GitHub</string>
     <string name="current_version_label">Versão atual: v%1$s</string>
     <string name="btn_check_updates">Verificar</string>

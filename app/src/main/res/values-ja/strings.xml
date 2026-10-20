@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Smart Island Personal</string>
+    <string name="app_name">NotchIQ</string>
     <string name="app_subtitle">フローティング・ダイナミック・オーバーレイ</string>
     <string name="app_description">スマートアイランドは、美しいフローティング体験、インタラクティブコントロール、および流体アニメーションでAndroidの通知を想像し、すべてを重要なものにします.</string>
-    <string name="accessibility_service_label">スマートアイランドサービス</string>
+    <string name="accessibility_service_label">NotchIQ サービス</string>
     <string name="accessibility_service_description">スマートアイランドオーバーレイがステータスバーの上に座るようにすることで、タッチ干渉なしでカメラのカットアウトの周りの丸薬をタップできます.</string>
     <string name="grant_accessibility">ステータスバーのオーバーレイを開始するためのアクセス許可の付与</string>
     <string name="made_by">アニメッシュ・グプタの❤️で作って</string>
@@ -12,7 +12,7 @@
     <string name="tab_settings">コンテンツ</string>
     <string name="tab_features">特徴:</string>
     <string name="tab_system">システムについて</string>
-    <string name="master_switch_title">スマートアイランド</string>
+    <string name="master_switch_title">NotchIQ</string>
     <string name="master_switch_active_desc">アクティブ</string>
     <string name="master_switch_ready_desc">オフ — タップして開始</string>
     <string name="master_switch_missing_desc">必要な許可</string>
@@ -112,7 +112,7 @@
     <string name="status_update_available">新しいバージョンの%1$sが利用可能です</string>
     <string name="btn_download_apk">APKをダウンロード</string>
     <string name="detail_title_permissions_center">パーミッション&amp;セットアップセンター</string>
-    <string name="detail_title_about_app">スマートアイランドについて</string>
+    <string name="detail_title_about_app">NotchIQ について</string>
     <string name="detail_title_support_community">サポート&amp;フィードバック</string>
     <string name="shizuku_card_title">Shizuku 1-Tap 自動セットアップ</string>
     <string name="shizuku_card_desc">各システム設定ページを開くことなく、志津区の許可を付与します。 助成金額を選択してください.</string>
@@ -421,7 +421,7 @@
     <string name="report_bug_desc">GitHubでデバイスの詳細を提出する</string>
     <string name="license_title">ライセンス(GNU GPL v3)</string>
     <string name="license_desc">フリー&amp;オープンソースソフトウェア</string>
-    <string name="about_title">スマートアイランドについて</string>
+    <string name="about_title">NotchIQ について</string>
     <string name="github_update_center_title">GitHubアップデートセンター</string>
     <string name="current_version_label">現在のバージョン: v%1$s</string>
     <string name="btn_check_updates">チェックイン</string>

@@ -4,6 +4,16 @@ All notable changes to Smart Island should be documented in this file.
 
 The format is inspired by Keep a Changelog, and this project uses the GNU General Public License v3.0.
 
+## [Unreleased]
+
+### Changed
+- The app is renamed to **NotchIQ**. `app_name` is updated in all six locales (en, es, ja, pt-BR, zh-CN and the default), and the launcher label, the master switch, the About screen titles and the accessibility service label all show NotchIQ. Issue [#6](https://github.com/niteeshbharadwaj2002/NotchIQ/issues/6).
+- The home header's status pill (Active / Ready / Setup needed) now sits below the app name and subtitle instead of beside them, so a longer name or a larger font no longer crowds it.
+- New `homeStatus()` helper decides the pill state: setup needed wins, then Active or Ready. Covered by `HomeStatusTest` (3 tests).
+
+### Known follow-up
+- Many descriptive strings still call the feature "Smart Island" (for example the accessibility service description and the app description). Renaming them is a separate change.
+
 ## [7.6.0-personal] - 2026-10-20
 
 NotchIQ is a personal fork of Smart Island. This release is Smart Island **7.6.0** with NotchIQ's own work ported on top.
