@@ -7,72 +7,158 @@
 
 package com.agupta07505.smartisland.ui.expanded
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.CallEnd
-import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.MicOff
-import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material3.Icon
 import com.agupta07505.smartisland.ui.IslandText as Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.agupta07505.smartisland.ui.NotchPalette
+import com.agupta07505.smartisland.R
 import com.agupta07505.smartisland.data.SmartIslandSettings
 import com.agupta07505.smartisland.model.IslandNotification
-import com.agupta07505.smartisland.model.IslandNotificationAction
+import com.agupta07505.smartisland.ui.CallTimer
+import com.agupta07505.smartisland.ui.animateFloatCalm
 import com.agupta07505.smartisland.ui.bounceClick
-import com.agupta07505.smartisland.util.CallActionRole
-import com.agupta07505.smartisland.util.VoipCallDetector
+import com.agupta07505.smartisland.ui.rememberIslandAnimationsActive
+import com.agupta07505.smartisland.util.GatedAction
+import com.agupta07505.smartisland.util.IslandControl
+import com.agupta07505.smartisland.util.OemDeviceRules
 
-private data class CallControl(
-    val action: IslandNotificationAction,
-    val role: CallActionRole,
-    /** Mute is on / speaker is on, judged from the button's own label. */
-    val active: Boolean
-)
+/** A WhatsApp / Meet / Telegram call (anything but the phone's own dialer) gets the app badge (Rule_Book §4.7). */
+private fun IslandNotification.isVoipCall(): Boolean = !OemDeviceRules.isDialerCall(packageName)
 
-private fun callControls(notification: IslandNotification?): List<CallControl> {
-    if (notification == null) return emptyList()
-    val real = notification.actionIntents.filter { it.pendingIntent != null }
-    fun first(role: CallActionRole) = real.firstOrNull { VoipCallDetector.classifyCallAction(it.title) == role }
-    val controls = mutableListOf<CallControl>()
-    val unmute = first(CallActionRole.Unmute)
-    val mute = first(CallActionRole.Mute)
-    if (unmute != null) {
-        controls.add(CallControl(unmute, CallActionRole.Mute, active = true))
-    } else if (mute != null) {
-        controls.add(CallControl(mute, CallActionRole.Mute, active = false))
+/**
+ * The caller's avatar; for a VoIP call the app's icon sits as a badge on its corner. Without a contact photo
+ * the app icon (or a phone glyph) stands in. Used by the small pill, the companion bubble and the Medium card.
+ */
+@Composable
+fun CallAvatar(
+    notification: IslandNotification?,
+    size: Dp,
+    settings: SmartIslandSettings = SmartIslandSettings.Default
+) {
+    val photo = notification?.largeIcon?.takeIf { !it.isRecycled }
+    val appIcon = notification?.icon?.takeIf { !it.isRecycled }
+    val main = photo ?: appIcon
+    Box(modifier = Modifier.size(size)) {
+        if (main != null) {
+            val bitmap = remember(main) { main.asImageBitmap() }
+            Image(
+                bitmap = bitmap,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape)
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape)
+                    .background(Color(settings.callColor).copy(alpha = 0.22f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Rounded.Call, contentDescription = null, tint = Color(settings.callColor), modifier = Modifier.size(size * 0.55f))
+            }
+        }
+        // The badge only adds information when the avatar is a contact photo, not the app icon itself.
+        if (notification != null && photo != null && appIcon != null && notification.isVoipCall()) {
+            val badge = remember(appIcon) { appIcon.asImageBitmap() }
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(size * 0.46f)
+                    .clip(CircleShape)
+                    .background(Color.Black)
+                    .padding(1.dp)
+            ) {
+                Image(
+                    bitmap = badge,
+                    contentDescription = notification.appName,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                )
+            }
+        }
     }
-    first(CallActionRole.Speaker)?.let {
-        controls.add(CallControl(it, CallActionRole.Speaker, VoipCallDetector.isSpeakerOnLabel(it.title)))
-    }
-    first(CallActionRole.HangUp)?.let { controls.add(CallControl(it, CallActionRole.HangUp, false)) }
-    first(CallActionRole.Answer)?.let { controls.add(CallControl(it, CallActionRole.Answer, false)) }
-    return controls
 }
 
+/** Small state, right: a pulsing call icon while it rings, the live duration once answered. */
+@Composable
+fun CallCollapsedRight(notification: IslandNotification?, settings: SmartIslandSettings) {
+    val color = Color(settings.callColor)
+    if (notification?.isCallRinging == true) {
+        val pulse = if (rememberIslandAnimationsActive()) {
+            val transition = rememberInfiniteTransition(label = "callRing")
+            val scale by transition.animateFloatCalm(
+                initialValue = 1f,
+                targetValue = 1.2f,
+                animationSpec = infiniteRepeatable(tween(durationMillis = 480, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+                label = "callRingScale"
+            )
+            scale
+        } else 1f
+        Icon(
+            Icons.Rounded.Call,
+            contentDescription = stringResource(R.string.island_call_incoming),
+            tint = color,
+            modifier = Modifier
+                .size(15.dp)
+                .graphicsLayer {
+                    scaleX = pulse
+                    scaleY = pulse
+                    rotationZ = (pulse - 1f) * 60f
+                }
+        )
+    } else {
+        CallTimer(postTimeMillis = notification?.timeMillis ?: System.currentTimeMillis(), color = color)
+    }
+}
+
+/**
+ * Medium state (Rule_Book §4.7). Header: app icon and label. Body: avatar (badged for VoIP), caller and
+ * "Incoming call…", Decline (red) and Accept (green). After Accept it becomes the Active Call card: the live
+ * duration and Mute, Speaker and End Call, each shown only when the call's notification offers that action.
+ * Every control works from the lockscreen without unlock (`GatedAction.CallControl`).
+ */
 @Composable
 fun IncomingCallExpanded(
     notification: IslandNotification?,
@@ -80,102 +166,125 @@ fun IncomingCallExpanded(
     onCollapse: () -> Unit,
     settings: SmartIslandSettings = SmartIslandSettings.Default
 ) {
+    val context = LocalContext.current
     val isRinging = notification?.isCallRinging == true
-    // Only the call notification's own buttons are shown. Nothing here is made up by the island,
-    // so an app whose call notification has no mute / speaker button (WhatsApp) gets none.
-    val controls = remember(notification?.key, notification?.actionIntents) { callControls(notification) }
+    val callColor = Color(settings.callColor)
+    val caller = notification?.title?.takeIf { it.isNotBlank() }
+        ?: notification?.text?.takeIf { it.isNotBlank() }
+        ?: stringResource(R.string.island_call_unknown_caller)
 
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight()
-            .heightIn(min = 64.dp, max = 110.dp)
-            .padding(start = 18.dp, top = 20.dp, end = 18.dp, bottom = bottomPadding),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(start = 18.dp, top = 16.dp, end = 18.dp, bottom = bottomPadding),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Column(modifier = Modifier.weight(1f)) {
+        // Header: the app making the call.
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            val appIcon = notification?.icon?.takeIf { !it.isRecycled }
+            if (appIcon != null) {
+                val bitmap = remember(appIcon) { appIcon.asImageBitmap() }
+                Image(bitmap = bitmap, contentDescription = null, modifier = Modifier.size(16.dp).clip(CircleShape))
+            }
             Text(
-                text = notification?.title?.takeIf { it.isNotBlank() }
-                    ?: notification?.text?.takeIf { it.isNotBlank() }
-                    ?: if (isRinging) "Incoming call" else "Active call",
-                color = LocalIslandPalette.current.text,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.SemiBold,
+                text = notification?.appName.orEmpty(),
+                color = LocalIslandPalette.current.textSecondary,
+                fontSize = 12.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            if (notification?.isCallConnecting == true) {
-                // Dialing: the other side has not picked up, so there is nothing to time yet.
-                // The app's own words are shown ("Calling...", "Ringing...", "Dialing").
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            CallAvatar(notification = notification, size = 46.dp, settings = settings)
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = notification.callStatusText,
-                    color = Color(settings.callColor),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold
+                    text = caller,
+                    color = LocalIslandPalette.current.text,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-            } else if (!isRinging) {
-                val time = notification?.timeMillis ?: System.currentTimeMillis()
-                com.agupta07505.smartisland.ui.CallTimer(
-                    postTimeMillis = time,
-                    color = Color(settings.callColor)
-                )
+                if (isRinging) {
+                    Text(
+                        text = stringResource(R.string.island_call_incoming),
+                        color = LocalIslandPalette.current.textSecondary,
+                        fontSize = 13.sp,
+                        maxLines = 1
+                    )
+                } else if (notification?.isCallConnecting == true) {
+                    // Dialing: nothing to time yet; show the app's own words ("Calling...", "Ringing...").
+                    Text(text = notification.callStatusText, color = callColor, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                } else {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = stringResource(R.string.island_call_ongoing), color = LocalIslandPalette.current.textSecondary, fontSize = 13.sp, maxLines = 1)
+                        CallTimer(postTimeMillis = notification?.timeMillis ?: System.currentTimeMillis(), color = callColor)
+                    }
+                }
             }
-        }
-
-        controls.forEach { CallControlButton(it, isRinging, notification, settings, onCollapse) }
-    }
-}
-
-@Composable
-private fun CallControlButton(
-    control: CallControl,
-    isRinging: Boolean,
-    notification: IslandNotification?,
-    settings: SmartIslandSettings,
-    onCollapse: () -> Unit
-) {
-    val context = LocalContext.current
-    val (background, tint, icon) = when (control.role) {
-        CallActionRole.HangUp -> Triple(Color(0xFFE11D48), Color.White, Icons.Rounded.CallEnd)
-        CallActionRole.Answer -> Triple(Color(settings.callColor), Color.White, Icons.Rounded.Call)
-        CallActionRole.Mute -> toggleStyle(control.active, Icons.Rounded.MicOff, Icons.Rounded.Mic)
-        else -> toggleStyle(control.active, Icons.Rounded.VolumeUp, Icons.Rounded.VolumeUp)
-    }
-    CircleActionButton(
-        color = background,
-        tint = tint,
-        icon = icon,
-        description = control.action.title,
-        onClick = {
             if (isRinging) {
-                // The ringing card is island-only, so it is dropped here; the app will not post a removal for it.
-                notification.sendFirstAction(context, control.action.title)
-            } else {
-                // An ongoing call's notification stays in the shade; the card follows it.
-                notification?.fireAction(context, control.action)
-            }
-            if (control.role == CallActionRole.HangUp || control.role == CallActionRole.Answer) {
-                onCollapse()
+                val decline = notification.actionFor(IslandControl.CallDecline)
+                val accept = notification.actionFor(IslandControl.CallAnswer)
+                if (decline != null) {
+                    CircleActionButton(
+                        color = NotchPalette.danger,
+                        icon = Icons.Rounded.CallEnd,
+                        label = stringResource(R.string.island_call_decline)
+                    ) {
+                        fireIslandControl(context, notification, decline, GatedAction.CallControl, removeAlert = true, onDone = onCollapse)
+                    }
+                }
+                if (accept != null) {
+                    CircleActionButton(
+                        color = callColor,
+                        icon = Icons.Rounded.Call,
+                        label = stringResource(R.string.island_call_accept)
+                    ) {
+                        // The card stays open and turns into the Active Call card when the call's notification updates.
+                        fireIslandControl(context, notification, accept, GatedAction.CallControl, removeAlert = false)
+                    }
+                }
             }
         }
-    )
-}
 
-@Composable
-private fun toggleStyle(active: Boolean, activeIcon: ImageVector, idleIcon: ImageVector): Triple<Color, Color, ImageVector> {
-    val palette = LocalIslandPalette.current
-    // Active: a solid disc with the opposite colour glyph; idle: a soft disc with the text-coloured glyph.
-    return if (active) Triple(palette.inverseFill, palette.onInverse, activeIcon)
-    else Triple(palette.tint(0.2f), palette.text, idleIcon)
+        if (!isRinging && notification != null) {
+            val mute = notification.actionFor(IslandControl.CallMute)
+            val speaker = notification.actionFor(IslandControl.CallSpeaker)
+            val end = notification.actionFor(IslandControl.CallEnd)
+            if (mute != null || speaker != null || end != null) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    if (mute != null) {
+                        IslandRoundButton(stringResource(R.string.island_call_mute), Icons.Rounded.MicOff, LocalIslandPalette.current.tint(0.2f)) {
+                            fireIslandControl(context, notification, mute, GatedAction.CallControl, removeAlert = false)
+                        }
+                    }
+                    if (speaker != null) {
+                        IslandRoundButton(stringResource(R.string.island_call_speaker), Icons.AutoMirrored.Rounded.VolumeUp, LocalIslandPalette.current.tint(0.2f)) {
+                            fireIslandControl(context, notification, speaker, GatedAction.CallControl, removeAlert = false)
+                        }
+                    }
+                    if (end != null) {
+                        IslandRoundButton(stringResource(R.string.island_call_end), Icons.Rounded.CallEnd, NotchPalette.danger) {
+                            fireIslandControl(context, notification, end, GatedAction.CallControl, removeAlert = true, onDone = onCollapse)
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
 private fun CircleActionButton(
     color: Color,
-    tint: Color,
-    icon: ImageVector,
-    description: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
     onClick: () -> Unit
 ) {
     Box(
@@ -186,6 +295,6 @@ private fun CircleActionButton(
             .bounceClick(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Icon(icon, contentDescription = description, tint = tint, modifier = Modifier.size(23.dp))
+        Icon(icon, contentDescription = label, tint = Color.White, modifier = Modifier.size(24.dp))
     }
 }

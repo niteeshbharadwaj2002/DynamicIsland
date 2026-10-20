@@ -293,6 +293,15 @@ fun MusicExpanded(
                         )
                     }
                 }
+                // NotchIQ: a live waveform beside the track (rests flat while paused), same as on the pill.
+                MusicWaveform(
+                    isPlaying = localIsPlaying,
+                    color = palette.text,
+                    barCount = 8,
+                    barWidth = 2.dp,
+                    gap = 2.dp,
+                    height = 22.dp
+                )
                 if (controls.hasPlayPause) {
                     MediaPlayPauseButton(
                         isPlaying = localIsPlaying,

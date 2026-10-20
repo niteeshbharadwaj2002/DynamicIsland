@@ -76,6 +76,8 @@ import com.agupta07505.smartisland.di.SmartIslandRepositories
 import com.agupta07505.smartisland.model.IslandNotification
 import com.agupta07505.smartisland.model.withSentReply
 import com.agupta07505.smartisland.ui.bounceClick
+import com.agupta07505.smartisland.util.GatedAction
+import com.agupta07505.smartisland.util.KeyguardGate
 import com.agupta07505.smartisland.util.formatNotificationTime
 import com.agupta07505.smartisland.util.lastReaderLine
 import androidx.compose.runtime.getValue
@@ -108,7 +110,8 @@ fun NotificationExpanded(
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
-    var isReplying by remember(notification?.key) { mutableStateOf(false) }
+    // Opens straight into the reply field when "Reply" was tapped on the lockscreen and the user then unlocked.
+    var isReplying by remember(notification?.key) { mutableStateOf(KeyguardGate.consumeReplyRequest(notification?.key)) }
     // The draft lives in the view model's store, so it survives Cancel, a collapse and the card being recreated.
     val replyDrafts = LocalReplyDrafts.current
     var replyText by remember(notification?.key) { mutableStateOf(notification?.key?.let { replyDrafts.get(it) }.orEmpty()) }
@@ -128,8 +131,17 @@ fun NotificationExpanded(
     val textScrollState = rememberScrollState()
     // The reader's scrolling is reported so a finger that only stops a fling is not taken for a tap (island gestures).
     if (!frozen) ReportReaderScroll(textScrollState)
-    val shortText = notification?.text?.takeIf { it.isNotBlank() } ?: "New activity"
-    val fullText = expandableNotificationText(shortText, notification?.bigText.orEmpty())
+    val shortText = when {
+        // Locked and private: only the fallback ("1 New Message"), the text returns on unlock.
+        notification?.isMasked == true -> notification.title
+        else -> buildString {
+            if (notification != null && notification.groupCount > 1 && notification.title.isNotBlank()) {
+                append(notification.title).append(": ")
+            }
+            append(notification?.text?.takeIf { it.isNotBlank() } ?: "New activity")
+        }
+    }
+    val fullText = expandableNotificationText(shortText, if (notification?.isMasked == true) "" else notification?.bigText.orEmpty())
     val mediaList = notification?.media.orEmpty()
     val hasMedia = mediaList.isNotEmpty()
     // No arrows beside pictures. A card with a sticker has no preview or picture steps; the step logic counts no pictures for it.
@@ -272,8 +284,16 @@ fun NotificationExpanded(
                         } else Modifier
                     )
             ) {
+                // A folded group shows the app and its count; a masked (locked, private) alert shows only the app
+                // (Rule_Book 8.1).
+                val groupCount = notification?.groupCount ?: 1
                 Text(
-                    text = notification?.title?.takeIf { it.isNotBlank() } ?: notification?.appName ?: "Notification",
+                    text = when {
+                        notification == null -> "Notification"
+                        groupCount > 1 -> "${notification.appName} \u2022 $groupCount Messages"
+                        notification.isMasked -> notification.appName
+                        else -> notification.title.takeIf { it.isNotBlank() } ?: notification.appName
+                    },
                     color = LocalIslandPalette.current.text,
                     maxLines = if (textExpanded) Int.MAX_VALUE else 1,
                     overflow = TextOverflow.Ellipsis,
@@ -411,8 +431,10 @@ fun NotificationExpanded(
                         replyText = ""
                     } else {
                         // Nothing was really sent (no reply action).
-                        repo.removeNotification(notification.key)
-                        repo.sendCommand(com.agupta07505.smartisland.data.SmartIslandCommand.CancelNotification(notification.key))
+                        notification.memberKeys.ifEmpty { listOf(notification.key) }.forEach { key ->
+                            repo.removeNotification(key)
+                            repo.sendCommand(com.agupta07505.smartisland.data.SmartIslandCommand.CancelNotification(key))
+                        }
                         onCollapse()
                     }
                 }
@@ -529,17 +551,28 @@ fun NotificationExpanded(
                                     .background(LocalIslandPalette.current.chipFill)
                                     .bounceClick {
                                         if (isReplyAction) {
-                                            isReplying = true
-                                        } else {
-                                            if (action.pendingIntent != null) {
-                                                triggerAction(context, notification.packageName, action.pendingIntent, action.title, notification.contentIntent)
+                                            // Locked: collapse, ask to unlock, and reopen the reply field only after it.
+                                            if (KeyguardGate.isLocked(context)) {
+                                                val replyKey = notification.key
+                                                KeyguardGate.run(context, GatedAction.Reply, onCollapse) {
+                                                    KeyguardGate.requestReply(replyKey)
+                                                }
                                             } else {
-                                                Toast.makeText(context, "Clicked: ${action.title}", Toast.LENGTH_SHORT).show()
+                                                isReplying = true
                                             }
-                                            val repo = SmartIslandRepositories.notificationRepository(context)
-                                            repo.removeNotification(notification.key)
-                                            repo.sendCommand(com.agupta07505.smartisland.data.SmartIslandCommand.CancelNotification(notification.key))
-                                            onCollapse()
+                                        } else {
+                                            KeyguardGate.run(context, GatedAction.AppAction, onCollapse) {
+                                                if (action.pendingIntent != null) {
+                                                    triggerAction(context, notification.packageName, action.pendingIntent, action.title, notification.contentIntent)
+                                                } else {
+                                                    Toast.makeText(context, "Clicked: ${action.title}", Toast.LENGTH_SHORT).show()
+                                                }
+                                                val repo = SmartIslandRepositories.notificationRepository(context)
+                                                notification.memberKeys.ifEmpty { listOf(notification.key) }.forEach { key ->
+                                                    repo.removeNotification(key)
+                                                    repo.sendCommand(com.agupta07505.smartisland.data.SmartIslandCommand.CancelNotification(key))
+                                                }
+                                            }
                                         }
                                     }
                                     .padding(horizontal = 12.dp),

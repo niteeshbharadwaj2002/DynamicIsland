@@ -7,6 +7,7 @@
 
 package com.agupta07505.smartisland.ui.expanded
 
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
@@ -60,6 +61,14 @@ import androidx.compose.ui.unit.sp
 import com.agupta07505.smartisland.R
 import com.agupta07505.smartisland.data.SmartIslandSettings
 import com.agupta07505.smartisland.model.IslandNotification
+import com.agupta07505.smartisland.ui.bounceClick
+import com.agupta07505.smartisland.util.EarbudBattery
+import com.agupta07505.smartisland.ui.NotchPalette
+import com.agupta07505.smartisland.util.runCatchingLogged
+import android.content.Intent
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -94,6 +103,11 @@ fun BluetoothExpanded(
         (batteryLevel ?: 100) >= 20 -> Icons.Rounded.BatteryChargingFull
         else -> Icons.Rounded.BatteryAlert
     }
+
+    val context = LocalContext.current
+    // L/R/case levels replace the single gauge when the alert carries them (Rule_Book §4.6).
+    val earbuds = remember(notification?.text) { EarbudBattery.parse(notification?.text) }
+    val showSplitGauges = settings.showBluetoothBattery && earbuds != null
 
     Row(
         modifier = Modifier
@@ -144,14 +158,14 @@ fun BluetoothExpanded(
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            text = if (settings.showBluetoothBattery && batteryLevel != null && !lost) "Connected" else statusText,
+                            text = if (settings.showBluetoothBattery && (batteryLevel != null || showSplitGauges) && !lost) "Connected" else statusText,
                             color = if (lost) accent else LocalIslandPalette.current.success,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
 
-                    if (!lost && settings.showBluetoothBattery && batteryLevel != null) {
+                    if (!lost && settings.showBluetoothBattery && batteryLevel != null && !showSplitGauges) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(3.dp),
@@ -225,7 +239,14 @@ fun BluetoothExpanded(
         }
         Spacer(Modifier.width(8.dp))
 
-        if (settings.showBluetoothBattery && batteryLevel != null) {
+        // Right side: L/R/case gauges, else earbuds / battery alternating animation
+        if (!lost && showSplitGauges && earbuds != null) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                EarbudGauge(label = "L", level = earbuds.left)
+                EarbudGauge(label = "R", level = earbuds.right)
+                EarbudGauge(label = "Case", level = earbuds.case)
+            }
+        } else if (settings.showBluetoothBattery && batteryLevel != null) {
             var showBatterySide by remember { mutableStateOf(false) }
             LaunchedEffect(Unit) {
                 while (true) {
@@ -261,7 +282,7 @@ fun BluetoothExpanded(
                         ) {
                             Icon(
                                 imageVector = batteryIcon,
-                                contentDescription = "Battery Level",
+                                contentDescription = stringResource(R.string.a11y_battery_level),
                                 tint = batteryColor,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -284,7 +305,7 @@ fun BluetoothExpanded(
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Headphones,
-                            contentDescription = "Earbuds",
+                            contentDescription = stringResource(R.string.a11y_earbuds),
                             tint = Color(settings.bluetoothColor),
                             modifier = Modifier.size(24.dp)
                         )
@@ -294,12 +315,76 @@ fun BluetoothExpanded(
         } else {
             Image(
                 painter = painterResource(id = R.drawable.ic_bluetooth_device),
-                contentDescription = "Bluetooth Device Image",
+                contentDescription = stringResource(R.string.a11y_bluetooth_device_image),
                 modifier = Modifier
                     .size(46.dp)
                     .clip(RoundedCornerShape(12.dp))
             )
         }
+
+        Spacer(Modifier.width(8.dp))
+
+        // Shortcut to the OS Bluetooth settings: the island collapses first, then the dashboard opens.
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(LocalIslandPalette.current.tint(0.133f))
+                .bounceClick {
+                    onCollapse()
+                    runCatchingLogged("BluetoothExpanded", "Opening Bluetooth settings failed") {
+                        context.startActivity(
+                            Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    }
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Settings,
+                contentDescription = stringResource(R.string.a11y_bluetooth_settings),
+                tint = LocalIslandPalette.current.text,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+/** One earbud or case level: a short label over a small fixed-size battery bar and its percentage. */
+@Composable
+private fun EarbudGauge(label: String, level: Int?) {
+    val color = when {
+        level == null -> LocalIslandPalette.current.textSecondary
+        level <= 20 -> NotchPalette.danger
+        else -> NotchPalette.success
+    }
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+        modifier = Modifier.width(34.dp)
+    ) {
+        Text(text = label, color = LocalIslandPalette.current.textSecondary, fontSize = 10.sp, maxLines = 1)
+        Box(
+            modifier = Modifier
+                .width(24.dp)
+                .height(10.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(LocalIslandPalette.current.tint(0.133f))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(((level ?: 0) / 100f).coerceIn(0f, 1f))
+                    .background(color)
+            )
+        }
+        Text(
+            text = level?.let { "$it%" } ?: "--",
+            color = color,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1
+        )
     }
 }
 
