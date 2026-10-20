@@ -38,6 +38,10 @@ import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.agupta07505.smartisland.MainActivity
 import com.agupta07505.smartisland.R
+import com.agupta07505.smartisland.buddy.runtime.MascotEventMapper
+import com.agupta07505.smartisland.buddy.runtime.MascotEvents
+import com.agupta07505.smartisland.buddy.runtime.MascotMoment
+import com.agupta07505.smartisland.buddy.runtime.NoteSnapshot
 import com.agupta07505.smartisland.data.INotificationRepository
 import com.agupta07505.smartisland.data.SmartIslandCommand
 import com.agupta07505.smartisland.data.SmartIslandSettings
@@ -92,6 +96,7 @@ class SmartIslandOverlayService : AccessibilityService() {
     private val torchCallback = object : android.hardware.camera2.CameraManager.TorchCallback() {
         override fun onTorchModeChanged(cameraId: String, enabled: Boolean) {
             if (destroyed || !::viewModel.isInitialized) return
+            MascotEvents.post(if (enabled) MascotMoment.TorchOn else MascotMoment.TorchOff)
             if (enabled) {
                 notificationRepository.postNotification(
                     IslandNotification(
@@ -255,6 +260,120 @@ class SmartIslandOverlayService : AccessibilityService() {
 
     private var lastFaceUnlockConfig: String? = null
 
+    private var unlockWatchJob: kotlinx.coroutines.Job? = null
+    private var lastUnlockAnnouncedMs = 0L
+
+    /**
+     * Tells the buddy the phone was unlocked. Some ROMs never deliver ACTION_USER_PRESENT to this app, so
+     * after the screen turns on we also watch the keyguard for a few minutes at most (a cheap check four
+     * times a second, only while it is showing) and announce the moment it goes away. A phone with no lock
+     * is announced at once. Whichever signal comes first wins; the other is ignored.
+     */
+    private fun watchForUnlock() {
+        unlockWatchJob?.cancel()
+        if (!::viewModel.isInitialized || !viewModel.settings.value.buddyEnabled) return
+        val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+        if (keyguardManager?.isKeyguardLocked != true) {
+            announceUnlock()
+            return
+        }
+        unlockWatchJob = serviceScope.launch {
+            repeat(UNLOCK_WATCH_MAX_TICKS) {
+                kotlinx.coroutines.delay(UNLOCK_WATCH_INTERVAL_MS)
+                if (keyguardManager.isKeyguardLocked != true) {
+                    announceUnlock()
+                    return@launch
+                }
+            }
+        }
+    }
+
+    private fun announceUnlock() {
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - lastUnlockAnnouncedMs < UNLOCK_DEDUPE_MS) return
+        lastUnlockAnnouncedMs = now
+        MascotEvents.post(MascotMoment.Unlock)
+    }
+
+    private val mascotMapper = MascotEventMapper()
+    private var timerWatchJob: kotlinx.coroutines.Job? = null
+    private var watchedTimerKey: String? = null
+    private var watchedTimerEnd = 0L
+
+    /**
+     * Feeds the buddy what happens on the island: transfers finishing or failing, timers starting and
+     * running out, recording, music starting. Charging, low battery, the torch and unlock are posted where
+     * they happen. Only runs while Buddy is on.
+     */
+    private fun startMascotObservers() {
+        serviceScope.launch {
+            notificationRepository.notifications.collect { list ->
+                if (destroyed || !viewModel.settings.value.buddyEnabled) {
+                    mascotMapper.reset()
+                    cancelTimerWatch(post = false)
+                    return@collect
+                }
+                val snapshots = list.map {
+                    NoteSnapshot(
+                        key = it.key, mode = it.mode, title = it.title, text = it.text,
+                        progress = it.progress, progressMax = it.progressMax,
+                        mediaIsPlaying = it.mediaIsPlaying, timeMillis = it.timeMillis
+                    )
+                }
+                val moments = mascotMapper.onChange(
+                    snapshots, android.os.SystemClock.elapsedRealtime() / 1000.0, System.currentTimeMillis()
+                )
+                for (moment in moments) {
+                    if (moment == MascotMoment.Music) {
+                        // Once the song's strip has settled, if the music still plays.
+                        launch {
+                            kotlinx.coroutines.delay(MUSIC_GROOVE_DELAY_MS)
+                            val stillPlaying = notificationRepository.notifications.value.any {
+                                it.mode == com.agupta07505.smartisland.model.IslandMode.Music && it.mediaIsPlaying
+                            }
+                            if (stillPlaying) MascotEvents.post(moment)
+                        }
+                    } else {
+                        MascotEvents.post(moment)
+                    }
+                }
+                watchTimer(list)
+            }
+        }
+    }
+
+    /** A running timer's last seconds are watched: the buddy comes out over its mark when 5s remain. */
+    private fun watchTimer(list: List<IslandNotification>) {
+        val timer = list.firstOrNull { it.mode == com.agupta07505.smartisland.model.IslandMode.Timer }
+        if (timer == null) {
+            cancelTimerWatch(post = true)
+            return
+        }
+        val end = timer.timeMillis
+        if (watchedTimerKey == timer.key && kotlin.math.abs(watchedTimerEnd - end) < TIMER_END_JITTER_MS) return
+        // New, or its end moved (paused, resumed, changed): watch it afresh.
+        cancelTimerWatch(post = watchedTimerKey != null)
+        watchedTimerKey = timer.key
+        watchedTimerEnd = end
+        val untilWatch = end - System.currentTimeMillis() - (com.agupta07505.smartisland.buddy.motion.MascotMotion.COUNTDOWN_LEAD_SEC * 1000f).toLong()
+        if (untilWatch < -4000L) return
+        timerWatchJob = serviceScope.launch {
+            kotlinx.coroutines.delay(maxOf(0L, untilWatch))
+            val current = notificationRepository.notifications.value.firstOrNull { it.key == timer.key }
+            if (current != null && kotlin.math.abs(current.timeMillis - end) < TIMER_END_JITTER_MS) {
+                MascotEvents.post(MascotMoment.CountdownStart)
+            }
+        }
+    }
+
+    private fun cancelTimerWatch(post: Boolean) {
+        timerWatchJob?.cancel()
+        timerWatchJob = null
+        if (watchedTimerKey != null && post) MascotEvents.post(MascotMoment.CountdownCancel)
+        watchedTimerKey = null
+        watchedTimerEnd = 0L
+    }
+
     private val screenStateReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             runCatchingLogged(TAG, "Screen-state callback failed") {
@@ -275,8 +394,10 @@ class SmartIslandOverlayService : AccessibilityService() {
                             isWindowExpanded,
                             viewModel.displaySettings.value
                         )
+                        watchForUnlock()
                     }
                     Intent.ACTION_SCREEN_OFF -> {
+                        unlockWatchJob?.cancel()
                         overlayOwners.pause()
                         viewModel.closeWidgetIsland(snap = true)
                         // The shade closes with the screen; its window event may come late.
@@ -294,6 +415,7 @@ class SmartIslandOverlayService : AccessibilityService() {
                     Intent.ACTION_USER_PRESENT -> {
                         isLockScreenActive = false
                         faceUnlockCoordinator.onUserPresent(android.os.SystemClock.elapsedRealtime())
+                        announceUnlock()
                         updateWindowLayoutParams(
                             isWindowExpanded,
                             viewModel.displaySettings.value
@@ -717,6 +839,8 @@ class SmartIslandOverlayService : AccessibilityService() {
         val isLandscape = resources.configuration.orientation ==
             android.content.res.Configuration.ORIENTATION_LANDSCAPE
         viewModel.orientation.value = LandscapeCameraDetector.read(this, isLandscape)
+        // The buddy's wing is measured against the camera hole (IslandViewModel.displaySettings widens the pill for it).
+        viewModel.buddyHoleWidthDp.value = detectedCutout().let { if (it.hasHardwareCutout) it.rawWidthDp else null }
     }
 
     override fun onCreate() {
@@ -754,6 +878,7 @@ class SmartIslandOverlayService : AccessibilityService() {
         lastConfigOrientation = resources.configuration.orientation
         refreshOrientation()
         registerRotationListener()
+        startMascotObservers()
         
         systemEventReceiver = SystemEventReceiver(
             notificationRepository,
@@ -2254,5 +2379,10 @@ class SmartIslandOverlayService : AccessibilityService() {
         private const val SETTLE_SCAN_FIRST_MS = 400L
         private const val SETTLE_SCAN_SECOND_MS = 1_100L
         private const val WINDOW_PACKAGE_CACHE_MAX = 96
+        private const val UNLOCK_WATCH_INTERVAL_MS = 250L
+        private const val MUSIC_GROOVE_DELAY_MS = 1200L
+        private const val TIMER_END_JITTER_MS = 1500L
+        private const val UNLOCK_WATCH_MAX_TICKS = 960
+        private const val UNLOCK_DEDUPE_MS = 3000L
     }
 }

@@ -81,6 +81,13 @@ internal class IslandInteractionState {
     /** The idle widget frame the collapsed pill is drawing right now (null: none). */
     var idleFrameNow by mutableStateOf<IdleWidgetFrame?>(null)
     /**
+     * The buddy's rest track on the pill and whether it is out on the pill right now. Set by the overlay; read by
+     * the pill's gesture handler (which outlives recompositions) so a finger makes the buddy look, and a held touch
+     * on its head pats it.
+     */
+    var buddyTrack: com.agupta07505.smartisland.buddy.model.MascotTrack? = null
+    var buddyActive: Boolean = false
+    /**
      * The widget island's pause button: true holds the collapsed pill on its current idle widget (the automatic
      * switch stops; swiping still steps it).
      */

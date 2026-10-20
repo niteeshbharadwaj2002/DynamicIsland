@@ -19,7 +19,11 @@ data class DetectedCutoutInfo(
     val yOffsetDp: Float,
     val widthDp: Float,
     val heightDp: Float,
-    val hasHardwareCutout: Boolean
+    val hasHardwareCutout: Boolean,
+    /** The hole's true width, without the pill padding. 0 when there is no hardware cutout. */
+    val rawWidthDp: Float = 0f,
+    /** The hole's centre relative to the screen centre, unclamped. 0 when there is no hardware cutout. */
+    val rawCenterOffsetDp: Float = 0f
 )
 
 object CameraCutoutDetector {
@@ -90,7 +94,9 @@ object CameraCutoutDetector {
             yOffsetDp = yOffsetDp,
             widthDp = widthDp,
             heightDp = heightDp,
-            hasHardwareCutout = true
+            hasHardwareCutout = true,
+            rawWidthDp = (right - left).toFloat() / density,
+            rawCenterOffsetDp = xOffsetPx / density
         )
     }
 

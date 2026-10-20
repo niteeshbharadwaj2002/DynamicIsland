@@ -31,6 +31,8 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.agupta07505.smartisland.buddy.MascotRuntime
+import com.agupta07505.smartisland.buddy.ui.MascotLayer
 import com.agupta07505.smartisland.data.LaunchableApp
 import com.agupta07505.smartisland.data.SmartIslandSettings
 import com.agupta07505.smartisland.model.IslandMode
@@ -177,6 +179,8 @@ fun IslandOverlayView(
     )
     @Suppress("NAME_SHADOWING")
     val settings = pillExit.frozenNow ?: settings
+    // The buddy (Mascot) rests in a wing of the idle pill (the pill is widened for it in IslandViewModel.displaySettings).
+    val buddy = rememberBuddyPill(settings, notifications.size, isLandscape)
     // Landscape: an open sibling picker sits beside the card as a SEPARATE island, so the window widens while it is
     // open and this view's own single island surface is switched off.
     val openPicture = com.agupta07505.smartisland.ui.expanded.LocalMediaExpansion.current
@@ -363,6 +367,16 @@ fun IslandOverlayView(
     AnimScaleProbeEffect()
     MergeTouchHapticEffect(layout, secondary, cb)
 
+    // The buddy rests only while no idle widget is on the pill; the gesture handler reads these for gaze and pats.
+    val buddyOnPill = buddy.onPill && ui.idleFrameNow == null
+    SideEffect {
+        ui.buddyTrack = buddy.track
+        ui.buddyActive = buddyOnPill && !expanded
+    }
+    // A busy pill lets the buddy make a cameo.
+    val buddyCanCameo = settings.buddyEnabled && !isLandscape && notifications.isNotEmpty() && !expanded && !layout.isHiding
+    LaunchedEffect(buddyCanCameo) { MascotRuntime.controller.setCanCameo(buddyCanCameo) }
+
     Box(
         modifier = modifier
             .islandOutsideTap(expanded, cb, isInputActive, onReplyStateChanged)
@@ -471,8 +485,29 @@ fun IslandOverlayView(
                     ui = ui,
                     animSpeed = settings.animationSpeed(isLandscape),
                     idleSuppressed = idleWidgetsSuppressed || tickPillHold,
+                    stepAsideLeft = buddy.aside && buddy.asideLeft,
+                    stepAsideRight = buddy.aside && !buddy.asideLeft,
                     modifier = Modifier.align(Alignment.TopCenter).then(pillContentFade)
                 )
+                // The buddy rests on an idle pill (an idle widget on the pill takes its wing), or steps out over a busy one.
+                if (buddyOnPill || buddy.aside) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .width(settings.width.dp)
+                            .height(settings.height.dp)
+                            .graphicsLayer { alpha = layout.collapsedAlpha }
+                            .then(pillContentFade)
+                    ) {
+                        MascotLayer(
+                            look = settings.buddyLook,
+                            track = buddy.track,
+                            active = buddyOnPill && !expanded && !layout.isHiding && layout.collapsedAlpha > 0.99f,
+                            controller = MascotRuntime.controller,
+                            hidesWhenIdle = settings.buddyHidesWhenIdle
+                        )
+                    }
+                }
                 // The clock widget's tick on the full hour, over whatever the pill shows (also while the idle widgets
                 // are held off after a tap or long press).
                 val tickCanHold = isLandscape && !settings.enableNotchMode

@@ -17,6 +17,8 @@ import android.content.IntentFilter
 import android.os.BatteryManager
 import android.os.Build
 import android.os.PowerManager
+import com.agupta07505.smartisland.buddy.runtime.MascotEvents
+import com.agupta07505.smartisland.buddy.runtime.MascotMoment
 import com.agupta07505.smartisland.data.INotificationRepository
 import com.agupta07505.smartisland.model.IslandEvent
 import com.agupta07505.smartisland.model.IslandMode
@@ -159,6 +161,7 @@ class SystemEventReceiver(
                     }
                 }
                 Intent.ACTION_POWER_CONNECTED -> {
+                    MascotEvents.post(MascotMoment.Charging)
                     // ACTION_BATTERY_CHANGED may already have announced this plug-in.
                     val alreadyAnnounced = chargingKnown && isCurrentlyCharging
                     chargingKnown = true
@@ -173,6 +176,7 @@ class SystemEventReceiver(
                     postUnplugged(context, intent)
                 }
                 Intent.ACTION_BATTERY_LOW -> {
+                    MascotEvents.post(MascotMoment.BatteryLow)
                     updateBatteryState(context, intent, autoExpand = true)
                 }
                 Intent.ACTION_BATTERY_OKAY -> {

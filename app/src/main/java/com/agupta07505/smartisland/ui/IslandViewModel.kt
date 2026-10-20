@@ -506,14 +506,25 @@ class IslandViewModel(
      * corner pill). The overlay window, its touch region and the island view read this one; everything in this class keeps
      * reading [settings] (the cards depend on it, so using this flow there would be circular).
      */
+    /** The camera hole's true width in dp (null: no hardware cutout); set by the overlay service for the buddy's wing. */
+    val buddyHoleWidthDp = MutableStateFlow<Float?>(null)
+
     val displaySettings: StateFlow<SmartIslandSettings> = combine(
-        settingsRepo.settings,
-        orientation,
-        visibleNotifications,
-        landscapeWidgetPill
-    ) { raw, state, cards, widgetPill ->
-        // The landscape widget pill keeps the collapsed pill's geometry while no card is on the island.
-        raw.forOrientation(state, hasContent = pillOnIsland(cards.isNotEmpty(), widgetPill), hasCards = cards.isNotEmpty())
+        combine(
+            settingsRepo.settings,
+            orientation,
+            visibleNotifications,
+            landscapeWidgetPill
+        ) { raw, state, cards, widgetPill ->
+            // The landscape widget pill keeps the collapsed pill's geometry while no card is on the island.
+            val shown = raw.forOrientation(state, hasContent = pillOnIsland(cards.isNotEmpty(), widgetPill), hasCards = cards.isNotEmpty())
+            Triple(shown, cards.size, state.isLandscape)
+        },
+        buddyHoleWidthDp,
+        com.agupta07505.smartisland.buddy.MascotRuntime.controller.tucked
+    ) { (shown, cardCount, landscape), hole, tucked ->
+        // A resting buddy widens the idle pill and overrides "Hide when idle" (Mascot / Buddy).
+        shown.withBuddyPill(hole, cardCount, tucked, landscape)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.Eagerly,

@@ -119,6 +119,12 @@ internal fun Modifier.islandMainGestures(
                 var crossedOnce = false
                 val pressTimeMs = System.currentTimeMillis()
                 val wasExpandedAtStart = cb.currentExpanded
+                // The buddy looks at where a finger lands and, held on its head, gets a pat.
+                val buddyTouchXDp = down.position.x / displayMetrics.density
+                val buddyTouchYDp = down.position.y / displayMetrics.density
+                if (!wasExpandedAtStart && ui.buddyActive) {
+                    com.agupta07505.smartisland.buddy.MascotRuntime.controller.attend(buddyTouchXDp, buddyTouchYDp)
+                }
                 // Sibling picker open when the touch began, and where in the island it landed.
                 val pickerOpenAtStart = cb.currentSiblingPickerOpen
                 val readingTextAtStart = cb.currentReadingExpandedText
@@ -193,6 +199,11 @@ internal fun Modifier.islandMainGestures(
                 val holdJob = scope.launch {
                     kotlinx.coroutines.delay(HOLD_GESTURE_THRESHOLD_MS)
                     isHoldRegistered = true
+                    if (!wasExpandedAtStart && ui.buddyActive &&
+                        ui.buddyTrack?.touches(buddyTouchXDp, buddyTouchYDp, BUDDY_PAT_SLACK_DP) == true
+                    ) {
+                        com.agupta07505.smartisland.buddy.MascotRuntime.controller.pat()
+                    }
                     // The hold buzz is skipped when this long press opens the app shortcuts (quiet launcher); every
                     // other hold still buzzes.
                     var holdBuzzed = false
@@ -793,6 +804,9 @@ internal const val PILL_SWIPE_TOUCH_GAP_MS = 250L
 
 /** A card switch this soon after a swipe is the swipe's own (the squash bounce skips it). */
 internal const val SWIPE_SWITCH_BOUNCE_SKIP_MS = 600L
+
+/** A held touch this close to the buddy (dp beyond its edge) pats it. */
+private const val BUDDY_PAT_SLACK_DP = 8f
 
 private fun expandedSideAction(settings: com.agupta07505.smartisland.data.SmartIslandSettings, dragX: Float): SwipeAction =
     SwipeAction.fromId(if (dragX < 0f) settings.swipeLeftAction else settings.swipeRightAction, SwipeAction.None)

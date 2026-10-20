@@ -20,6 +20,7 @@ import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.People
+import androidx.compose.material.icons.rounded.Pets
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SettingsBackupRestore
 import androidx.compose.material.icons.rounded.Shield
@@ -503,6 +504,13 @@ internal fun buildSettingsSearchIndex(str: (Int) -> String): List<SettingsSearch
         "about.screen", aboutScreen, detail(FeatureDetailSection.About), aboutScreen, Icons.Rounded.Info,
         str(R.string.card_about_subtitle),
         listOf("creator", "author", "original", "github", "link", "credits", "licence", "license", "gpl", "version", "animesh gupta")
+    )
+
+    val buddyScreen = str(R.string.buddy_title)
+    add(
+        "buddy.screen", buddyScreen, detail(FeatureDetailSection.Buddy), buddyScreen, Icons.Rounded.Pets,
+        str(R.string.buddy_description),
+        listOf("buddy", "mascot", "companion", "pet", "friend", "character", "ball", "robot", "camera", "visit", "react")
     )
 
     val supportScreen = str(R.string.card_support_requests_title)

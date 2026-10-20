@@ -36,6 +36,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.Commit
 import androidx.compose.material.icons.rounded.Description
@@ -275,10 +276,24 @@ fun AboutSection(
                         } ?: Toast.makeText(context, "Cannot open link", Toast.LENGTH_SHORT).show()
                     }
                 )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+
+                // Buddy artwork credit (Vorssaint).
+                ClickableRowItem(
+                    label = stringResource(R.string.about_acknowledgements_title),
+                    subtitle = stringResource(R.string.about_buddy_credit),
+                    icon = Icons.Rounded.Favorite,
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(com.agupta07505.smartisland.buddy.MascotAttribution.SOURCE_URL))
+                        runCatchingLogged("AboutSection", "Failed to open acknowledgements link") {
+                            context.startActivity(intent)
+                        } ?: Toast.makeText(context, "Cannot open link", Toast.LENGTH_SHORT).show()
+                    }
+                )
             }
         }
 
-        
+
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),

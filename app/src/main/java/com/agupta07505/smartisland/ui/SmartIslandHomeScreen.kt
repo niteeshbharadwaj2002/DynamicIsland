@@ -148,7 +148,9 @@ import com.agupta07505.smartisland.ui.sections.AnimationSpeedSection
 import com.agupta07505.smartisland.ui.sections.MergeStyleSection
 import com.agupta07505.smartisland.ui.sections.IdleWidgetsSection
 import com.agupta07505.smartisland.ui.sections.IdleWidgetsSettingsSection
+import com.agupta07505.smartisland.ui.sections.BuddySection
 import com.agupta07505.smartisland.ui.sections.WeatherSettingsCard
+import androidx.compose.material.icons.rounded.Pets
 import com.agupta07505.smartisland.ui.sections.NetSpeedSettingsCard
 import com.agupta07505.smartisland.ui.sections.CalendarSettingsCard
 import com.agupta07505.smartisland.ui.search.searchAnchor
@@ -201,6 +203,7 @@ internal enum class FeatureDetailSection {
     SupportCommunity,
     DeveloperOptions,
     FaceIdSettings,
+    Buddy,
     WeatherSettings,
     NetSpeedSettings,
     CalendarSettings
@@ -975,6 +978,15 @@ private fun SettingsOverviewSection(
                     onClick = { onNavigateTo(FeatureDetailSection.ColorStudio) }
                 )
 
+                FeatureStudioNavigationCard(
+                    title = stringResource(R.string.buddy_title),
+                    subtitle = stringResource(R.string.buddy_description),
+                    icon = Icons.Rounded.Pets,
+                    iconColor = BadgePink,
+                    statusText = stringResource(if (settings.buddyEnabled) R.string.buddy_status_on else R.string.buddy_status_off),
+                    onClick = { onNavigateTo(FeatureDetailSection.Buddy) }
+                )
+
                 CollapsibleCard(
                     title = stringResource(R.string.island_font_title),
                     stateKey = "settings_appearance_fonts",
@@ -1289,6 +1301,7 @@ private fun DetailScreenHost(
                 FeatureDetailSection.SupportCommunity -> stringResource(R.string.detail_title_support_community)
                 FeatureDetailSection.DeveloperOptions -> stringResource(R.string.detail_title_developer_options)
                 FeatureDetailSection.FaceIdSettings -> "Face ID settings"
+                FeatureDetailSection.Buddy -> stringResource(R.string.detail_title_buddy)
                 FeatureDetailSection.WeatherSettings -> stringResource(R.string.weather_cfg_title)
                 FeatureDetailSection.NetSpeedSettings -> stringResource(R.string.net_cfg_title)
                 FeatureDetailSection.CalendarSettings -> stringResource(R.string.cal_cfg_title)
@@ -1386,6 +1399,9 @@ private fun DetailScreenHost(
             }
             FeatureDetailSection.FaceIdSettings -> {
                 FaceIdSettingsSection(settings = settings, repository = repository)
+            }
+            FeatureDetailSection.Buddy -> {
+                BuddySection(settings = settings, repository = repository)
             }
             FeatureDetailSection.WeatherSettings -> {
                 WeatherSettingsCard(settings = settings, repository = repository, modifier = Modifier.searchAnchor("idle.weather"))

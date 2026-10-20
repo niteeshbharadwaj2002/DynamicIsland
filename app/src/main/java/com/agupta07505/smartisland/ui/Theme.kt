@@ -32,6 +32,56 @@ import com.agupta07505.smartisland.ui.glass.LocalGlassBackdropColors
 import com.agupta07505.smartisland.ui.glass.LocalGlassDark
 import com.agupta07505.smartisland.ui.glass.LocalLiquidGlass
 
+/**
+ * Semantic colors that Material 3 has no slot for (NotchIQ HIG settings design system). Each is named by role,
+ * never by hue, and has an explicit light and dark value. Status colors must always be paired with an icon or text.
+ */
+@androidx.compose.runtime.Immutable
+data class SemanticColors(
+    /** Behind inset-grouped lists (systemGroupedBackground). */
+    val groupedBackground: Color,
+    /** Row surface inside a grouped section (secondarySystemGroupedBackground). */
+    val groupedRow: Color,
+    /** Hairline between rows and around grouped sections. */
+    val separator: Color,
+    /** Subtle fill for chips, steppers and tracks. */
+    val fill: Color,
+    val success: Color,
+    val warning: Color,
+    val danger: Color,
+    /** Translucent bar background; paired with a blur-free scrim on Android. */
+    val bar: Color
+)
+
+private val LightSemantic = SemanticColors(
+    groupedBackground = Color(0xFFF2F2F7),
+    groupedRow = Color(0xFFFFFFFF),
+    separator = Color(0xFFC6C6C8),
+    fill = Color(0xFFE9E9EE),
+    success = Color(0xFF1F7A34),
+    warning = Color(0xFFA64B00),
+    danger = Color(0xFFD70015),
+    bar = Color(0xF2F9F9F9)
+)
+
+// Rule_Book 11.1 palette: #000000 background, #1C1C1E elevated rows, #FF3B30 destructive.
+private val DarkSemantic = SemanticColors(
+    groupedBackground = Color(0xFF000000),
+    groupedRow = Color(0xFF1C1C1E),
+    separator = Color(0xFF38383A),
+    fill = Color(0xFF2C2C2E),
+    success = Color(0xFF30D158),
+    warning = Color(0xFFFF9F0A),
+    danger = Color(0xFFFF3B30),
+    bar = Color(0xF21C1C1E)
+)
+
+val LocalSemanticColors = androidx.compose.runtime.staticCompositionLocalOf { LightSemantic }
+
+/** Accessor: `MaterialTheme.semantic.success`. */
+val MaterialTheme.semantic: SemanticColors
+    @Composable @androidx.compose.runtime.ReadOnlyComposable get() = LocalSemanticColors.current
+
 // The app's theme: Material 3 colour roles, built from one accent colour (or from the wallpaper with Material You),
 // drawn either flat (plain Material 3) or as liquid glass (translucent panels over a soft colour backdrop, see
 // ui/glass).
@@ -178,6 +228,7 @@ fun SmartIslandTheme(
 
     MaterialTheme(colorScheme = colorScheme) {
         CompositionLocalProvider(
+            LocalSemanticColors provides if (useDark) DarkSemantic else LightSemantic,
             LocalLiquidGlass provides liquidGlass,
             LocalGlassDark provides useDark,
             LocalGlassBackdropColors provides remember(solid) {

@@ -7,6 +7,11 @@
 
 package com.agupta07505.smartisland.data
 
+import com.agupta07505.smartisland.buddy.model.MascotPalette
+import com.agupta07505.smartisland.buddy.model.MascotShape
+import com.agupta07505.smartisland.buddy.model.MascotSide
+import com.agupta07505.smartisland.buddy.model.MascotStyle
+import com.agupta07505.smartisland.buddy.model.MascotVisitFrequency
 import android.content.Context
 import android.util.Log
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
@@ -144,6 +149,14 @@ class SmartIslandSettingsRepository(private val context: Context) {
         val PillSwipeRightAction = stringPreferencesKey("pill_swipe_right_action")
         val LongPressAction = stringPreferencesKey("long_press_action")
         val CirclePosition = stringPreferencesKey("circle_position")
+        val BuddyEnabled = booleanPreferencesKey("buddy_enabled")
+        val BuddyStyle = stringPreferencesKey("buddy_style")
+        val BuddyShape = stringPreferencesKey("buddy_shape")
+        val BuddyPalette = stringPreferencesKey("buddy_palette")
+        val BuddySide = stringPreferencesKey("buddy_side")
+        val BuddyVisits = stringPreferencesKey("buddy_visits")
+        val BuddyReacts = booleanPreferencesKey("buddy_reacts")
+        val BuddyHidesWhenIdle = booleanPreferencesKey("buddy_hides_when_idle")
         val LandscapeShape = stringPreferencesKey("landscape_shape")
         val LandscapeWidth = floatPreferencesKey("landscape_width")
         val LandscapeHeight = floatPreferencesKey("landscape_height")
@@ -452,6 +465,14 @@ class SmartIslandSettingsRepository(private val context: Context) {
                 pillSwipeRightAction = prefs[Keys.PillSwipeRightAction] ?: defaults.pillSwipeRightAction,
                 longPressAction = prefs[Keys.LongPressAction] ?: defaults.longPressAction,
                 circlePosition = prefs[Keys.CirclePosition]?.takeIf { it in VALID_CIRCLE_POSITIONS } ?: defaults.circlePosition,
+                buddyEnabled = prefs[Keys.BuddyEnabled] ?: defaults.buddyEnabled,
+                buddyStyle = MascotStyle.fromId(prefs[Keys.BuddyStyle]).id,
+                buddyShape = MascotShape.fromId(prefs[Keys.BuddyShape]).id,
+                buddyPalette = MascotPalette.fromId(prefs[Keys.BuddyPalette]).id,
+                buddySide = MascotSide.fromId(prefs[Keys.BuddySide]).id,
+                buddyVisits = MascotVisitFrequency.fromId(prefs[Keys.BuddyVisits]).id,
+                buddyReacts = prefs[Keys.BuddyReacts] ?: defaults.buddyReacts,
+                buddyHidesWhenIdle = prefs[Keys.BuddyHidesWhenIdle] ?: defaults.buddyHidesWhenIdle,
                 landscapeShape = prefs[Keys.LandscapeShape]?.takeIf { it in VALID_LANDSCAPE_SHAPES } ?: defaults.landscapeShape,
                 landscapeWidth = validDimension(prefs[Keys.LandscapeWidth], defaults.landscapeWidth, SmartIslandSettings.MIN_WIDTH, SmartIslandSettings.MAX_WIDTH),
                 landscapeHeight = validDimension(prefs[Keys.LandscapeHeight], defaults.landscapeHeight, SmartIslandSettings.MIN_HEIGHT, SmartIslandSettings.MAX_HEIGHT),
@@ -1322,6 +1343,14 @@ class SmartIslandSettingsRepository(private val context: Context) {
         val current = it[Keys.DisabledEventsLandscape] ?: emptySet()
         it[Keys.DisabledEventsLandscape] = if (enabled) current - eventId else current + eventId
     }
+    suspend fun setBuddyEnabled(value: Boolean) = editSafely { it[Keys.BuddyEnabled] = value }
+    suspend fun setBuddyStyle(value: String) = editSafely { it[Keys.BuddyStyle] = MascotStyle.fromId(value).id }
+    suspend fun setBuddyShape(value: String) = editSafely { it[Keys.BuddyShape] = MascotShape.fromId(value).id }
+    suspend fun setBuddyPalette(value: String) = editSafely { it[Keys.BuddyPalette] = MascotPalette.fromId(value).id }
+    suspend fun setBuddySide(value: String) = editSafely { it[Keys.BuddySide] = MascotSide.fromId(value).id }
+    suspend fun setBuddyVisits(value: String) = editSafely { it[Keys.BuddyVisits] = MascotVisitFrequency.fromId(value).id }
+    suspend fun setBuddyReacts(value: Boolean) = editSafely { it[Keys.BuddyReacts] = value }
+    suspend fun setBuddyHidesWhenIdle(value: Boolean) = editSafely { it[Keys.BuddyHidesWhenIdle] = value }
     suspend fun setLandscapeCirclePosition(value: String) = editSafely {
         it[Keys.LandscapeCirclePosition] = if (value in VALID_LANDSCAPE_POSITIONS) value else SmartIslandSettings.Default.landscapeCirclePosition
     }
@@ -1539,6 +1568,14 @@ class SmartIslandSettingsRepository(private val context: Context) {
         } else {
             SmartIslandSettings.CIRCLE_POSITION_RIGHT
         }
+        prefs[Keys.BuddyEnabled] = settings.buddyEnabled
+        prefs[Keys.BuddyStyle] = MascotStyle.fromId(settings.buddyStyle).id
+        prefs[Keys.BuddyShape] = MascotShape.fromId(settings.buddyShape).id
+        prefs[Keys.BuddyPalette] = MascotPalette.fromId(settings.buddyPalette).id
+        prefs[Keys.BuddySide] = MascotSide.fromId(settings.buddySide).id
+        prefs[Keys.BuddyVisits] = MascotVisitFrequency.fromId(settings.buddyVisits).id
+        prefs[Keys.BuddyReacts] = settings.buddyReacts
+        prefs[Keys.BuddyHidesWhenIdle] = settings.buddyHidesWhenIdle
         prefs[Keys.LandscapeShape] = settings.landscapeShape.takeIf { it in VALID_LANDSCAPE_SHAPES }
             ?: SmartIslandSettings.Default.landscapeShape
         prefs[Keys.LandscapeWidth] = settings.landscapeWidth

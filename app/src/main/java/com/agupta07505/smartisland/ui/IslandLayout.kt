@@ -125,6 +125,9 @@ internal fun CollapsedContentLayer(
     animSpeed: com.agupta07505.smartisland.util.AnimationSpeed,
     /** The idle widgets are held off the pill (see [com.agupta07505.smartisland.model.IdleWidgetOff]). */
     idleSuppressed: Boolean = false,
+    /** The buddy is out over this wing (a cameo or a countdown watch): the pill's content steps aside until it is gone. */
+    stepAsideLeft: Boolean = false,
+    stepAsideRight: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val density = androidx.compose.ui.platform.LocalDensity.current
@@ -198,7 +201,9 @@ internal fun CollapsedContentLayer(
             notification = fade.notification,
             collapsedAlpha = layout.collapsedAlpha,
             settings = settings,
-            idleWidget = idleFrame
+            idleWidget = idleFrame,
+            stepAsideLeft = stepAsideLeft,
+            stepAsideRight = stepAsideRight
         )
     }
 }
