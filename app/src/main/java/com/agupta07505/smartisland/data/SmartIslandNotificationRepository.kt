@@ -8,6 +8,7 @@
 package com.agupta07505.smartisland.data
 
 import com.agupta07505.smartisland.model.IslandMode
+import com.agupta07505.smartisland.util.HotspotUtil
 import com.agupta07505.smartisland.model.IslandNotification
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +35,12 @@ class SmartIslandNotificationRepository : INotificationRepository {
         var isNewNotification = false
         _notifications.update { existingNotifications ->
             val updated = existingNotifications.toMutableList()
+            // The system's own tethering notification replaces the island's AP-state stand-in (Rule_Book 4.8).
+            if (notification.mode == IslandMode.Hotspot && notification.key != HotspotUtil.SYSTEM_HOTSPOT_KEY &&
+                !notification.key.startsWith("demo_")
+            ) {
+                updated.removeAll { it.key == HotspotUtil.SYSTEM_HOTSPOT_KEY }
+            }
             val index = updated.indexOfFirst { it.key == notification.key }
             if (index >= 0) {
                 val existing = updated[index]

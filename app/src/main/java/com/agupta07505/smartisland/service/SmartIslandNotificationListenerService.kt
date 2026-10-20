@@ -97,6 +97,14 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
 
     override fun onCreate() {
         super.onCreate()
+        listenerEvents.consumeIn(serviceScope) { event ->
+            runSuspendCatchingLogged(TAG, "Listener event handling failed") {
+                when (event) {
+                    is ListenerEvent.Posted -> processPosted(event.sbn, event.rankingMap)
+                    is ListenerEvent.Removed -> processRemoved(event.sbn, event.reason)
+                }
+            }
+        }
         com.agupta07505.smartisland.util.AppLogRecorder.restore(applicationContext)
         com.agupta07505.smartisland.util.AppLogRecorder.i("ListenerLifecycle", "onCreate: notification listener service created (pid=${android.os.Process.myPid()})")
         androidx.core.content.ContextCompat.registerReceiver(
@@ -434,6 +442,21 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
     }
 
     private val pendingRemovals = java.util.concurrent.ConcurrentHashMap<String, kotlinx.coroutines.Job>()
+    private val timerAnchors by lazy { com.agupta07505.smartisland.data.TimerAnchorStore(this) }
+
+    /** A listener callback waiting to reach the repository; see [ListenerEventBuffer]. */
+    private sealed interface ListenerEvent {
+        val sbn: StatusBarNotification
+
+        class Posted(override val sbn: StatusBarNotification, val rankingMap: RankingMap?) : ListenerEvent
+        class Removed(override val sbn: StatusBarNotification, val reason: Int?) : ListenerEvent
+    }
+
+    // Bounded (10, oldest post dropped first) and drained by one consumer, so bursts cannot pile up (Rule_Book 5).
+    private val listenerEvents = ListenerEventBuffer<ListenerEvent>(
+        keyOf = { it.sbn.key },
+        isRemoval = { it is ListenerEvent.Removed }
+    )
 
     private val shownPostTimes = java.util.concurrent.ConcurrentHashMap<String, Long>()
 
@@ -559,26 +582,62 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
         // (no removal event), so the recording card has to be ended here, before any filter can drop the new post.
         endSupersededRecordingCard(sbn)
 
-        serviceScope.launch {
-            runSuspendCatchingLogged(TAG, "NotificationPosted async failed") {
-                val asyncReason = suppressionReasonFor(sbn, rankingMap)
-                if (asyncReason != null) {
-                    traceStage(sbn, "DROPPED", "stage=async-filter reason=$asyncReason")
-                    return@runSuspendCatchingLogged
-                }
-
-                val settings = repository.settings.first()
-                currentSettings = settings
-                if (!settings.enabled) {
-                    traceStage(sbn, "DROPPED", "stage=async-settings reason=island-disabled")
-                    return@runSuspendCatchingLogged
-                }
-
-                android.util.Log.d(TAG, "Processing island-only async: key=${sbn.key}")
-                handleNotificationPosted(sbn, settings)
-            }
+        // Bounded and ordered from here on (Rule_Book 5): a burst cannot pile up, and this key's events stay in order.
+        listenerEvents.offer(ListenerEvent.Posted(sbn, rankingMap))
         }
+    }
+
+    /** The queued half of [onNotificationPosted]; runs on the single [listenerEvents] consumer. */
+    private suspend fun processPosted(sbn: StatusBarNotification, rankingMap: RankingMap?) {
+        val asyncReason = suppressionReasonFor(sbn, rankingMap)
+        if (asyncReason != null) {
+            traceStage(sbn, "DROPPED", "stage=async-filter reason=$asyncReason")
+            return
         }
+
+        val settings = repository.settings.first()
+        currentSettings = settings
+        if (!settings.enabled) {
+            traceStage(sbn, "DROPPED", "stage=async-settings reason=island-disabled")
+            return
+        }
+
+        android.util.Log.d(TAG, "Processing island-only async: key=${sbn.key}")
+        handleNotificationPosted(sbn, settings)
+    }
+
+    /**
+     * The queued half of a removal, after its debounce. [reason] is null when the OEM only called the
+     * reason-less overload (it cannot be told from our own shade cancel).
+     */
+    private fun processRemoved(sbn: StatusBarNotification, reason: Int?) {
+        val now = SystemClock.elapsedRealtime()
+        if (now < (replyGraceUntil[sbn.key] ?: 0L)) {
+            android.util.Log.d(TAG, "Removal right after an island reply, keeping the card: ${sbn.key}")
+            return
+        }
+        replyGraceUntil.remove(sbn.key)
+        val lastSuppressedTime = suppressedKeys[sbn.key] ?: 0L
+        val isRecentInitialSuppression = (now - lastSuppressedTime) < INITIAL_SUPPRESSION_WINDOW_MS
+
+        // Cancelling a group summary makes the system auto-cancel its children with
+        // REASON_GROUP_SUMMARY_CANCELED; that is our own doing, not the user dismissing them.
+        val cancelledByUs = reason == null || reason == REASON_LISTENER_CANCEL || reason == REASON_GROUP_SUMMARY_CANCELED
+        if (cancelledByUs && isRecentInitialSuppression) {
+            // Suppressed from the shade less than 1.5 s ago: keep the island copy during the initial suppression.
+            android.util.Log.d(TAG, "Recent listener-cancel (<1.5s), keeping island: ${sbn.key} reason=$reason")
+            return
+        }
+
+        android.util.Log.d(TAG, "Genuinely removed, cleaning up: ${sbn.key}")
+        traceStage(sbn, "ISLAND-REMOVED", "reason=${reason ?: "none"}(${reason?.let { removalReasonName(it) } ?: "no-reason"})")
+        com.agupta07505.smartisland.util.NotificationTrace.forget(sbn.key)
+        latePictureJobs.remove(sbn.key)?.cancel()
+        clearSuppressed(sbn.key)
+        timerAnchors.remove(sbn.key)
+        recordingStates.remove(sbn.key)
+        com.agupta07505.smartisland.util.NotificationViewInspector.forget(sbn.key)
+        notificationRepository.removeNotification(sbn.key)
     }
 
     /**
@@ -599,33 +658,8 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
             runSuspendCatchingLogged(TAG, "NotificationRemoved handling failed") {
                 delay(removalDelayMs(sbn.key))
                 if (sbn.packageName == packageName) return@runSuspendCatchingLogged
-
-                val now = SystemClock.elapsedRealtime()
-                if (now < (replyGraceUntil[sbn.key] ?: 0L)) {
-                    android.util.Log.d(TAG, "Removal right after an island reply, keeping the card: ${sbn.key}")
-                    return@runSuspendCatchingLogged
-                }
-                replyGraceUntil.remove(sbn.key)
-                val lastSuppressedTime = suppressedKeys[sbn.key] ?: 0L
-                val isRecentInitialSuppression = (now - lastSuppressedTime) < INITIAL_SUPPRESSION_WINDOW_MS
-
-                // Cancelling a group summary makes the system auto-cancel its children with
-                // REASON_GROUP_SUMMARY_CANCELED; that is our own doing, not the user dismissing them.
-                val cancelledByUs = reason == REASON_LISTENER_CANCEL || reason == REASON_GROUP_SUMMARY_CANCELED
-                if (cancelledByUs && isRecentInitialSuppression) {
-                    // Suppressed from the shade less than 1.5 s ago: keep the island copy during the initial suppression.
-                    android.util.Log.d(TAG, "Recent listener-cancel (<1.5s), keeping island: ${sbn.key}")
-                    return@runSuspendCatchingLogged
-                }
-
-                android.util.Log.d(TAG, "Genuinely removed, cleaning up: ${sbn.key}")
-                traceStage(sbn, "ISLAND-REMOVED", "reason=$reason(${removalReasonName(reason)})")
-                com.agupta07505.smartisland.util.NotificationTrace.forget(sbn.key)
-                latePictureJobs.remove(sbn.key)?.cancel()
-                clearSuppressed(sbn.key)
-                recordingStates.remove(sbn.key)
-                com.agupta07505.smartisland.util.NotificationViewInspector.forget(sbn.key)
-                notificationRepository.removeNotification(sbn.key)
+                // Joins the same ordered queue as posts; a removal is never dropped from it.
+                listenerEvents.offer(ListenerEvent.Removed(sbn, reason))
             }
             pendingRemovals.remove(sbn.key)
         }
@@ -673,26 +707,7 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
             runSuspendCatchingLogged(TAG, "NotificationRemoved (no reason) handling failed") {
                 delay(removalDelayMs(sbn.key))
                 if (sbn.packageName == packageName) return@runSuspendCatchingLogged
-
-                val now = SystemClock.elapsedRealtime()
-                if (now < (replyGraceUntil[sbn.key] ?: 0L)) {
-                    android.util.Log.d(TAG, "Removal right after an island reply, keeping the card: ${sbn.key}")
-                    return@runSuspendCatchingLogged
-                }
-                replyGraceUntil.remove(sbn.key)
-                val lastSuppressedTime = suppressedKeys[sbn.key] ?: 0L
-                val isRecentInitialSuppression = (now - lastSuppressedTime) < INITIAL_SUPPRESSION_WINDOW_MS
-
-                if (isRecentInitialSuppression) {
-                    android.util.Log.d(TAG, "Suppressed key recently (<1.5s), keeping island: ${sbn.key}")
-                    return@runSuspendCatchingLogged
-                }
-
-                android.util.Log.d(TAG, "Removing from island repo: ${sbn.key}")
-                clearSuppressed(sbn.key)
-                recordingStates.remove(sbn.key)
-                com.agupta07505.smartisland.util.NotificationViewInspector.forget(sbn.key)
-                notificationRepository.removeNotification(sbn.key)
+                listenerEvents.offer(ListenerEvent.Removed(sbn, reason = null))
             }
             pendingRemovals.remove(sbn.key)
         }
@@ -747,6 +762,8 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
 
         android.util.Log.d(TAG, "initial sync ($trigger): ${active.size} active, overlayReady=$overlayReady")
 
+        if (!onlyMissing) timerAnchors.retainOnly(active.mapTo(HashSet()) { it.key })
+
         active.forEach { sbn ->
             val mode = sbn.notification.toIslandMode(
                 sbn,
@@ -798,6 +815,42 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
             "startup re-sync imported ${missing.size} card(s) the first pass missed: ${missing.map { it.key }}"
         )
         missing.forEach { handleNotificationPosted(it, settings, isInitialSync = true) }
+    }
+
+    /**
+     * Pins a timer (end time) or stopwatch (start time) to its absolute epoch anchor and saves it, so a restart
+     * rebuilds it from that instead of from text that may be minutes old. Null for every other mode.
+     */
+    private fun anchorClockTool(
+        key: String,
+        mode: IslandMode,
+        notification: Notification,
+        freshEpochMs: Long,
+        isRestore: Boolean
+    ): com.agupta07505.smartisland.alert.RecoveredTimer? {
+        val kind = when (mode) {
+            IslandMode.Timer -> com.agupta07505.smartisland.alert.TimerKind.Timer
+            IslandMode.Stopwatch -> com.agupta07505.smartisland.alert.TimerKind.Stopwatch
+            else -> return null
+        }
+        return runCatchingLogged(TAG, "Anchoring $mode failed") {
+            val paused = if (kind == com.agupta07505.smartisland.alert.TimerKind.Timer) {
+                com.agupta07505.smartisland.util.TimerStopwatchParser.isTimerPaused(notification)
+            } else {
+                com.agupta07505.smartisland.util.TimerStopwatchParser.isStopwatchPaused(notification)
+            }
+            val recovered = com.agupta07505.smartisland.alert.TimerRecovery.recover(
+                stored = timerAnchors.get(key),
+                kind = kind,
+                freshEpochMs = freshEpochMs,
+                nowMs = System.currentTimeMillis(),
+                isRestore = isRestore,
+                paused = paused
+            )
+            // A paused clock has no fixed anchor; keep the last running one for when it resumes.
+            if (!paused) timerAnchors.put(key, com.agupta07505.smartisland.alert.TimerAnchor(kind, recovered.epochMs))
+            recovered
+        }
     }
 
     private fun sweepStaleShadeCards() {
@@ -1372,7 +1425,7 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
         }
 
         val voipLive = com.agupta07505.smartisland.util.VoipCallSignal.active
-        val computedTimeMillis = when {
+        val computedTimeMillis0 = when {
             recordingState != null -> recordingState.startMillis
             // A running call's chronometer start is the real call start.
             mode == IslandMode.IncomingCall && !isNowRinging &&
@@ -1471,6 +1524,12 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
             else -> sbn.postTime
         }
 
+        // Timers and stopwatches are pinned to an absolute anchor that survives the process (Rule_Book 7.3).
+        val recoveredClock = anchorClockTool(sbn.key, mode, notification, computedTimeMillis0, isInitialSync)
+        val computedTimeMillis = recoveredClock?.epochMs ?: computedTimeMillis0
+        // A timer that ran out while the process was dead rings as Critical (Tier 0).
+        val promoteTimerToCritical = recoveredClock?.promoteToCritical == true
+
         // A media card's title and artist come from the live session when it has them: a re-post that was built from
         // the previous track must not put the old title back over the one the session reported a moment ago.
         val notifTitle = mediaInfo?.title?.takeIf { it.isNotBlank() }
@@ -1559,7 +1618,7 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
                 smallIcon = if (mode == IslandMode.Music) notification.loadSmallIconBitmap(sbn.packageName) else null,
                 largeIcon = mediaInfo?.artwork ?: notification.loadLargeIconBitmap(),
                 actionIntents = actions,
-                category = notification.category,
+                category = if (promoteTimerToCritical) Notification.CATEGORY_ALARM else notification.category,
                 progress = textPercent ?: barProgress,
                 progressMax = if (textPercent != null) 100 else barProgressMax,
                 mediaPositionMs = mediaInfo?.positionMs,

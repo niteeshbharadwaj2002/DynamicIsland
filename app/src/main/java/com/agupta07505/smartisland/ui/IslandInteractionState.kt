@@ -145,6 +145,8 @@ internal class IslandInteractionState {
     var cardSlideMaxPx by mutableFloatStateOf(0f)
     /** The ease-back and the "no card came" timer of the last expanded swipe; a new touch cancels them. */
     var cardBackJob: kotlinx.coroutines.Job? = null
+    /** Instant spring compression of the collapsed pill on finger-down (NotchIQ touch feedback); 1 at rest. */
+    val pressScale = androidx.compose.animation.core.Animatable(1f)
     /**
      * The one ease-back of the collapsed pill's drag (shell, lean, content, pull); a new touch cancels it so it
      * cannot fight the finger.

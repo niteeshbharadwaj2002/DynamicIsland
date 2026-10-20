@@ -1032,19 +1032,39 @@ class SmartIslandOverlayService : AccessibilityService() {
             addAction(Intent.ACTION_BATTERY_LOW)
             addAction(Intent.ACTION_BATTERY_OKAY)
             addAction(android.os.PowerManager.ACTION_POWER_SAVE_MODE_CHANGED)
+        }
+        val bluetoothFilter = IntentFilter().apply {
             addAction(android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED)
             addAction(android.bluetooth.BluetoothDevice.ACTION_ACL_DISCONNECTED)
             addAction("android.bluetooth.device.action.BATTERY_LEVEL_CHANGED")
         }
-        
-        // Android 13+ requires an explicit export flag. NOT_EXPORTED still receives system broadcasts and blocks
-        // spoofed intents from other apps.
+
+        // Power events come from the system server and are fine with NOT_EXPORTED (Android 13+ needs an explicit flag).
+        // Bluetooth events are sent by the Bluetooth app (not a system uid), so they need an exported receiver;
+        // the broadcast permission keeps other apps from spoofing them.
         runCatchingLogged(TAG, "registerReceiver failed") {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 registerReceiver(systemEventReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+                registerReceiver(systemEventReceiver, bluetoothFilter, bluetoothBroadcastPermission(), null, Context.RECEIVER_EXPORTED)
             } else {
                 @Suppress("UnspecifiedRegisterReceiverFlag")
                 registerReceiver(systemEventReceiver, filter)
+                @Suppress("UnspecifiedRegisterReceiverFlag")
+                registerReceiver(systemEventReceiver, bluetoothFilter, bluetoothBroadcastPermission(), null)
+            }
+            systemEventReceiverRegistered = true
+        }
+
+        // Hotspot on/off (Rule_Book 4.8), with or without a tethering notification. The broadcast is protected,
+        // so only the system can send it; it comes from the Wi-Fi stack, hence exported. It is sticky, so
+        // registering delivers the current state at once.
+        runCatchingLogged(TAG, "registerReceiver hotspot failed") {
+            val hotspotFilter = IntentFilter(com.agupta07505.smartisland.util.HotspotUtil.ACTION_WIFI_AP_STATE_CHANGED)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(systemEventReceiver, hotspotFilter, Context.RECEIVER_EXPORTED)
+            } else {
+                @Suppress("UnspecifiedRegisterReceiverFlag")
+                registerReceiver(systemEventReceiver, hotspotFilter)
             }
             systemEventReceiverRegistered = true
         }
@@ -1359,6 +1379,13 @@ class SmartIslandOverlayService : AccessibilityService() {
             }
         }
     }
+
+    private fun bluetoothBroadcastPermission(): String =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            android.Manifest.permission.BLUETOOTH_CONNECT
+        } else {
+            android.Manifest.permission.BLUETOOTH
+        }
 
     override fun onDestroy() {
         if (destroyed) return

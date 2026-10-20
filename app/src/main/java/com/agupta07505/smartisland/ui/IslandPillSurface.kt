@@ -114,6 +114,11 @@ internal fun Modifier.islandPillSurface(
                 scaleX = switchScaleAnim.value * swell
                 scaleY = switchScaleAnim.value * swell
             }
+            // Finger-down feedback (collapsed pill only): a quick press-in, released on lift.
+            if (!cb.currentExpanded) {
+                scaleX *= ui.pressScale.value
+                scaleY *= ui.pressScale.value
+            }
             // A swipe that would fire if the finger lifted now: the pill swells a touch (1 -> 1.04).
             val pull = ui.swipeDownPull
             val deadWeight = com.agupta07505.smartisland.util.SwipeDownPull.deadShrinkWeight(pull)

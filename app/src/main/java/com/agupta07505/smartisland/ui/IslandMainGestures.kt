@@ -60,6 +60,8 @@ import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
+private const val PRESS_SCALE = 0.95f
+
 /**
  * All touch handling on the island shell itself: tap, hold, drag with finger-follow, the pill swipe actions
  * (collapsed) and the swipe-up / down / sideways actions (expanded).
@@ -81,6 +83,37 @@ internal fun Modifier.islandMainGestures(
     val displayMetrics = context.resources.displayMetrics
     return this
         .onGloballyPositioned { ui.gestureOrigin = it.positionInWindow() }
+        // Instant spring compression on finger-down for low-latency touch feedback. It only watches (Initial pass,
+        // nothing consumed), so the gesture below is unaffected; the collapsed pill reads it in its graphicsLayer.
+        .pointerInput(isInputActive) {
+            if (isInputActive) return@pointerInput
+            awaitEachGesture {
+                awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                if (!cb.currentExpanded) {
+                    scope.launch {
+                        ui.pressScale.animateTo(
+                            PRESS_SCALE,
+                            androidx.compose.animation.core.spring(
+                                dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                                stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
+                            )
+                        )
+                    }
+                }
+                do {
+                    val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                } while (event.changes.any { it.pressed })
+                scope.launch {
+                    ui.pressScale.animateTo(
+                        1f,
+                        androidx.compose.animation.core.spring(
+                            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                            stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
+                        )
+                    )
+                }
+            }
+        }
         .pointerInput(displayMetrics.density, isInputActive, isLandscape, centreOverlapsCutout, pillHasContent) {
             if (isInputActive) return@pointerInput
             awaitEachGesture {

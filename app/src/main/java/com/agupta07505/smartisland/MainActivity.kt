@@ -7,8 +7,14 @@
 
 package com.agupta07505.smartisland
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import com.agupta07505.smartisland.util.PermissionGate
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -31,10 +37,19 @@ class MainActivity : ComponentActivity() {
 
     private var requestedSection by mutableStateOf<String?>(null)
 
+    // Bluetooth connect/disconnect broadcasts (device name, battery) are only delivered once this runtime permission is granted.
+    private val bluetoothPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
+    // Whether setup (overlay + notification access) was complete at the last look; a later miss means a grant was revoked.
+    private var setupWasComplete = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         requestedSection = sectionFrom(intent)
         SystemServiceRecovery.requestRecovery(this)
+        setupWasComplete = !PermissionGate.check(this).needsSetup
+        requestBluetoothPermissionIfNeeded()
 
         setContent {
             val themeSettings by settingsRepository.settings.collectAsStateWithLifecycle(
@@ -79,5 +94,19 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         SystemServiceRecovery.requestRecovery(this)
+        // Either grant can be revoked while the app is away (Rule_Book 7.1); send the user back to setup if one is
+        // gone. First-run setup is left alone: this only fires after setup had been complete.
+        val needsSetup = PermissionGate.check(this).needsSetup
+        if (needsSetup && setupWasComplete && requestedSection == null) {
+            requestedSection = com.agupta07505.smartisland.util.UtilityActions.SECTION_PERMISSIONS
+        }
+        setupWasComplete = !needsSetup
+    }
+
+    private fun requestBluetoothPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+        val granted = ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) ==
+            PackageManager.PERMISSION_GRANTED
+        if (!granted) bluetoothPermissionLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
     }
 }
