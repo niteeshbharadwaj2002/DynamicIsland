@@ -662,88 +662,94 @@ private fun StudioTopHeader(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            if (appIcon != null) {
-                Image(
-                    bitmap = appIcon,
-                    contentDescription = "Smart Island Logo",
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(42.dp)
-                        .background(
-                            brush = Brush.linearGradient(
-                                listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)
-                            ),
-                            shape = RoundedCornerShape(12.dp)
+        if (appIcon != null) {
+            Image(
+                bitmap = appIcon,
+                contentDescription = stringResource(R.string.app_name),
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(12.dp))
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .background(
+                        brush = Brush.linearGradient(
+                            listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)
                         ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("SI", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                }
-            }
-            Column {
-                Text(
-                    text = stringResource(R.string.app_name),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = stringResource(R.string.app_subtitle),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        val statusColor = when {
-            !canEnable -> Color(0xFFE88C25)
-            isIslandEnabled -> Color(0xFF0F9F6E)
-            else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-        }
-        val statusText = when {
-            !canEnable -> stringResource(R.string.status_setup_needed)
-            isIslandEnabled -> stringResource(R.string.status_active)
-            else -> stringResource(R.string.status_ready)
-        }
-
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(20.dp))
-                .background(statusColor.copy(alpha = 0.12f))
-                .border(1.dp, statusColor.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
-                .clickable(onClick = onHealthClick)
-                .padding(horizontal = 12.dp, vertical = 6.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        shape = RoundedCornerShape(12.dp)
+                    ),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .background(statusColor, CircleShape)
-                )
-                Text(
-                    text = statusText,
-                    color = statusColor,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                Text("N", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            }
+        }
+        // Name, subtitle, then the status pill below them, all left-aligned on the title's edge.
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.app_name),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = stringResource(R.string.app_subtitle),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            val status = homeStatus(canEnable = canEnable, isIslandEnabled = isIslandEnabled)
+            val statusColor = when (status) {
+                HomeStatus.SETUP_NEEDED -> Color(0xFFE88C25)
+                HomeStatus.ACTIVE -> Color(0xFF0F9F6E)
+                HomeStatus.READY -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            }
+            val statusText = when (status) {
+                HomeStatus.SETUP_NEEDED -> stringResource(R.string.status_setup_needed)
+                HomeStatus.ACTIVE -> stringResource(R.string.status_active)
+                HomeStatus.READY -> stringResource(R.string.status_ready)
+            }
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(statusColor.copy(alpha = 0.12f))
+                    .border(1.dp, statusColor.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
+                    .clickable(onClick = onHealthClick)
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(statusColor, CircleShape)
+                    )
+                    Text(
+                        text = statusText,
+                        color = statusColor,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }
+}
+
+/** The home header's status pill states. */
+internal enum class HomeStatus { SETUP_NEEDED, ACTIVE, READY }
+
+/** Missing permissions win over everything, then the island's on/off state. */
+internal fun homeStatus(canEnable: Boolean, isIslandEnabled: Boolean): HomeStatus = when {
+    !canEnable -> HomeStatus.SETUP_NEEDED
+    isIslandEnabled -> HomeStatus.ACTIVE
+    else -> HomeStatus.READY
 }
 
 /**
@@ -1445,7 +1451,7 @@ private fun WelcomeDialog(
                 if (appIcon != null) {
                     Image(
                         bitmap = appIcon,
-                        contentDescription = "Smart Island Logo",
+                        contentDescription = stringResource(R.string.app_name),
                         modifier = Modifier
                             .size(68.dp)
                             .clip(RoundedCornerShape(18.dp))

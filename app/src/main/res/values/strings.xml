@@ -6,10 +6,10 @@
   Do not remove or alter this notice. - Per GPL-3.0 Section 4 & Section 5
 -->
 <resources>
-    <string name="app_name">Smart Island Personal</string>
+    <string name="app_name">NotchIQ</string>
     <string name="app_subtitle">Floating Dynamic Overlay</string>
     <string name="app_description">Smart Island reimagines Android notifications with a beautiful floating experience, interactive controls, and fluid animations—keeping everything important just a glance away.</string>
-    <string name="accessibility_service_label">Smart Island Service</string>
+    <string name="accessibility_service_label">NotchIQ Service</string>
     <string name="accessibility_service_description">Enables the Smart Island overlay to sit on top of the status bar so you can tap the pill around your camera cutout without touch interference.</string>
     <string name="grant_accessibility">Grant Accessibility permission to start overlay over status bar</string>
     <string name="made_by">Made with ❤️ by Animesh Gupta</string>
@@ -18,7 +18,7 @@
     <string name="tab_settings">Settings</string>
     <string name="tab_features">Features</string>
     <string name="tab_system">System &amp; About</string>
-    <string name="master_switch_title">Smart Island</string>
+    <string name="master_switch_title">NotchIQ</string>
     <string name="master_switch_active_desc">Active</string>
     <string name="master_switch_ready_desc">Off — tap to start</string>
     <string name="master_switch_missing_desc">Permissions needed</string>
@@ -118,7 +118,7 @@
     <string name="status_update_available">New version %1$s is available</string>
     <string name="btn_download_apk">Download APK</string>
     <string name="detail_title_permissions_center">Permissions &amp; Setup Center</string>
-    <string name="detail_title_about_app">About Smart Island</string>
+    <string name="detail_title_about_app">About NotchIQ</string>
     <string name="detail_title_support_community">Support &amp; Feedback</string>
     <string name="shizuku_card_title">Shizuku 1-Tap Auto Setup</string>
     <string name="shizuku_card_desc">Grants permissions through Shizuku, without opening each system settings page. Choose how much to grant.</string>
@@ -427,7 +427,7 @@
     <string name="report_bug_desc">File an issue with device details on GitHub</string>
     <string name="license_title">License (GNU GPL v3)</string>
     <string name="license_desc">Free &amp; Open Source Software</string>
-    <string name="about_title">About Smart Island</string>
+    <string name="about_title">About NotchIQ</string>
     <string name="github_update_center_title">GitHub Update Center</string>
     <string name="current_version_label">Current Version: v%1$s</string>
     <string name="btn_check_updates">Check</string>
