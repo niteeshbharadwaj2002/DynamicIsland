@@ -53,6 +53,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
+import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -673,10 +674,17 @@ fun IslandOverlayView(
             modifier = Modifier
                 .layout { measurable, _ ->
                     val currentProgress = expansionProgress
-                    val targetW = if (isHiding && currentProgress == 0f) 0f
-                        else lerp(pillWidthDp.toPx(), expandedWidth.toPx(), currentProgress)
-                    val targetH = if (isHiding && currentProgress == 0f) 0f
-                        else lerp(settings.height.dp.toPx(), expandedHeight.toPx(), currentProgress)
+                    val progressClamped = currentProgress.coerceIn(0f, 1f)
+                    val baseW = pillWidthDp.toPx()
+                    val baseH = settings.height.dp.toPx()
+                    val expW = expandedWidth.toPx()
+                    val expH = expandedHeight.toPx()
+
+                    val targetW = if (isHiding && currentProgress <= 0f) 0f
+                        else lerp(baseW, expW, currentProgress).coerceAtLeast(if (isHiding) 0f else baseW)
+                    val targetH = if (isHiding && currentProgress <= 0f) 0f
+                        else lerp(baseH, expH, currentProgress).coerceAtLeast(if (isHiding) 0f else baseH)
+
                     val currentWidth = targetW.roundToInt().coerceAtLeast(0)
                     val currentHeight = targetH.roundToInt().coerceAtLeast(0)
                     val placeable = measurable.measure(
@@ -692,25 +700,27 @@ fun IslandOverlayView(
                     scaleX = switchScaleAnim.value * springPressScale.value
                     scaleY = switchScaleAnim.value * springPressScale.value
                     val currentProgress = expansionProgress
-                    val currentRadius = lerp(settings.cornerRadius, expandedRadius.value, currentProgress)
-                    shape = if (settings.enableNotchMode && currentProgress == 0f) {
-                        RoundedCornerShape(
-                            topStart = 0.dp,
-                            topEnd = 0.dp,
-                            bottomStart = currentRadius.dp,
-                            bottomEnd = currentRadius.dp
-                        )
+                    val progressClamped = currentProgress.coerceIn(0f, 1f)
+                    val currentRadius = lerp(settings.cornerRadius, expandedRadius.value, progressClamped)
+                    val topRadius = if (settings.enableNotchMode) {
+                        lerp(0f, expandedRadius.value, progressClamped)
                     } else {
-                        RoundedCornerShape(currentRadius.dp)
+                        currentRadius
                     }
+                    shape = RoundedCornerShape(
+                        topStart = topRadius.dp,
+                        topEnd = topRadius.dp,
+                        bottomStart = currentRadius.dp,
+                        bottomEnd = currentRadius.dp
+                    )
                     clip = true
                 }
                 .drawBehind {
                     drawRect(color = shellColor)
-                    val glow = glowRadiusState.floatValue
+                    val glow = glowRadiusState.floatValue * expansionProgress.coerceIn(0f, 1f)
                     if (glow > 0f) {
                         val currentProgress = expansionProgress
-                        val currentRadius = lerp(settings.cornerRadius, expandedRadius.value, currentProgress)
+                        val currentRadius = lerp(settings.cornerRadius, expandedRadius.value, currentProgress.coerceIn(0f, 1f))
                         drawKineticGlow(glow.dp.toPx(), currentRadius.dp.toPx())
                     }
                 }
@@ -722,17 +732,19 @@ fun IslandOverlayView(
                             settings.shadowElevation.dp
                         }
                         val currentProgress = expansionProgress
-                        val currentRadius = lerp(settings.cornerRadius, expandedRadius.value, currentProgress)
-                        val activeShape = if (settings.enableNotchMode && currentProgress == 0f) {
-                            RoundedCornerShape(
-                                topStart = 0.dp,
-                                topEnd = 0.dp,
-                                bottomStart = currentRadius.dp,
-                                bottomEnd = currentRadius.dp
-                            )
+                        val progressClamped = currentProgress.coerceIn(0f, 1f)
+                        val currentRadius = lerp(settings.cornerRadius, expandedRadius.value, progressClamped)
+                        val topRadius = if (settings.enableNotchMode) {
+                            lerp(0f, expandedRadius.value, progressClamped)
                         } else {
-                            RoundedCornerShape(currentRadius.dp)
+                            currentRadius
                         }
+                        val activeShape = RoundedCornerShape(
+                            topStart = topRadius.dp,
+                            topEnd = topRadius.dp,
+                            bottomStart = currentRadius.dp,
+                            bottomEnd = currentRadius.dp
+                        )
                         Modifier.shadow(
                             elevation = activeMainShadow,
                             shape = activeShape,
@@ -1196,8 +1208,9 @@ fun IslandOverlayView(
             if (expanded || expandedAlpha > 0.01f) {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .wrapContentHeight()
+                        .requiredWidth(expandedWidth)
+                        .requiredHeight(expandedHeight)
+                        .align(Alignment.TopCenter)
                         .graphicsLayer {
                             alpha = expandedAlpha
                             scaleX = contentScale
@@ -1217,7 +1230,7 @@ fun IslandOverlayView(
                         // Each mode owns its natural height. The launcher already
                         // supplies its own loading height and must not impose that
                         // minimum on compact call or battery content.
-                        onHeightMeasured = { expandedHeight = it },
+                        onHeightMeasured = { if (expanded) expandedHeight = it },
                         settings = settings,
                         onReplyStateChanged = onReplyStateChanged
                     )
