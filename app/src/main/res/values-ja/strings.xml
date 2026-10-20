@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">スマートアイランド</string>
+    <string name="app_name">Smart Island Personal</string>
     <string name="app_subtitle">フローティング・ダイナミック・オーバーレイ</string>
     <string name="app_description">スマートアイランドは、美しいフローティング体験、インタラクティブコントロール、および流体アニメーションでAndroidの通知を想像し、すべてを重要なものにします.</string>
     <string name="accessibility_service_label">スマートアイランドサービス</string>

@@ -6,7 +6,7 @@
   Do not remove or alter this notice. - Per GPL-3.0 Section 4 & Section 5
 -->
 <resources>
-    <string name="app_name">Smart Island</string>
+    <string name="app_name">Smart Island Personal</string>
     <string name="app_subtitle">Floating Dynamic Overlay</string>
     <string name="app_description">Smart Island reimagines Android notifications with a beautiful floating experience, interactive controls, and fluid animations—keeping everything important just a glance away.</string>
     <string name="accessibility_service_label">Smart Island Service</string>

@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Smart Island</string>
+    <string name="app_name">Smart Island Personal</string>
     <string name="app_subtitle">Sobrecarga dinámica flotante</string>
     <string name="app_description">Smart Island reimagina las notificaciones de Android con una hermosa experiencia flotante, controles interactivos y animaciones de fluidos, manteniendo todo importante sólo un vistazo.</string>
     <string name="accessibility_service_label">Smart Island Service</string>

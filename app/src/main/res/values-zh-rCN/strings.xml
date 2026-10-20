@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">智能岛</string>
+    <string name="app_name">Smart Island Personal</string>
     <string name="app_subtitle">浮动动态重叠</string>
     <string name="app_description">Smart Island再造Android通知.</string>
     <string name="accessibility_service_label">智能岛服务</string>

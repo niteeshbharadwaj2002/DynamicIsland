@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Ilha Inteligente</string>
+    <string name="app_name">Smart Island Personal</string>
     <string name="app_subtitle">Sobreposição dinâmica flutuante</string>
     <string name="app_description">Smart Island reimagina notificações Android com uma bela experiência flutuante, controles interativos e animações fluidas – mantendo tudo importante apenas um olhar de distância.</string>
     <string name="accessibility_service_label">Serviço de ilha inteligente</string>
