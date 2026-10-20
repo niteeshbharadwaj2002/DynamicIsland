@@ -10,6 +10,7 @@ package com.agupta07505.smartisland.ui.search
 import com.agupta07505.smartisland.model.IslandEvent
 import com.agupta07505.smartisland.ui.FeatureDetailSection
 import com.agupta07505.smartisland.ui.StudioTab
+import com.agupta07505.smartisland.ui.sections.LayoutGroup
 import com.agupta07505.smartisland.ui.sections.eventSearchKey
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -66,7 +67,7 @@ class SettingsSearchIndexTest {
             .groupingBy { it }.eachCount()
             .filterValues { it > 1 }.keys
         // Portrait and Landscape each have an entry, but they point at the same row.
-        assertEquals(setOf("layout.anim_speed", "layout.merge_style"), shared)
+        assertEquals(setOf("layout.anim_speed", "layout.merge_style", LayoutGroup.ExemptApps.searchKey), shared)
     }
 
     @Test
@@ -136,5 +137,29 @@ class SettingsSearchIndexTest {
         assertEquals("backup.export", first("json export"))
         assertEquals("perm.shizuku", first("shizuku"))
         assertEquals("diag.screen", first("debug"))
+    }
+
+    @Test
+    fun everyLayoutGroupCanBeFoundByItsTitleAndScrollsToItself() {
+        LayoutGroup.entries.forEach { group ->
+            val entries = index.filter { it.rowKey == group.searchKey }
+            assertTrue("no search entry for ${group.name}", entries.isNotEmpty())
+            entries.forEach { entry ->
+                // The test stub resolves every string id to "s<id>", so the title is the group's resolved title.
+                assertEquals("s${group.titleRes}", entry.item.title)
+                assertEquals(StudioTab.Position, (entry.target as SearchTarget.Tab).tab)
+            }
+        }
+    }
+
+    @Test
+    fun layoutGroupsLeadToTheirOwnOrientation() {
+        val exempt = index.filter { it.rowKey == LayoutGroup.ExemptApps.searchKey }
+            .map { (it.target as SearchTarget.Tab).landscape }
+        assertEquals(setOf<Boolean?>(false, true), exempt.toSet())
+        LayoutGroup.entries.filter { it != LayoutGroup.ExemptApps }.forEach { group ->
+            val entry = index.single { it.rowKey == group.searchKey }
+            assertEquals(SearchTarget.Tab(StudioTab.Position, false), entry.target)
+        }
     }
 }
