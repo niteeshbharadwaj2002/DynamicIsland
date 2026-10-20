@@ -4,6 +4,42 @@ All notable changes to Smart Island should be documented in this file.
 
 The format is inspired by Keep a Changelog, and this project uses the GNU General Public License v3.0.
 
+## [7.6.0-personal] - 2026-10-20
+
+NotchIQ is a personal fork of Smart Island. This release is Smart Island **7.6.0** with NotchIQ's own work ported on top.
+
+### Merged from Smart Island 7.6.0
+- Upstream 7.6.0 is the base: Spanish and Japanese translations, the string translation script, and the USB and audio-jack refinements.
+- Upstream features now in the build: face, fingerprint and app-lock animation, idle widgets, headphone and USB events, the clock rework, hotspot, and baseline profiles.
+- Upstream's 7.1 to 7.6 history below this entry is kept as written.
+
+### Kept from NotchIQ
+- **Buddy (mascot):** a character on the collapsed pill with reactions, visits and a settings screen. Ported from Vorssaint (GPL-3.0-or-later) and credited in About.
+- **Island UI revamp:** the two-slot alert engine (`alert/AlertEngine.kt`), spring presets and kinetic glow (`ui/IslandMotion.kt`), size-class pill layout, backdrop blur behind a setting on Android 12 and later, and the privacy indicators.
+- **HIG app UI:** the settings app uses grouped lists, Apple-style typography and switches.
+- **Hardening:** notification history uses secure delete, Shizuku settings values are quoted, notification titles are no longer logged, receivers are not exported, and the listener's events go through an ordered queue.
+- **Debug and build:** the debug build has a `DebugAlertReceiver` for synthetic alerts and LeakCanary; the release build shrinks Compose and strips logs unless `-PkeepLogs` is set.
+
+### Offline decisions (D1)
+- No `INTERNET` permission. The app makes no network calls.
+- The GitHub update checker and its download screen are removed.
+- The weather and wind idle widgets are hidden from the pickers.
+- Calendar is read locally for the next-event widget. No location permission is requested.
+
+### Removed
+- Telegram CI jobs, the Telegram scripts and setup guide, the auto-review and cleanup workflows, the Copilot instruction files, `ROADMAP.md` and `analysis.md`.
+
+### Build and CI
+- Application ID `com.niteeshbharadwaj.smartisland.personal`, `versionCode 10`, `versionName 7.6.0-personal`.
+- `build.yml` and `build_pull_request.yml` run lint, unit tests and a debug build for `main` and `update`, on JDK 17.
+- `release.yml` runs on `v*` tags and by hand. It signs the APK only when `ANDROID_KEYSTORE_BASE64` and `ANDROID_KEYSTORE_PASSWORD` are set, and otherwise produces an unsigned APK. See [docs/RELEASE_SIGNING.md](docs/RELEASE_SIGNING.md).
+- `baseline-profile.yml` is manual only.
+- Gradle dependency verification is on (`gradle/verification-metadata.xml`).
+
+### Known issues
+- The welcome dialog still has a link to the upstream Telegram community. It is not yet removed from the app code.
+- Unit tests: 2048 pass. The on-device smoke test has not been run for this release.
+
 ## [7.6.0] - 2026-10-19
 
 ### Highlights (v7.6.0)
