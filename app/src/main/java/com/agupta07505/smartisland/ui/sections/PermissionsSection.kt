@@ -7,6 +7,15 @@
 
 package com.agupta07505.smartisland.ui.sections
 
+import androidx.compose.material3.CardDefaults
+import com.agupta07505.smartisland.ui.components.SmartIslandSwitch
+import com.agupta07505.smartisland.util.HeadsUpNotificationManager
+import android.content.Context
+import android.content.ClipboardManager
+import android.content.ClipData
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Notifications
 import android.content.Intent
 import android.provider.Settings
 import android.widget.Toast
@@ -32,7 +41,6 @@ import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import com.agupta07505.smartisland.ui.glass.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -438,13 +446,16 @@ fun PermissionsSection(
             onClick = onBatteryClick
         )
 
+        // Recommended: OEM background lock, pop-up notifications off, permission alerts (Rule_Book 7.2, 10.2)
+        OnboardingExtrasSection()
+
         val warningIconColor = if (isOverlayWarningDisabled) Color(0xFF0F9F6E) else MaterialTheme.colorScheme.onSurfaceVariant
         val warningBgColor = if (isOverlayWarningDisabled) Color(0xFF0F9F6E).copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            border = null,
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
@@ -533,7 +544,7 @@ fun PermissionsSection(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            border = null,
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
@@ -628,6 +639,121 @@ fun PermissionsSection(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     lineHeight = 16.sp
                 )
+            }
+        }
+
+        // Heads-Up Notification (HUN) Suppression Card (Item 8)
+        val lifecycleOwner = LocalLifecycleOwner.current
+        var writeSecureGranted by remember { mutableStateOf(HeadsUpNotificationManager.hasWriteSecureSettings(context)) }
+        var hunSuppressed by remember { mutableStateOf(HeadsUpNotificationManager.isHunSuppressed(context)) }
+
+        DisposableEffect(lifecycleOwner, context) {
+            val observer = LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    writeSecureGranted = HeadsUpNotificationManager.hasWriteSecureSettings(context)
+                    hunSuppressed = HeadsUpNotificationManager.isHunSuppressed(context)
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Notifications,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = "Suppress Pop-up Banners",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Hides heads-up banners so only the island renders notifications",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    SmartIslandSwitch(
+                        checked = hunSuppressed,
+                        enabled = writeSecureGranted,
+                        onCheckedChange = { suppress ->
+                            val ok = HeadsUpNotificationManager.setHunSuppressed(context, suppress)
+                            if (ok) {
+                                hunSuppressed = HeadsUpNotificationManager.isHunSuppressed(context)
+                            } else {
+                                android.widget.Toast.makeText(context, "Failed to update heads-up setting", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    )
+                }
+
+                if (!writeSecureGranted) {
+                    val command = HeadsUpNotificationManager.adbGrantCommand(context)
+                    Text(
+                        text = "Requires WRITE_SECURE_SETTINGS via ADB or Shizuku:",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = command,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .padding(10.dp)
+                    )
+                    OutlinedButton(
+                        onClick = {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                            clipboard?.setPrimaryClip(ClipData.newPlainText("adb grant", command))
+                            android.widget.Toast.makeText(context, "Command copied to clipboard", android.widget.Toast.LENGTH_SHORT).show()
+                        },
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(Icons.Rounded.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Copy Command", fontSize = 13.sp)
+                    }
+                }
             }
         }
     }

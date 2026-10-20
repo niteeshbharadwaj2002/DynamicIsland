@@ -7,6 +7,7 @@
 
 package com.agupta07505.smartisland.ui.sections
 
+import com.agupta07505.smartisland.ui.components.SmartIslandSwitch
 import androidx.compose.animation.animateContentSize
 import com.agupta07505.smartisland.model.IdleSchedule
 import androidx.compose.ui.zIndex
@@ -656,7 +657,7 @@ private fun SectionCard(modifier: Modifier = Modifier, content: @Composable () -
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+        border = null,
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = modifier.fillMaxWidth()
     ) {
@@ -689,7 +690,7 @@ private fun SwitchRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        SmartIslandSwitch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 

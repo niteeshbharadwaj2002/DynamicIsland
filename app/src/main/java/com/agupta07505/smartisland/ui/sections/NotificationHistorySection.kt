@@ -7,6 +7,7 @@
 
 package com.agupta07505.smartisland.ui.sections
 
+import com.agupta07505.smartisland.ui.components.SmartIslandSwitch
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -342,7 +343,7 @@ fun NotificationHistorySection(
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                border = null,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
@@ -377,7 +378,7 @@ fun NotificationHistorySection(
                                  Text(
                                      text = stringResource(R.string.history_title),
                                      style = MaterialTheme.typography.titleMedium,
-                                     fontWeight = FontWeight.Bold,
+                                     fontWeight = FontWeight.SemiBold,
                                      color = MaterialTheme.colorScheme.onSurface
                                  )
                                  Text(
@@ -389,7 +390,7 @@ fun NotificationHistorySection(
                         }
 
                         if (repository != null) {
-                            Switch(
+                            SmartIslandSwitch(
                                 checked = settings.enableNotificationHistory,
                                 onCheckedChange = { isChecked ->
                                     scope.launch {
@@ -432,7 +433,7 @@ fun NotificationHistorySection(
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                    border = null,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
@@ -449,7 +450,7 @@ fun NotificationHistorySection(
                         Text(
                             text = stringResource(R.string.toggle_enable_history_title),
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
@@ -475,7 +476,7 @@ fun NotificationHistorySection(
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                    border = null,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
@@ -552,7 +553,7 @@ fun NotificationHistorySection(
                                             text = {
                                                 Text(
                                                     text = stringResource(resId),
-                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                                                     color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                                                 )
                                             },
@@ -627,7 +628,7 @@ fun NotificationHistorySection(
                                             Text(
                                                 text = stringResource(R.string.filter_all_apps) + " (${historyEntries.size})",
                                                 fontSize = 12.sp,
-                                                fontWeight = if (isAllSelected) FontWeight.Bold else FontWeight.Normal
+                                                fontWeight = if (isAllSelected) FontWeight.SemiBold else FontWeight.Normal
                                             )
                                         },
                                         colors = FilterChipDefaults.filterChipColors(
@@ -667,7 +668,7 @@ fun NotificationHistorySection(
                                             Text(
                                                 text = "${app.appName} (${app.count})",
                                                 fontSize = 12.sp,
-                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
                                             )
                                         },
                                         colors = FilterChipDefaults.filterChipColors(
@@ -694,7 +695,7 @@ fun NotificationHistorySection(
                                     Text(
                                         text = "Filter: $activeAppName",
                                         style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold,
+                                        fontWeight = FontWeight.SemiBold,
                                         color = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                     IconButton(
@@ -767,7 +768,7 @@ fun NotificationHistorySection(
                                     ) {
                                         Icon(Icons.Rounded.DeleteSweep, contentDescription = null, modifier = Modifier.size(14.dp))
                                         Spacer(Modifier.width(4.dp))
-                                        Text(stringResource(R.string.btn_clear_history), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        Text(stringResource(R.string.btn_clear_history), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                                     }
                                 }
                             }
@@ -799,7 +800,7 @@ fun NotificationHistorySection(
                             Text(
                                 text = stringResource(R.string.empty_history_title),
                                 style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
@@ -828,7 +829,7 @@ fun NotificationHistorySection(
                                 Text(
                                     text = dateHeader,
                                     style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
+                                    fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                 )
@@ -882,7 +883,7 @@ private fun NotificationHistoryItemCard(
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+        border = null,
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onCardClick)
@@ -915,7 +916,7 @@ private fun NotificationHistoryItemCard(
                         Text(
                             text = entry.appName.firstOrNull()?.uppercase() ?: "A",
                             style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
@@ -924,7 +925,7 @@ private fun NotificationHistoryItemCard(
                 Text(
                     text = entry.appName,
                     style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -939,7 +940,7 @@ private fun NotificationHistoryItemCard(
                         Text(
                             text = entry.mode,
                             style = MaterialTheme.typography.labelSmall,
-                            fontSize = 10.sp,
+                            fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSecondaryContainer,
                             modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
                         )
@@ -994,7 +995,7 @@ private fun NotificationHistoryItemCard(
                     text = if (isExpanded) "Show less" else "Show more",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.clickable { isExpanded = !isExpanded }
                 )
             }
@@ -1082,7 +1083,7 @@ private fun AppFilterDialog(
         Card(
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            border = null,
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 260.dp, max = 520.dp)
@@ -1106,7 +1107,7 @@ private fun AppFilterDialog(
                         Text(
                             text = stringResource(R.string.filter_by_app),
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
                     IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
@@ -1167,7 +1168,7 @@ private fun AppFilterDialog(
                                     Text(
                                         text = stringResource(R.string.filter_all_apps),
                                         style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.SemiBold
                                     )
                                     Text(
                                         text = stringResource(R.string.filter_all_apps_desc) + " ($totalCount)",
@@ -1230,7 +1231,7 @@ private fun AppFilterDialog(
                                         Text(
                                             text = app.appName.firstOrNull()?.uppercase() ?: "A",
                                             style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = FontWeight.Bold
+                                            fontWeight = FontWeight.SemiBold
                                         )
                                     }
                                 }
@@ -1239,7 +1240,7 @@ private fun AppFilterDialog(
                                     Text(
                                         text = app.appName,
                                         style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Bold,
+                                        fontWeight = FontWeight.SemiBold,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
@@ -1278,7 +1279,7 @@ private fun DeleteByAppDialog(
         Card(
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            border = null,
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 260.dp, max = 520.dp)
@@ -1302,7 +1303,7 @@ private fun DeleteByAppDialog(
                         Text(
                             text = "Delete by App",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
                     IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
@@ -1357,7 +1358,7 @@ private fun DeleteByAppDialog(
                                         Text(
                                             text = app.appName.firstOrNull()?.uppercase() ?: "A",
                                             style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Bold
+                                            fontWeight = FontWeight.SemiBold
                                         )
                                     }
                                 }
@@ -1366,7 +1367,7 @@ private fun DeleteByAppDialog(
                                     Text(
                                         text = app.appName,
                                         style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Bold,
+                                        fontWeight = FontWeight.SemiBold,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
@@ -1413,7 +1414,7 @@ private fun NotificationDetailDialog(
         Card(
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            border = null,
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(max = 560.dp)
@@ -1438,7 +1439,7 @@ private fun NotificationDetailDialog(
                     Text(
                         text = "Message Inspection Details",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -1524,8 +1525,8 @@ private fun DetailFieldItem(label: String, value: String) {
         Text(
             text = label.uppercase(Locale.getDefault()),
             style = MaterialTheme.typography.labelSmall,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.primary
         )
         Text(

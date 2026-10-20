@@ -7,6 +7,7 @@
 
 package com.agupta07505.smartisland.ui.search
 
+import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.BugReport
@@ -511,6 +512,13 @@ internal fun buildSettingsSearchIndex(str: (Int) -> String): List<SettingsSearch
         "buddy.screen", buddyScreen, detail(FeatureDetailSection.Buddy), buddyScreen, Icons.Rounded.Pets,
         str(R.string.buddy_description),
         listOf("buddy", "mascot", "companion", "pet", "friend", "character", "ball", "robot", "camera", "visit", "react")
+    )
+
+    val secureAppsScreen = str(R.string.secure_apps_title)
+    add(
+        "secureapps.screen", secureAppsScreen, detail(FeatureDetailSection.SecureApps), secureAppsScreen, Icons.Rounded.Security,
+        str(R.string.secure_apps_desc),
+        listOf("secure", "blacklist", "banking", "privacy", "flag secure", "passthrough", "apps")
     )
 
     val supportScreen = str(R.string.card_support_requests_title)

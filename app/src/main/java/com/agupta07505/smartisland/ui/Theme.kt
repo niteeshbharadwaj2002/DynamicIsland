@@ -226,7 +226,8 @@ fun SmartIslandTheme(
         }
     }
 
-    MaterialTheme(colorScheme = colorScheme) {
+    // HIG type scale and corner shapes (ui/Type.kt) on top of the accent-built colour scheme.
+    MaterialTheme(colorScheme = colorScheme, typography = SmartIslandTypography, shapes = SmartIslandShapes) {
         CompositionLocalProvider(
             LocalSemanticColors provides if (useDark) DarkSemantic else LightSemantic,
             LocalLiquidGlass provides liquidGlass,

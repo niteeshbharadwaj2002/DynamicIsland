@@ -7,6 +7,7 @@
 
 package com.agupta07505.smartisland.ui.sections
 
+import com.agupta07505.smartisland.ui.components.SmartIslandSwitch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -87,7 +88,7 @@ internal fun IslandFontMixSection(
                     modifier = Modifier.padding(top = 2.dp)
                 )
             }
-            Switch(checked = settings.fontMixEnabled, onCheckedChange = { update(enabled = it) })
+            SmartIslandSwitch(checked = settings.fontMixEnabled, onCheckedChange = { update(enabled = it) })
         }
 
         if (settings.fontMixEnabled) {

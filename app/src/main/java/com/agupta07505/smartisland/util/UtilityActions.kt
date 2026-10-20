@@ -67,6 +67,9 @@ object UtilityActions {
     const val EXTRA_OPEN_SECTION = "open_section"
     const val SECTION_APP_SHORTCUTS = "app_shortcuts"
 
+    /** Opens the Permissions center (the "Restore Smart Island permissions" notification, Rule_Book 7.1). */
+    const val SECTION_PERMISSIONS = "permissions"
+
     /**
      * Opens the app on the App Shortcuts configuration (where the pinned apps and the Utilities layout are edited).
      */

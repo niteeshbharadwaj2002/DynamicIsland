@@ -33,7 +33,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        requestedSection = intent?.getStringExtra(com.agupta07505.smartisland.util.UtilityActions.EXTRA_OPEN_SECTION)
+        requestedSection = sectionFrom(intent)
         SystemServiceRecovery.requestRecovery(this)
 
         setContent {
@@ -59,8 +59,15 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        requestedSection = intent.getStringExtra(com.agupta07505.smartisland.util.UtilityActions.EXTRA_OPEN_SECTION)
+        requestedSection = sectionFrom(intent)
     }
+
+    /** The section an intent asks for: the island's own request, or the permission-recovery notification's. */
+    private fun sectionFrom(intent: Intent?): String? =
+        intent?.getStringExtra(com.agupta07505.smartisland.util.UtilityActions.EXTRA_OPEN_SECTION)
+            ?: if (intent?.getBooleanExtra(com.agupta07505.smartisland.util.PermissionRecoveryNotifier.EXTRA_OPEN_PERMISSIONS, false) == true) {
+                com.agupta07505.smartisland.util.UtilityActions.SECTION_PERMISSIONS
+            } else null
 
     @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

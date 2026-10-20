@@ -7,6 +7,7 @@
 
 package com.agupta07505.smartisland.ui.sections
 
+import com.agupta07505.smartisland.ui.components.SmartIslandSwitch
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.semantics.Role
@@ -203,7 +204,7 @@ fun EventTogglesSection(
                                 }
                             )
                         }
-                        Switch(
+                        SmartIslandSwitch(
                             checked = onCount == events.size,
                             onCheckedChange = { turnOn ->
                                 scope.launch {

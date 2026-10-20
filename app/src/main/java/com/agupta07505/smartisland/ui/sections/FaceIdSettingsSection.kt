@@ -7,6 +7,7 @@
 
 package com.agupta07505.smartisland.ui.sections
 
+import com.agupta07505.smartisland.ui.components.SmartIslandSwitch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -62,7 +63,7 @@ fun FaceIdSettingsSection(
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold
                 )
-                Switch(
+                SmartIslandSwitch(
                     checked = settings.fingerprintAnimationEnabled,
                     onCheckedChange = { value -> scope.launch { repository.setFingerprintAnimationEnabled(value) } }
                 )
@@ -84,7 +85,7 @@ fun FaceIdSettingsSection(
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold
                 )
-                Switch(
+                SmartIslandSwitch(
                     checked = settings.appFaceIdEnabled,
                     onCheckedChange = { value -> scope.launch { repository.setAppFaceIdEnabled(value) } }
                 )

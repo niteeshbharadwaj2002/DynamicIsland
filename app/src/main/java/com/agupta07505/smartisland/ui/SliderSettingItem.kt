@@ -7,37 +7,44 @@
 
 package com.agupta07505.smartisland.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Remove
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.agupta07505.smartisland.R
 import kotlin.math.roundToInt
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Remove
-import androidx.compose.material3.Icon
-import androidx.compose.material3.SliderDefaults
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
-
+/**
+ * Label with the live value right-aligned on the same line (Rule_Book 11.3), above a slider flanked by 44dp
+ * decrement/increment buttons.
+ * The buttons give an exact, non-drag way to adjust (Switch Access, TalkBack, precision).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SliderSettingItem(
     label: String,
@@ -48,12 +55,14 @@ fun SliderSettingItem(
     onValueChangeFinished: (() -> Unit)? = null,
     suffix: String = "dp",
     step: Float = 1f,
+    /** Formats the shown value; null shows the rounded value and [suffix]. */
     valueText: ((Float) -> String)? = null
 ) {
+    val shownValue = valueText?.invoke(value) ?: "${value.roundToInt()} $suffix"
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp)
+            .padding(horizontal = Dimens.RowHorizontal, vertical = 8.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -62,83 +71,80 @@ fun SliderSettingItem(
         ) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
             )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            Text(
+                text = shownValue,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = {
+                    onValueChange((value - step).coerceIn(range.start, range.endInclusive))
+                    onValueChangeFinished?.invoke()
+                },
+                modifier = Modifier.size(Dimens.MinTouch)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .clickable {
-                            val newVal = (value - step).coerceIn(range.start, range.endInclusive)
-                            onValueChange(newVal)
-                            onValueChangeFinished?.invoke()
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Remove,
-                        contentDescription = "Decrease",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(14.dp)
+                Icon(
+                    imageVector = Icons.Rounded.Remove,
+                    contentDescription = stringResource(R.string.action_decrease),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            // Rule_Book 11.3: accent-filled track and a pure circular thumb.
+            val colors = SliderDefaults.colors(
+                thumbColor = Color.White,
+                activeTrackColor = MaterialTheme.colorScheme.primary,
+                inactiveTrackColor = MaterialTheme.colorScheme.outline
+            )
+            Slider(
+                value = value,
+                onValueChange = onValueChange,
+                onValueChangeFinished = onValueChangeFinished,
+                valueRange = range,
+                modifier = Modifier
+                    .weight(1f)
+                    .semantics { contentDescription = "$label, $shownValue" },
+                colors = colors,
+                thumb = {
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .shadow(elevation = 2.dp, shape = CircleShape)
+                            .background(Color.White, CircleShape)
+                    )
+                },
+                track = { state ->
+                    SliderDefaults.Track(
+                        sliderState = state,
+                        modifier = Modifier.height(4.dp),
+                        colors = colors,
+                        drawStopIndicator = null,
+                        thumbTrackGapSize = 0.dp,
+                        trackInsideCornerSize = 2.dp
                     )
                 }
-
-                Box(
-                    modifier = Modifier
-                        .background(
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                ) {
-                    Text(
-                        text = valueText?.invoke(value) ?: "${value.roundToInt()} $suffix",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontSize = 11.sp
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .clickable {
-                            val newVal = (value + step).coerceIn(range.start, range.endInclusive)
-                            onValueChange(newVal)
-                            onValueChangeFinished?.invoke()
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Add,
-                        contentDescription = "Increase",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(14.dp)
-                    )
-                }
+            )
+            IconButton(
+                onClick = {
+                    onValueChange((value + step).coerceIn(range.start, range.endInclusive))
+                    onValueChangeFinished?.invoke()
+                },
+                modifier = Modifier.size(Dimens.MinTouch)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Add,
+                    contentDescription = stringResource(R.string.action_increase),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
-        Spacer(Modifier.height(2.dp))
-        Slider(
-            value = value,
-            onValueChange = onValueChange,
-            onValueChangeFinished = onValueChangeFinished,
-            valueRange = range,
-            colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.primary,
-                activeTrackColor = MaterialTheme.colorScheme.primary,
-                inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
-            )
-        )
     }
 }

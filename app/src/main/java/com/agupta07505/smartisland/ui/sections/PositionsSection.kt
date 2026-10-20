@@ -7,6 +7,7 @@
 
 package com.agupta07505.smartisland.ui.sections
 
+import com.agupta07505.smartisland.ui.components.SmartIslandSwitch
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -209,7 +210,7 @@ fun PositionsSection(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            border = null,
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
@@ -421,7 +422,7 @@ fun PositionsSection(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            border = null,
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
@@ -474,7 +475,7 @@ fun PositionsSection(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Switch(
+                    SmartIslandSwitch(
                         checked = settings.contentPillSameAsIdle,
                         onCheckedChange = { scope.launch { repository.setContentPillSameAsIdle(false, it) } }
                     )
@@ -570,7 +571,7 @@ fun PositionsSection(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                border = null,
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
@@ -592,7 +593,7 @@ fun PositionsSection(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        Switch(
+                        SmartIslandSwitch(
                             checked = settings.cameraCutoutManual,
                             onCheckedChange = { checked -> scope.launch { repository.setCameraCutoutManual(checked) } }
                         )
@@ -651,7 +652,7 @@ fun PositionsSection(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            border = null,
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
@@ -679,7 +680,7 @@ fun PositionsSection(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Switch(
+                    SmartIslandSwitch(
                         checked = settings.enableShadow,
                         onCheckedChange = { checked ->
                             scope.launch { repository.setEnableShadow(checked) }
@@ -744,6 +745,9 @@ fun PositionsSection(
             }
         }
         }
+
+        // Motion physics: spring presets and the kinetic glow (Rule_Book 2.2, 2.3).
+        MotionSettings(settings = settings, repository = repository)
     }
 }
 

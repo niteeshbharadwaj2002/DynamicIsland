@@ -7,6 +7,7 @@
 
 package com.agupta07505.smartisland.ui.sections
 
+import com.agupta07505.smartisland.ui.components.SmartIslandSwitch
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -107,7 +108,7 @@ fun DiagnosticsSection(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Switch(
+                    SmartIslandSwitch(
                         checked = settings.recordLogs,
                         onCheckedChange = { enabled ->
                             // Apply right away; the services follow the saved setting as well.

@@ -7,6 +7,7 @@
 
 package com.agupta07505.smartisland.ui
 
+import androidx.compose.material.icons.rounded.Security
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ComponentName
@@ -204,6 +205,7 @@ internal enum class FeatureDetailSection {
     DeveloperOptions,
     FaceIdSettings,
     Buddy,
+    SecureApps,
     WeatherSettings,
     NetSpeedSettings,
     CalendarSettings
@@ -387,6 +389,10 @@ fun SmartIslandHomeScreen(
         if (openSection == com.agupta07505.smartisland.util.UtilityActions.SECTION_APP_SHORTCUTS) {
             transitionDirection = 1
             activeDetailSection = FeatureDetailSection.AppShortcuts
+            onOpenSectionHandled()
+        } else if (openSection == com.agupta07505.smartisland.util.UtilityActions.SECTION_PERMISSIONS) {
+            transitionDirection = 1
+            activeDetailSection = FeatureDetailSection.PermissionsCenter
             onOpenSectionHandled()
         }
     }
@@ -1032,6 +1038,14 @@ private fun SettingsOverviewSection(
                     statusColor = if (settings.enableAppShortcuts) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                     onClick = { onNavigateTo(FeatureDetailSection.AppShortcuts) }
                 )
+
+                FeatureStudioNavigationCard(
+                    title = stringResource(R.string.secure_apps_title),
+                    subtitle = stringResource(R.string.secure_apps_desc),
+                    icon = Icons.Rounded.Security,
+                    statusText = if (settings.secureAppPackages.isNotEmpty()) "${settings.secureAppPackages.size}" else null,
+                    onClick = { onNavigateTo(FeatureDetailSection.SecureApps) }
+                )
             }
 
             // Interaction: how the island answers your hands, and how long things stay.
@@ -1302,6 +1316,7 @@ private fun DetailScreenHost(
                 FeatureDetailSection.DeveloperOptions -> stringResource(R.string.detail_title_developer_options)
                 FeatureDetailSection.FaceIdSettings -> "Face ID settings"
                 FeatureDetailSection.Buddy -> stringResource(R.string.detail_title_buddy)
+                FeatureDetailSection.SecureApps -> stringResource(R.string.secure_apps_title)
                 FeatureDetailSection.WeatherSettings -> stringResource(R.string.weather_cfg_title)
                 FeatureDetailSection.NetSpeedSettings -> stringResource(R.string.net_cfg_title)
                 FeatureDetailSection.CalendarSettings -> stringResource(R.string.cal_cfg_title)
@@ -1402,6 +1417,9 @@ private fun DetailScreenHost(
             }
             FeatureDetailSection.Buddy -> {
                 BuddySection(settings = settings, repository = repository)
+            }
+            FeatureDetailSection.SecureApps -> {
+                com.agupta07505.smartisland.ui.sections.SecureAppsSection(settings = settings, repository = repository)
             }
             FeatureDetailSection.WeatherSettings -> {
                 WeatherSettingsCard(settings = settings, repository = repository, modifier = Modifier.searchAnchor("idle.weather"))

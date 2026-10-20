@@ -7,6 +7,7 @@
 
 package com.agupta07505.smartisland.ui.sections
 
+import com.agupta07505.smartisland.ui.components.SmartIslandSwitch
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.AnimatedVisibility
@@ -182,9 +183,9 @@ fun CustomizationsSection(
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(12.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            border = null,
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
@@ -196,7 +197,7 @@ fun CustomizationsSection(
                 Text(
                     text = stringResource(R.string.opacity_card_title).uppercase(),
                     style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     letterSpacing = 0.8.sp
                 )
@@ -238,7 +239,7 @@ fun CustomizationsSection(
                             Text(
                                 text = label,
                                 style = MaterialTheme.typography.labelSmall,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
                                 color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -285,7 +286,7 @@ fun CustomizationsSection(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            border = null,
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
@@ -387,7 +388,7 @@ fun CustomizationsSection(
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
                     )
-                    Switch(
+                    SmartIslandSwitch(
                         checked = settings.mediaBlurEnabled,
                         onCheckedChange = { checked -> scope.launch { repository.setMediaBlurEnabled(checked) } }
                     )
@@ -424,7 +425,7 @@ fun CustomizationsSection(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Switch(
+                    SmartIslandSwitch(
                         checked = settings.expandedGradientEnabled,
                         onCheckedChange = { checked -> scope.launch { repository.setExpandedGradientEnabled(checked) } }
                     )
@@ -470,9 +471,9 @@ fun CustomizationsSection(
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(12.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            border = null,
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
@@ -484,7 +485,7 @@ fun CustomizationsSection(
                 Text(
                     text = stringResource(R.string.card_color_studio_title).uppercase(),
                     style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     letterSpacing = 0.8.sp,
                     modifier = Modifier.padding(bottom = 4.dp)
@@ -660,7 +661,7 @@ internal fun RgbColorPickerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title, fontWeight = FontWeight.Bold) },
+        title = { Text(title, fontWeight = FontWeight.SemiBold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 val previewColor = Color(0xFF000000L or (red.toLong() shl 16) or (green.toLong() shl 8) or blue.toLong())
@@ -675,7 +676,7 @@ internal fun RgbColorPickerDialog(
                 ) {
                     Text(
                         text = "#$hexInput",
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                         color = if (previewColor.red * 0.299 + previewColor.green * 0.587 + previewColor.blue * 0.114 > 0.5) Color.Black else Color.White
                     )
                 }
@@ -685,7 +686,7 @@ internal fun RgbColorPickerDialog(
                     onValueChange = { updateFromHex(it) },
                     label = { Text(stringResource(R.string.color_hex_input)) },
                     placeholder = { Text(stringResource(R.string.color_hex_hint)) },
-                    prefix = { Text("#", fontWeight = FontWeight.Bold) },
+                    prefix = { Text("#", fontWeight = FontWeight.SemiBold) },
                     isError = isHexError,
                     supportingText = if (isHexError) {
                         { Text(stringResource(R.string.color_hex_error), color = MaterialTheme.colorScheme.error) }
@@ -787,7 +788,7 @@ internal fun RgbColorPickerDialog(
                     onSave(finalColor)
                 }
             ) {
-                Text(stringResource(R.string.btn_save_color), fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.btn_save_color), fontWeight = FontWeight.SemiBold)
             }
         },
         dismissButton = {

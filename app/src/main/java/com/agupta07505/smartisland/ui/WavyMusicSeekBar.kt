@@ -57,7 +57,9 @@ fun WavyMusicSeekBar(
     /** The shade's thumb: a short vertical rounded bar instead of a dot. */
     pillThumb: Boolean = false,
     pillThumbWidth: Dp = 5.dp,
-    pillThumbHeight: Dp = 18.dp
+    pillThumbHeight: Dp = 18.dp,
+    /** Height of the touch target; the music card keeps 24dp, a standalone bar should use 44dp (HIG). */
+    touchHeight: Dp = 24.dp
 ) {
     // The wave settles into a straight line when playback is paused, like the shade's bar.
     val waveAmount by animateFloatAsState(
@@ -88,7 +90,7 @@ fun WavyMusicSeekBar(
     Canvas(
         modifier = modifier
             .fillMaxWidth()
-            .height(24.dp)
+            .height(touchHeight)
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
                     val newProgress = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)

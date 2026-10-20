@@ -7,6 +7,7 @@
 
 package com.agupta07505.smartisland.ui.sections
 
+import com.agupta07505.smartisland.ui.components.SmartIslandSwitch
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -55,7 +56,7 @@ internal fun IdleScheduleCard(
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+        border = null,
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = modifier.fillMaxWidth()
     ) {
@@ -135,7 +136,7 @@ internal fun IdleScheduleCard(
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        Switch(
+                        SmartIslandSwitch(
                             checked = settings.idleScheduleWorkWeekdaysOnly,
                             onCheckedChange = { scope.launch { repository.setIdleScheduleWorkWeekdaysOnly(it) } }
                         )
@@ -172,7 +173,7 @@ private fun ScheduleGroup(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Switch(checked = enabled, onCheckedChange = onEnabled)
+            SmartIslandSwitch(checked = enabled, onCheckedChange = onEnabled)
         }
         if (enabled) {
             extras()

@@ -7,6 +7,7 @@
 
 package com.agupta07505.smartisland.ui.sections
 
+import com.agupta07505.smartisland.ui.components.SmartIslandSwitch
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -141,7 +142,7 @@ fun NotificationsAndPrivacySection(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            border = null,
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
@@ -175,7 +176,7 @@ fun NotificationsAndPrivacySection(
                         Text(
                             text = stringResource(R.string.oem_rules_title),
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
@@ -231,7 +232,7 @@ fun NotificationsAndPrivacySection(
                                     ) {
                                         Text(
                                             text = if (deviceTypeOption == OemDeviceType.AUTO) stringResource(R.string.auto_detect_device, detectedDevice.displayName) else deviceTypeOption.displayName,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                                             color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                                         )
                                         if (isSelected) {
@@ -266,7 +267,7 @@ fun NotificationsAndPrivacySection(
                         Text(
                             text = stringResource(R.string.active_rules_title, effectiveDevice.displayName),
                             style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.primary
                         )
                         Text(
@@ -284,7 +285,7 @@ fun NotificationsAndPrivacySection(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            border = null,
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
@@ -321,7 +322,7 @@ fun NotificationsAndPrivacySection(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            border = null,
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
@@ -333,7 +334,7 @@ fun NotificationsAndPrivacySection(
                 Text(
                     text = stringResource(R.string.lock_screen_title),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
@@ -467,7 +468,7 @@ fun NotificationsAndPrivacySection(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            border = null,
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
@@ -479,7 +480,7 @@ fun NotificationsAndPrivacySection(
                 Text(
                     text = stringResource(R.string.display_rules_title),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
@@ -648,9 +649,9 @@ fun NotificationsAndPrivacySection(
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(12.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            border = null,
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
@@ -662,7 +663,7 @@ fun NotificationsAndPrivacySection(
                 Text(
                     text = stringResource(R.string.notification_cooldown_title),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
@@ -1026,7 +1027,7 @@ fun NotificationsAndPrivacySection(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            border = null,
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
@@ -1060,7 +1061,7 @@ fun NotificationsAndPrivacySection(
                         Text(
                             text = stringResource(R.string.app_alerts_manager_title),
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
@@ -1093,7 +1094,7 @@ fun NotificationsAndPrivacySection(
                             Text(
                                 text = "$activeCount",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Text(
@@ -1117,7 +1118,7 @@ fun NotificationsAndPrivacySection(
                             Text(
                                 text = "$excludedCount",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.SemiBold,
                                 color = if (excludedCount > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
@@ -1141,7 +1142,7 @@ fun NotificationsAndPrivacySection(
                             Text(
                                 text = "$mutedCount",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.SemiBold,
                                 color = if (mutedCount > 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
@@ -1161,7 +1162,7 @@ fun NotificationsAndPrivacySection(
                         Text(
                             text = stringResource(R.string.customized_apps_title, customizedApps.size),
                             style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
 
@@ -1199,7 +1200,7 @@ fun NotificationsAndPrivacySection(
                                     ) {
                                         Text(
                                             text = app.label.firstOrNull()?.uppercase() ?: "A",
-                                            fontWeight = FontWeight.Bold,
+                                            fontWeight = FontWeight.SemiBold,
                                             fontSize = 12.sp
                                         )
                                     }
@@ -1351,7 +1352,7 @@ fun NotificationsAndPrivacySection(
                     Text(
                         text = stringResource(R.string.app_alerts_manager_title),
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 },
@@ -1439,7 +1440,7 @@ fun NotificationsAndPrivacySection(
                                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
                                     modifier = Modifier.height(28.dp)
                                 ) {
-                                    Text(stringResource(R.string.btn_select_all), fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                                    Text(stringResource(R.string.btn_select_all), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                                 }
 
                                 OutlinedButton(
@@ -1453,7 +1454,7 @@ fun NotificationsAndPrivacySection(
                                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
                                     modifier = Modifier.height(28.dp)
                                 ) {
-                                    Text(stringResource(R.string.btn_deselect_all), fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                                    Text(stringResource(R.string.btn_deselect_all), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                                 }
                             }
                         }
@@ -1519,7 +1520,7 @@ fun NotificationsAndPrivacySection(
                                                     Text(
                                                         text = app.label.firstOrNull()?.uppercase() ?: "A",
                                                         style = MaterialTheme.typography.labelMedium,
-                                                        fontWeight = FontWeight.Bold
+                                                        fontWeight = FontWeight.SemiBold
                                                     )
                                                 }
                                             }
@@ -1541,7 +1542,7 @@ fun NotificationsAndPrivacySection(
                                                             text = stringResource(R.string.tag_excluded_from_island),
                                                             style = MaterialTheme.typography.labelSmall,
                                                             color = MaterialTheme.colorScheme.error,
-                                                            fontWeight = FontWeight.Bold
+                                                            fontWeight = FontWeight.SemiBold
                                                         )
                                                     } else {
                                                         Text(
@@ -1558,7 +1559,7 @@ fun NotificationsAndPrivacySection(
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                                         ) {
-                                            Switch(
+                                            SmartIslandSwitch(
                                                 checked = isNotificationEnabled,
                                                 onCheckedChange = { enabled ->
                                                     val updated = if (enabled) {
@@ -1590,7 +1591,7 @@ fun NotificationsAndPrivacySection(
                 },
                 confirmButton = {
                     TextButton(onClick = { showAppManagerDialog = false }) {
-                        Text("Done", fontWeight = FontWeight.Bold)
+                        Text("Done", fontWeight = FontWeight.SemiBold)
                     }
                 }
             )
@@ -1628,7 +1629,7 @@ fun NotificationsAndPrivacySection(
                             Text(
                                 text = app.label.firstOrNull()?.uppercase() ?: "A",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
                     }
@@ -1641,7 +1642,7 @@ fun NotificationsAndPrivacySection(
                         Text(
                             text = stringResource(R.string.app_options_title, app.label),
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
@@ -1803,7 +1804,7 @@ fun NotificationsAndPrivacySection(
                 },
                 confirmButton = {
                     TextButton(onClick = { selectedAppForOptions = null }) {
-                        Text("Done", fontWeight = FontWeight.Bold)
+                        Text("Done", fontWeight = FontWeight.SemiBold)
                     }
                 },
                 dismissButton = {
@@ -1888,7 +1889,7 @@ private fun ToggleRowItem(
             }
         }
         Spacer(Modifier.width(10.dp))
-        Switch(
+        SmartIslandSwitch(
             checked = checked,
             onCheckedChange = onCheckedChange
         )
@@ -1915,7 +1916,7 @@ private fun PrivacySegmentButton(
             text = label,
             fontSize = 12.sp,
             color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium
         )
     }
 }
@@ -2008,7 +2009,7 @@ private fun LockScreenEventList(
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
                     )
-                    Switch(
+                    SmartIslandSwitch(
                         checked = event.id in settings.hideOnLockScreenEvents,
                         onCheckedChange = { hide ->
                             scope.launch { repository.setEventHiddenOnLockScreen(event.id, hide) }

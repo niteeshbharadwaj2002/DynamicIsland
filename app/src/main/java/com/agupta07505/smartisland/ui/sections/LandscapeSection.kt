@@ -7,6 +7,7 @@
 
 package com.agupta07505.smartisland.ui.sections
 
+import com.agupta07505.smartisland.ui.components.SmartIslandSwitch
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -105,7 +106,7 @@ fun LandscapeSection(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Switch(
+                    SmartIslandSwitch(
                         checked = settings.showInLandscape,
                         onCheckedChange = { scope.launch { repository.setShowInLandscape(it) } }
                     )
@@ -253,7 +254,7 @@ fun LandscapeSection(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text("Same size as idle cutout", modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
-                Switch(
+                SmartIslandSwitch(
                     checked = settings.contentPillSameAsIdleLandscape,
                     onCheckedChange = { scope.launch { repository.setContentPillSameAsIdle(true, it) } }
                 )
@@ -328,7 +329,7 @@ private fun LandscapeCard(content: @Composable () -> Unit) {
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+        border = null,
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(

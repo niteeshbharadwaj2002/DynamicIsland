@@ -7,6 +7,7 @@
 
 package com.agupta07505.smartisland.ui.sections
 
+import com.agupta07505.smartisland.ui.components.SmartIslandSwitch
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
@@ -73,7 +74,7 @@ internal fun LedTickSettingsCard(settings: SmartIslandSettings, repository: Smar
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+        border = null,
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = Modifier.fillMaxWidth().searchAnchor("idle.led_tick")
     ) {
@@ -102,7 +103,7 @@ internal fun LedTickSettingsCard(settings: SmartIslandSettings, repository: Smar
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Switch(
+                    SmartIslandSwitch(
                         checked = ledOn,
                         onCheckedChange = { on ->
                             scope.launch { repository.setIdleTickStyle(if (on) LedTick.STYLE_LED else LedTick.STYLE_SMOOTH) }
@@ -192,7 +193,7 @@ internal fun LedTickSettingsCard(settings: SmartIslandSettings, repository: Smar
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        Switch(
+                        SmartIslandSwitch(
                             checked = settings.ledTickStagger,
                             onCheckedChange = { on -> scope.launch { repository.setLedTickStagger(on) } }
                         )

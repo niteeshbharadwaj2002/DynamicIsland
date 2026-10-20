@@ -16,4 +16,8 @@
     <string name="layout_drop_shadow">Drop Shadow</string>
     <string name="home_permissions_needed_header">Setup</string>
     <string name="ride_driver_fallback">Your driver</string>
+    <string name="secure_apps_title">Secure App Blacklist</string>
+    <string name="secure_apps_desc">Apps the island treats as secure: alerts never pop open over them.</string>
+    <string name="motion_blur_title">Backdrop blur</string>
+    <string name="motion_blur_desc">Blur the screen behind the idle dashboard (Android 12 and newer). Older versions keep the glass look.</string>
 </resources>

@@ -7,6 +7,7 @@
 
 package com.agupta07505.smartisland.ui.sections
 
+import com.agupta07505.smartisland.ui.components.SmartIslandSwitch
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -106,7 +107,7 @@ internal fun UtilitiesEditorCard(settings: SmartIslandSettings, repository: Smar
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+        border = null,
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -364,7 +365,7 @@ private fun SelectedItemControls(
                     }
                 }
                 Spacer(Modifier.width(12.dp))
-                Switch(checked = settings.utilityCalculatorFloating, onCheckedChange = onCalculatorFloating)
+                SmartIslandSwitch(checked = settings.utilityCalculatorFloating, onCheckedChange = onCalculatorFloating)
             }
         }
 

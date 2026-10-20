@@ -75,6 +75,15 @@ fun MotionSettings(
                 onCheckedChange = { scope.launch { repository.setKineticGlow(it) } }
             )
         }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            GroupedSection(footer = stringResource(R.string.motion_blur_desc)) {
+                SwitchRow(
+                    title = stringResource(R.string.motion_blur_title),
+                    checked = settings.backdropBlur,
+                    onCheckedChange = { scope.launch { repository.setBackdropBlur(it) } }
+                )
+            }
+        }
     }
 }
 

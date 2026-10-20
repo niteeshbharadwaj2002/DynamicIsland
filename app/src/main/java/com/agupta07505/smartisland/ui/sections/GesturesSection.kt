@@ -7,6 +7,7 @@
 
 package com.agupta07505.smartisland.ui.sections
 
+import com.agupta07505.smartisland.ui.components.SmartIslandSwitch
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -254,7 +255,7 @@ fun GesturesSection(
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                border = null,
                 modifier = Modifier.fillMaxWidth(),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
@@ -264,7 +265,7 @@ fun GesturesSection(
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                border = null,
                 modifier = Modifier.fillMaxWidth(),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
@@ -275,7 +276,7 @@ fun GesturesSection(
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                border = null,
                 modifier = Modifier.fillMaxWidth(),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
@@ -286,7 +287,7 @@ fun GesturesSection(
         Card(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             shape = RoundedCornerShape(16.dp),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            border = null,
             modifier = Modifier.fillMaxWidth(),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
@@ -327,7 +328,7 @@ fun GesturesSection(
                             Text(
                                 text = stringResource(R.string.enable_pill_swipe_gestures_title),
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
@@ -337,7 +338,7 @@ fun GesturesSection(
                             )
                         }
                     }
-                    Switch(
+                    SmartIslandSwitch(
                         checked = settings.enablePillSwipeActions,
                         onCheckedChange = { isEnabled ->
                             coroutineScope.launch {
@@ -379,7 +380,7 @@ fun GesturesSection(
                 Text(
                     text = stringResource(R.string.pill_swipe_customization_title),
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
@@ -478,7 +479,7 @@ fun GesturesSection(
                                         getSwipeActionTitle(currentAction)
                                     },
                                     fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
+                                    fontWeight = FontWeight.SemiBold,
                                     color = if (isActionDisabled) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                                 )
                             }
@@ -500,7 +501,7 @@ fun GesturesSection(
         Card(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             shape = RoundedCornerShape(16.dp),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            border = null,
             modifier = Modifier.fillMaxWidth(),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
@@ -541,7 +542,7 @@ fun GesturesSection(
                             Text(
                                 text = stringResource(R.string.enable_swipe_gestures_title),
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
@@ -551,7 +552,7 @@ fun GesturesSection(
                             )
                         }
                     }
-                    Switch(
+                    SmartIslandSwitch(
                         checked = settings.enableSwipeActions,
                         onCheckedChange = { isEnabled ->
                             coroutineScope.launch {
@@ -593,7 +594,7 @@ fun GesturesSection(
                 Text(
                     text = stringResource(R.string.expanded_swipe_customization_title),
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
@@ -693,7 +694,7 @@ fun GesturesSection(
                                         getSwipeActionTitle(currentAction)
                                     },
                                     fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
+                                    fontWeight = FontWeight.SemiBold,
                                     color = if (isActionDisabled) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary
                                 )
                             }
@@ -728,7 +729,7 @@ fun GesturesSection(
                 Text(
                     text = stringResource(R.string.swipe_action_dialog_title, stringResource(gesture.titleRes)),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.SemiBold
                 )
             },
             text = {
@@ -787,7 +788,7 @@ fun GesturesSection(
                                 Text(
                                     text = getSwipeActionTitle(action),
                                     style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
                                     color = if (isNone) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
@@ -919,7 +920,7 @@ private fun LongPressCard(
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+        border = null,
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {

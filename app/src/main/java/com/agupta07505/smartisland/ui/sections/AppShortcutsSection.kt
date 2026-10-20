@@ -7,6 +7,7 @@
 
 package com.agupta07505.smartisland.ui.sections
 
+import com.agupta07505.smartisland.ui.components.SmartIslandSwitch
 import androidx.compose.runtime.saveable.rememberSaveable
 import android.content.Intent
 import android.provider.Settings
@@ -148,7 +149,7 @@ fun AppShortcutsSection(
         Card(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             shape = RoundedCornerShape(16.dp),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            border = null,
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -194,7 +195,7 @@ fun AppShortcutsSection(
                         }
                     }
                     Spacer(Modifier.width(12.dp))
-                    Switch(
+                    SmartIslandSwitch(
                         checked = settings.enableAppShortcuts,
                         onCheckedChange = { enabled ->
                             scope.launch { repository.setEnableAppShortcuts(enabled) }
@@ -250,7 +251,7 @@ fun AppShortcutsSection(
                             }
                         }
                         Spacer(Modifier.width(12.dp))
-                        Switch(
+                        SmartIslandSwitch(
                             checked = settings.showRecentApps,
                             onCheckedChange = { enabled ->
                                 if (enabled && !usageAccess) {
@@ -285,7 +286,7 @@ fun AppShortcutsSection(
         Card(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             shape = RoundedCornerShape(16.dp),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            border = null,
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -299,7 +300,7 @@ fun AppShortcutsSection(
                         Text(
                             text = stringResource(R.string.pinned_apps_title),
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
@@ -316,7 +317,7 @@ fun AppShortcutsSection(
                         Text(
                             text = stringResource(R.string.card_app_shortcuts_status, settings.shortcutPackages.size),
                             style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                         )
@@ -356,7 +357,7 @@ fun AppShortcutsSection(
                             }
                             Text(
                                 text = "No Apps Pinned Yet",
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.SemiBold,
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
