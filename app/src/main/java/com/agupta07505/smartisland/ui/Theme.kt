@@ -9,6 +9,8 @@ package com.agupta07505.smartisland.ui
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -17,18 +19,24 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.ReadOnlyComposable
-import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.graphics.ColorUtils
+import com.agupta07505.smartisland.data.SmartIslandSettings
+import com.agupta07505.smartisland.ui.glass.GlassBackdropColors
+import com.agupta07505.smartisland.ui.glass.LiquidGlassBackdrop
+import com.agupta07505.smartisland.ui.glass.LocalGlassBackdropColors
+import com.agupta07505.smartisland.ui.glass.LocalGlassDark
+import com.agupta07505.smartisland.ui.glass.LocalLiquidGlass
 
 /**
- * Semantic colors that Material 3 has no slot for. Each is named by role, never by hue,
- * and has an explicit light and dark value that meets 4.5:1 against its surface.
- * Status colors must always be paired with an icon or text (color is never the only signal).
+ * Semantic colors that Material 3 has no slot for (NotchIQ HIG settings design system). Each is named by role,
+ * never by hue, and has an explicit light and dark value. Status colors must always be paired with an icon or text.
  */
-@Immutable
+@androidx.compose.runtime.Immutable
 data class SemanticColors(
     /** Behind inset-grouped lists (systemGroupedBackground). */
     val groupedBackground: Color,
@@ -56,9 +64,7 @@ private val LightSemantic = SemanticColors(
     bar = Color(0xF2F9F9F9)
 )
 
-// Rule_Book §11.1 palette: #000000 / #F2F2F7 backgrounds, #1C1C1E elevated rows, #8E8E93 secondary text and
-// #FF3B30 destructive. Dark mode uses those values as-is (each clears 4.5:1 on #1C1C1E). On light surfaces
-// #8E8E93 and #FF3B30 only reach ~3.3:1 and ~3.6:1, so light mode keeps darker variants for body-size text.
+// Rule_Book 11.1 palette: #000000 background, #1C1C1E elevated rows, #FF3B30 destructive.
 private val DarkSemantic = SemanticColors(
     groupedBackground = Color(0xFF000000),
     groupedRow = Color(0xFF1C1C1E),
@@ -70,94 +76,180 @@ private val DarkSemantic = SemanticColors(
     bar = Color(0xF21C1C1E)
 )
 
-/** Secondary label gray (§11.1), dark mode. */
-private val DarkSecondaryLabel = Color(0xFF8E8E93)
-
-val LocalSemanticColors = staticCompositionLocalOf { LightSemantic }
+val LocalSemanticColors = androidx.compose.runtime.staticCompositionLocalOf { LightSemantic }
 
 /** Accessor: `MaterialTheme.semantic.success`. */
 val MaterialTheme.semantic: SemanticColors
-    @Composable @ReadOnlyComposable get() = LocalSemanticColors.current
+    @Composable @androidx.compose.runtime.ReadOnlyComposable get() = LocalSemanticColors.current
 
-// Brand burnt orange is reserved for primary actions, "on" switches and selection.
-// Everything else is neutral so the island itself stays the signature element.
-private val LightColorScheme = lightColorScheme(
-    primary = Color(0xFFC73A10), // 5.2:1 on white, 4.7:1 on grouped background
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFFFCE9E2),
-    onPrimaryContainer = Color(0xFF7A2208),
-    secondary = Color(0xFF6C6C70),
-    onSecondary = Color.White,
-    secondaryContainer = Color(0xFFE9E9EE),
-    onSecondaryContainer = Color(0xFF1C1C1E),
-    tertiary = Color(0xFF6C6C70),
-    onTertiary = Color.White,
-    tertiaryContainer = Color(0xFFE9E9EE),
-    onTertiaryContainer = Color(0xFF1C1C1E),
-    background = LightSemantic.groupedBackground,
-    onBackground = Color(0xFF000000),
-    surface = LightSemantic.groupedRow,
-    onSurface = Color(0xFF000000),
-    surfaceVariant = LightSemantic.fill,
-    onSurfaceVariant = Color(0xFF6C6C70), // 5.2:1 on white, 4.7:1 on grouped background
-    outline = LightSemantic.separator,
-    outlineVariant = Color(0xFFE0E0E5),
-    error = LightSemantic.danger,
-    onError = Color.White,
-    errorContainer = Color(0xFFFFE5E8),
-    onErrorContainer = Color(0xFF7A000C)
-)
+// The app's theme: Material 3 colour roles, built from one accent colour (or from the wallpaper with Material You),
+// drawn either flat (plain Material 3) or as liquid glass (translucent panels over a soft colour backdrop, see
+// ui/glass).
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Color(0xFFFF7A4D), // 6.6:1 on the row surface
-    onPrimary = Color(0xFF2B0B02),
-    primaryContainer = Color(0xFF45170A),
-    onPrimaryContainer = Color(0xFFFFDBCF),
-    secondary = DarkSecondaryLabel,
-    onSecondary = Color(0xFF000000),
-    secondaryContainer = Color(0xFF2C2C2E),
-    onSecondaryContainer = Color(0xFFF2F2F7),
-    tertiary = DarkSecondaryLabel,
-    onTertiary = Color(0xFF000000),
-    tertiaryContainer = Color(0xFF2C2C2E),
-    onTertiaryContainer = Color(0xFFF2F2F7),
-    background = DarkSemantic.groupedBackground,
-    onBackground = Color(0xFFFFFFFF),
-    surface = DarkSemantic.groupedRow,
-    onSurface = Color(0xFFFFFFFF),
-    surfaceVariant = DarkSemantic.fill,
-    onSurfaceVariant = DarkSecondaryLabel, // 5.2:1 on the row surface, 6.4:1 on black
-    outline = DarkSemantic.separator,
-    outlineVariant = Color(0xFF2C2C2E),
-    error = DarkSemantic.danger,
-    onError = Color(0xFF000000),
-    errorContainer = Color(0xFF4A0A10),
-    onErrorContainer = Color(0xFFFFDAD6)
+private fun hsl(hue: Float, sat: Float, light: Float): Color {
+    val h = ((hue % 360f) + 360f) % 360f
+    return Color(ColorUtils.HSLToColor(floatArrayOf(h, sat.coerceIn(0f, 1f), light.coerceIn(0f, 1f))))
+}
+
+/**
+ * A full Material 3 colour scheme grown from [seed]: primary, secondary (the same hue, calmer) and tertiary (a warm-
+ * shifted hue) families plus neutrals that lean slightly towards the seed's hue, so surfaces never look grey next to
+ * the accent.
+ */
+internal fun accentColorScheme(seed: Color, dark: Boolean): ColorScheme {
+    val hsl = FloatArray(3)
+    ColorUtils.colorToHSL(seed.toArgb(), hsl)
+    val h = hsl[0]
+    val s = hsl[1].coerceIn(0.40f, 0.95f)
+    val h3 = h + 58f
+    // A touch of the accent in the neutrals (more in the light theme, where it shows as a tinted white).
+    val n = (s * 0.16f).coerceIn(0.05f, 0.14f)
+    return if (!dark) {
+        lightColorScheme(
+            primary = hsl(h, s, 0.42f),
+            onPrimary = Color.White,
+            primaryContainer = hsl(h, s * 0.95f, 0.91f),
+            onPrimaryContainer = hsl(h, s, 0.16f),
+            secondary = hsl(h, s * 0.40f, 0.40f),
+            onSecondary = Color.White,
+            secondaryContainer = hsl(h, s * 0.50f, 0.91f),
+            onSecondaryContainer = hsl(h, s * 0.55f, 0.15f),
+            tertiary = hsl(h3, s * 0.60f, 0.42f),
+            onTertiary = Color.White,
+            tertiaryContainer = hsl(h3, s * 0.65f, 0.91f),
+            onTertiaryContainer = hsl(h3, s * 0.70f, 0.15f),
+            background = hsl(h, n * 1.8f, 0.965f),
+            onBackground = hsl(h, 0.20f, 0.11f),
+            surface = hsl(h, n * 1.2f, 0.99f),
+            onSurface = hsl(h, 0.20f, 0.11f),
+            surfaceVariant = hsl(h, n * 1.6f, 0.93f),
+            onSurfaceVariant = hsl(h, 0.10f, 0.34f),
+            surfaceTint = hsl(h, s, 0.42f),
+            outline = hsl(h, 0.08f, 0.72f),
+            outlineVariant = hsl(h, 0.10f, 0.88f),
+            surfaceBright = hsl(h, n, 0.99f),
+            surfaceDim = hsl(h, n * 1.4f, 0.90f),
+            surfaceContainerLowest = Color.White,
+            surfaceContainerLow = hsl(h, n * 1.4f, 0.965f),
+            surfaceContainer = hsl(h, n * 1.5f, 0.945f),
+            surfaceContainerHigh = hsl(h, n * 1.6f, 0.925f),
+            surfaceContainerHighest = hsl(h, n * 1.7f, 0.905f)
+        )
+    } else {
+        darkColorScheme(
+            primary = hsl(h, s, 0.74f),
+            onPrimary = hsl(h, s, 0.14f),
+            primaryContainer = hsl(h, s * 0.60f, 0.26f),
+            onPrimaryContainer = hsl(h, s * 0.75f, 0.90f),
+            secondary = hsl(h, s * 0.45f, 0.76f),
+            onSecondary = hsl(h, s * 0.5f, 0.14f),
+            secondaryContainer = hsl(h, s * 0.35f, 0.25f),
+            onSecondaryContainer = hsl(h, s * 0.50f, 0.90f),
+            tertiary = hsl(h3, s * 0.55f, 0.76f),
+            onTertiary = hsl(h3, s * 0.5f, 0.14f),
+            tertiaryContainer = hsl(h3, s * 0.40f, 0.26f),
+            onTertiaryContainer = hsl(h3, s * 0.55f, 0.90f),
+            background = hsl(h, n, 0.075f),
+            onBackground = hsl(h, 0.06f, 0.92f),
+            surface = hsl(h, n, 0.115f),
+            onSurface = hsl(h, 0.06f, 0.92f),
+            surfaceVariant = hsl(h, n * 1.1f, 0.19f),
+            onSurfaceVariant = hsl(h, 0.08f, 0.72f),
+            surfaceTint = hsl(h, s, 0.74f),
+            outline = hsl(h, 0.08f, 0.40f),
+            outlineVariant = hsl(h, 0.08f, 0.24f),
+            surfaceBright = hsl(h, n, 0.20f),
+            surfaceDim = hsl(h, n, 0.07f),
+            surfaceContainerLowest = hsl(h, n, 0.06f),
+            surfaceContainerLow = hsl(h, n, 0.10f),
+            surfaceContainer = hsl(h, n, 0.13f),
+            surfaceContainerHigh = hsl(h, n, 0.165f),
+            surfaceContainerHighest = hsl(h, n, 0.20f)
+        )
+    }
+}
+
+/**
+ * The glass version of a scheme: the same colours, but the page background is clear (the backdrop is drawn behind
+ * it), the panels (surface, surfaceVariant, surfaceContainer) are see-through so the backdrop tints them, and the
+ * roles that dialogs, menus and sheets sit on stay nearly solid, so text over a dimmed screen stays readable.
+ */
+internal fun ColorScheme.asGlass(dark: Boolean): ColorScheme = copy(
+    background = Color.Transparent,
+    surface = surface.copy(alpha = if (dark) 0.58f else 0.62f),
+    surfaceVariant = surfaceVariant.copy(alpha = if (dark) 0.50f else 0.55f),
+    surfaceContainerLowest = surfaceContainerLowest.copy(alpha = 0.50f),
+    surfaceContainerLow = surfaceContainerLow.copy(alpha = 0.58f),
+    surfaceContainer = surfaceContainer.copy(alpha = if (dark) 0.72f else 0.78f),
+    surfaceContainerHigh = surfaceContainerHigh.copy(alpha = 0.95f),
+    surfaceContainerHighest = surfaceContainerHighest.copy(alpha = 0.96f),
+    outline = if (dark) Color.White.copy(alpha = 0.34f) else Color.Black.copy(alpha = 0.22f),
+    outlineVariant = if (dark) Color.White.copy(alpha = 0.16f) else Color.Black.copy(alpha = 0.10f)
 )
 
 @Composable
 fun SmartIslandTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = false, // Neutral grouped palette by default; wallpaper color is opt-in
+    /** "system" follows [darkTheme]; "light" / "dark" force one. */
+    themeMode: String = "system",
+    /** Liquid glass look (translucent panels over a colour backdrop). Off gives plain Material 3. */
+    liquidGlass: Boolean = SmartIslandSettings.Default.liquidGlassTheme,
+    /** Colours from the phone's wallpaper (Android 12+). Off builds the palette from [accentColor]. */
+    materialYou: Boolean = SmartIslandSettings.Default.materialYou,
+    /** The accent colour (ARGB) the palette is built from when Material You is off. */
+    accentColor: Long = SmartIslandSettings.Default.accentColor,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
-    val colorScheme: ColorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+    val useDark = when (themeMode) {
+        "light" -> false
+        "dark" -> true
+        else -> darkTheme
+    }
+    val solid = remember(materialYou, accentColor, useDark, context) {
+        if (materialYou && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (useDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        } else {
+            accentColorScheme(Color(accentColor.toInt()), useDark)
         }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+    }
+    val colorScheme = if (liquidGlass) solid.asGlass(useDark) else solid
+
+    // Keep the status / navigation bar icons readable when the chosen theme differs from the phone's.
+    val view = androidx.compose.ui.platform.LocalView.current
+    if (!view.isInEditMode) {
+        androidx.compose.runtime.SideEffect {
+            val window = (context as? android.app.Activity)?.window ?: return@SideEffect
+            val controller = androidx.core.view.WindowCompat.getInsetsController(window, view)
+            controller.isAppearanceLightStatusBars = !useDark
+            controller.isAppearanceLightNavigationBars = !useDark
+        }
     }
 
-    CompositionLocalProvider(
-        LocalSemanticColors provides if (darkTheme) DarkSemantic else LightSemantic
-    ) {
-        MaterialTheme(
-            colorScheme = colorScheme,
-            typography = SmartIslandTypography,
-            shapes = SmartIslandShapes,
-            content = content
-        )
+    // HIG type scale and corner shapes (ui/Type.kt) on top of the accent-built colour scheme.
+    MaterialTheme(colorScheme = colorScheme, typography = SmartIslandTypography, shapes = SmartIslandShapes) {
+        CompositionLocalProvider(
+            LocalSemanticColors provides if (useDark) DarkSemantic else LightSemantic,
+            LocalLiquidGlass provides liquidGlass,
+            LocalGlassDark provides useDark,
+            LocalGlassBackdropColors provides remember(solid) {
+                GlassBackdropColors(solid.background, solid.primary, solid.tertiary, solid.secondary)
+            }
+        ) {
+            if (liquidGlass) {
+                Box(Modifier.fillMaxSize()) {
+                    LiquidGlassBackdrop(
+                        base = solid.background,
+                        glowA = solid.primary,
+                        glowB = solid.tertiary,
+                        glowC = solid.secondary,
+                        dark = useDark
+                    )
+                    content()
+                }
+            } else {
+                content()
+            }
+        }
     }
 }

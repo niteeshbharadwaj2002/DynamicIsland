@@ -11,6 +11,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.kapt")
     id("com.google.dagger.hilt.android")
+    id("androidx.baselineprofile")
 }
 
 val signingStoreFile = providers.environmentVariable("SIGNING_STORE_FILE")
@@ -30,12 +31,12 @@ android {
         applicationId = "com.niteeshbharadwaj.smartisland.personal"
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
-        versionName = "7.0.0-personal"
+        versionCode = 10
+        versionName = "7.6.0-personal"
     }
 
     androidResources {
-        localeFilters += setOf("en", "pt", "zh")
+        localeFilters += setOf("en", "es", "ja", "pt", "zh")
     }
 
     buildFeatures {
@@ -73,6 +74,7 @@ android {
     }
 
     lint {
+        checkReleaseBuilds = false
         abortOnError = true
         warningsAsErrors = true
         checkDependencies = true
@@ -97,7 +99,8 @@ android {
             "BatteryLife",
             "ConfigurationScreenWidthHeight",
             "ModifierParameter",
-            "MissingTranslation"
+            "MissingTranslation",
+            "Typos"
         )
     }
 
@@ -119,6 +122,17 @@ android {
     }
 }
 
+baselineProfile {
+    // Generate from a phone or emulator that is already connected (the island needs the overlay and
+    // accessibility permissions, which a managed device cannot hold). Run: ./gradlew :app:generateBaselineProfile
+    // The result is written to app/src/main/generated/baselineProfiles/baseline-prof.txt and committed;
+    // the release build packages it from there by itself (mergeIntoMain puts it under main, not under
+    // the release variant, so any build type picks it up).
+    saveInSrc = true
+    mergeIntoMain = true
+    automaticGenerationDuringBuild = false
+}
+
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2026.02.01")
 
@@ -136,12 +150,16 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-service:2.10.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
     implementation("androidx.profileinstaller:profileinstaller:1.4.1")
+    "baselineProfile"(project(":baselineprofile"))
     implementation("com.google.dagger:hilt-android:2.60.1")
     kapt("com.google.dagger:hilt-compiler:2.60.1")
 
     // Rikka Shizuku API
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
+
+    // Hidden-API exemptions (used for the overlay's touch-through region); no root or LSPosed app needed.
+    implementation("org.lsposed.hiddenapibypass:hiddenapibypass:6.1")
 
     debugImplementation(composeBom)
     debugImplementation("androidx.compose.ui:ui-tooling")

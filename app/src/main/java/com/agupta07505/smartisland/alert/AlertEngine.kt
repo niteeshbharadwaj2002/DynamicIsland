@@ -17,7 +17,7 @@ import com.agupta07505.smartisland.util.TimerStopwatchParser
  *
  *  - [Critical]: alarms (a ringing [IslandMode.Alarm], or any `alarm`-category alert), a ringing timer, battery
  *    at 5% or less. Persists until the user acts, and outranks everything.
- *  - [Persistent] (Tier 1): calls, navigation and rides, screen and voice recording, timers, stopwatches, the camera /
+ *  - [Persistent] (Tier 1): calls, navigation and rides, screen and audio recording, timers, stopwatches, the camera /
  *    microphone privacy indicator. Persists until ended and owns the island; nothing displaces it for good.
  *  - [Background] (Tier 2): music, live activities, hotspot, transfers. Persists while active, and steps
  *    aside (to the companion bubble, or out of sight) for a Persistent task or an Ephemeral interruption.
@@ -39,7 +39,7 @@ object AlertClassifier {
         val category = notification.category?.lowercase()
         return when (notification.mode) {
             IslandMode.IncomingCall, IslandMode.Navigation, IslandMode.ScreenRecording,
-            IslandMode.Stopwatch, IslandMode.VoiceRecording, IslandMode.PrivacyIndicator -> AlertTier.Persistent
+            IslandMode.Stopwatch, IslandMode.AudioRecording, IslandMode.PrivacyIndicator -> AlertTier.Persistent
             IslandMode.Alarm -> AlertTier.Critical
             IslandMode.Timer ->
                 if (category == "alarm" || TimerStopwatchParser.isFinishedTimerText(notification.title, notification.text)) {
@@ -106,7 +106,14 @@ object AlertClassifier {
  */
 class AlertEngine(
     val communicationTimeoutMs: Long = DEFAULT_COMMUNICATION_TIMEOUT_MS,
-    val transientTimeoutMs: Long = DEFAULT_TRANSIENT_TIMEOUT_MS
+    val transientTimeoutMs: Long = DEFAULT_TRANSIENT_TIMEOUT_MS,
+    /**
+     * Slots returned; [MAX_ACTIVE] is the rulebook's. Only tests widen it, to exercise the view model's card
+     * machinery (sibling picker, event cycling) without the rules in between.
+     */
+    private val maxActive: Int = MAX_ACTIVE,
+    /** False keeps every message as its own entry. Rulebook: true. Tests only, see [maxActive]. */
+    private val foldGroups: Boolean = true
 ) {
 
     class Evaluation(val visible: List<IslandNotification>, val nextExpiryAtMs: Long?)
@@ -130,6 +137,25 @@ class AlertEngine(
      * (§4.7, §4.10; see [breaksBiometricHold]).
      */
     var biometricHold: Boolean = false
+
+    /**
+     * Alerts imported from the shade (not new arrivals): messages among them are treated as already seen, so they
+     * do not hijack the island for seven seconds. Keys the engine already tracks are left alone.
+     */
+    fun adoptQuietly(keys: Collection<String>) {
+        for (key in keys) {
+            if (key !in firstSeenAt) {
+                firstSeenAt[key] = Long.MIN_VALUE / 2
+                expired += key
+            }
+        }
+    }
+
+    /**
+     * While the card is open the clocks are held: nothing expires and no expiry is scheduled. Closing it
+     * ([touch]) restarts every ephemeral clock (Rule_Book 3.3).
+     */
+    var held: Boolean = false
 
     /** The user interacted with the island: every ephemeral alert starts its timeout over. */
     fun touch(nowMs: Long) {
@@ -180,6 +206,7 @@ class AlertEngine(
 
         var nextExpiry: Long? = null
         fun consider(startedAt: Long, timeoutMs: Long): Boolean {
+            if (held || timeoutMs == NEVER) return true
             val expiresAt = maxOf(startedAt, lastTouchAt) + timeoutMs
             if (nowMs >= expiresAt) return false
             nextExpiry = nextExpiry?.let { minOf(it, expiresAt) } ?: expiresAt
@@ -218,7 +245,7 @@ class AlertEngine(
             immersive -> ordered.filter(::breaksSuppression)
             else -> ordered
         }
-        val visible = shown.take(MAX_ACTIVE)
+        val visible = shown.take(maxActive)
         return Evaluation(if (isLocked) visible.map(LockscreenPrivacy::mask) else visible, nextExpiry)
     }
 
@@ -227,7 +254,7 @@ class AlertEngine(
         notification.mode == IslandMode.IncomingCall || AlertClassifier.classify(notification) == AlertTier.Critical
 
     private fun groupOf(notification: IslandNotification): String =
-        notification.packageName + "|" + (notification.groupId ?: "")
+        if (foldGroups) notification.packageName + "|" + (notification.groupId ?: "") else notification.key
 
     private fun fold(members: List<IslandNotification>): IslandNotification {
         val latest = members.maxByOrNull { it.timeMillis } ?: members.last()
@@ -251,6 +278,9 @@ class AlertEngine(
         fun breaksBiometricHold(notification: IslandNotification): Boolean =
             (notification.mode == IslandMode.IncomingCall && notification.isCallRinging) ||
                 notification.mode == IslandMode.Alarm
+
+        /** A timeout value that never runs out (tests of the view model's card machinery). */
+        const val NEVER = Long.MAX_VALUE
 
         /** Messages: exactly seven seconds. */
         const val DEFAULT_COMMUNICATION_TIMEOUT_MS = 7_000L

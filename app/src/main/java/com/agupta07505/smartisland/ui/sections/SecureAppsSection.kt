@@ -83,6 +83,8 @@ fun SecureAppsSection(
     val installedApps by produceState<List<Pair<String, String>>>(initialValue = emptyList()) {
         value = withContext(Dispatchers.IO) {
             val pm = context.packageManager
+            // The apps the manifest <queries> make visible (launcher apps) are the ones worth guarding; no QUERY_ALL_PACKAGES.
+            @Suppress("QueryPermissionsNeeded")
             pm.getInstalledApplications(PackageManager.GET_META_DATA)
                 .filter { (it.flags and ApplicationInfo.FLAG_SYSTEM) == 0 || it.packageName.contains("wallet") || it.packageName.contains("bank") }
                 .map { appInfo ->

@@ -104,8 +104,31 @@ object CameraCutoutDetector {
     }
 
     /**
-     * Calculates the physical pill position and dimensions matching the device's camera cutout coordinates.
+     * The camera hole as best known, portrait only: the manual area when set, else the detected one (without the
+     * padding the pill size adds), else null. Notch mode has no camera hole of its own (null).
      */
+    fun areaFor(
+        settings: SmartIslandSettings,
+        detected: DetectedCutoutInfo,
+        isLandscape: Boolean
+    ): com.agupta07505.smartisland.model.CutoutArea? = when {
+        isLandscape || settings.enableNotchMode -> null
+        settings.cameraCutoutManual -> com.agupta07505.smartisland.model.CutoutArea(
+            settings.cameraCutoutX, settings.cameraCutoutY, settings.cameraCutoutWidth, settings.cameraCutoutHeight
+        )
+        detected.hasHardwareCutout -> com.agupta07505.smartisland.model.CutoutArea(
+            detected.xOffsetDp,
+            detected.yOffsetDp,
+            (detected.widthDp - PADDING_W_DP).coerceAtLeast(1f),
+            (detected.heightDp - PADDING_H_DP).coerceAtLeast(1f)
+        )
+        else -> null
+    }
+
+    /** Added around the real hole when the pill size is derived from it (see [calculateCutoutOffset]). */
+    const val PADDING_W_DP = 24f
+    const val PADDING_H_DP = 10f
+
     fun calculateCutoutOffset(
         left: Int,
         top: Int,
@@ -130,8 +153,8 @@ object CameraCutoutDetector {
             SmartIslandSettings.MAX_Y_OFFSET
         )
 
-        val paddingW = 24f
-        val paddingH = 10f
+        val paddingW = PADDING_W_DP
+        val paddingH = PADDING_H_DP
         val widthDp = ((right - left).toFloat() / density + paddingW).coerceIn(
             SmartIslandSettings.MIN_WIDTH,
             SmartIslandSettings.MAX_WIDTH
@@ -152,9 +175,6 @@ object CameraCutoutDetector {
         )
     }
 
-    /**
-     * Calculates the physical pill position and dimensions matching the device's camera cutout rect.
-     */
     fun calculateCutoutOffset(
         rect: Rect,
         screenWidthPx: Int,

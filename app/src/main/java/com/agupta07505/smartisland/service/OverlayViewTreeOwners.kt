@@ -33,13 +33,8 @@ internal class OverlayViewTreeOwners : LifecycleOwner, ViewModelStoreOwner, Save
         lifecycleRegistry.currentState = Lifecycle.State.RESUMED
     }
 
-    /**
-     * Screen off: drop to CREATED, not just STARTED. Compose's window recomposer pauses its frame clock on
-     * ON_STOP, which is what actually halts `infiniteRepeatable` animations; STARTED would keep them ticking.
-     * [resume] passes ON_START again and the clock restarts.
-     */
     fun pause() {
-        lifecycleRegistry.currentState = Lifecycle.State.CREATED
+        lifecycleRegistry.currentState = Lifecycle.State.STARTED
     }
 
     fun destroy() {

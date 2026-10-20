@@ -7,7 +7,6 @@
 
 package com.agupta07505.smartisland.ui.expanded
 
-import com.agupta07505.smartisland.ui.IslandPalette
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.infiniteRepeatable
@@ -31,7 +30,7 @@ import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.CallEnd
 import androidx.compose.material.icons.rounded.MicOff
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import com.agupta07505.smartisland.ui.IslandText as Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -49,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.agupta07505.smartisland.ui.NotchPalette
 import com.agupta07505.smartisland.R
 import com.agupta07505.smartisland.data.SmartIslandSettings
 import com.agupta07505.smartisland.model.IslandNotification
@@ -189,7 +189,7 @@ fun IncomingCallExpanded(
             }
             Text(
                 text = notification?.appName.orEmpty(),
-                color = IslandPalette.secondaryLabel,
+                color = LocalIslandPalette.current.textSecondary,
                 fontSize = 12.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -205,7 +205,7 @@ fun IncomingCallExpanded(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = caller,
-                    color = Color.White,
+                    color = LocalIslandPalette.current.text,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
@@ -214,13 +214,16 @@ fun IncomingCallExpanded(
                 if (isRinging) {
                     Text(
                         text = stringResource(R.string.island_call_incoming),
-                        color = IslandPalette.secondaryLabel,
+                        color = LocalIslandPalette.current.textSecondary,
                         fontSize = 13.sp,
                         maxLines = 1
                     )
+                } else if (notification?.isCallConnecting == true) {
+                    // Dialing: nothing to time yet; show the app's own words ("Calling...", "Ringing...").
+                    Text(text = notification.callStatusText, color = callColor, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                 } else {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = stringResource(R.string.island_call_ongoing), color = IslandPalette.secondaryLabel, fontSize = 13.sp, maxLines = 1)
+                        Text(text = stringResource(R.string.island_call_ongoing), color = LocalIslandPalette.current.textSecondary, fontSize = 13.sp, maxLines = 1)
                         CallTimer(postTimeMillis = notification?.timeMillis ?: System.currentTimeMillis(), color = callColor)
                     }
                 }
@@ -230,7 +233,7 @@ fun IncomingCallExpanded(
                 val accept = notification.actionFor(IslandControl.CallAnswer)
                 if (decline != null) {
                     CircleActionButton(
-                        color = IslandPalette.danger,
+                        color = NotchPalette.danger,
                         icon = Icons.Rounded.CallEnd,
                         label = stringResource(R.string.island_call_decline)
                     ) {
@@ -257,17 +260,17 @@ fun IncomingCallExpanded(
             if (mute != null || speaker != null || end != null) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                     if (mute != null) {
-                        IslandRoundButton(stringResource(R.string.island_call_mute), Icons.Rounded.MicOff, IslandPalette.fillStrong) {
+                        IslandRoundButton(stringResource(R.string.island_call_mute), Icons.Rounded.MicOff, LocalIslandPalette.current.tint(0.2f)) {
                             fireIslandControl(context, notification, mute, GatedAction.CallControl, removeAlert = false)
                         }
                     }
                     if (speaker != null) {
-                        IslandRoundButton(stringResource(R.string.island_call_speaker), Icons.AutoMirrored.Rounded.VolumeUp, IslandPalette.fillStrong) {
+                        IslandRoundButton(stringResource(R.string.island_call_speaker), Icons.AutoMirrored.Rounded.VolumeUp, LocalIslandPalette.current.tint(0.2f)) {
                             fireIslandControl(context, notification, speaker, GatedAction.CallControl, removeAlert = false)
                         }
                     }
                     if (end != null) {
-                        IslandRoundButton(stringResource(R.string.island_call_end), Icons.Rounded.CallEnd, IslandPalette.danger) {
+                        IslandRoundButton(stringResource(R.string.island_call_end), Icons.Rounded.CallEnd, NotchPalette.danger) {
                             fireIslandControl(context, notification, end, GatedAction.CallControl, removeAlert = true, onDone = onCollapse)
                         }
                     }

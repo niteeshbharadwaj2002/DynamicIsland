@@ -55,7 +55,7 @@ class AlertEngineTest {
         fun tier(mode: IslandMode, category: String? = null) = AlertClassifier.classify(alert("k", mode = mode, category = category))
         listOf(
             IslandMode.IncomingCall, IslandMode.Navigation, IslandMode.ScreenRecording, IslandMode.Timer, IslandMode.Stopwatch,
-            IslandMode.VoiceRecording, IslandMode.PrivacyIndicator
+            IslandMode.AudioRecording, IslandMode.PrivacyIndicator
         ).forEach { assertEquals(it.name, AlertTier.Persistent, tier(it)) }
         assertEquals(AlertTier.Critical, tier(IslandMode.Alarm, "alarm"))
         listOf(IslandMode.Music, IslandMode.LiveActivity, IslandMode.Hotspot, IslandMode.DownloadUpload)
@@ -386,7 +386,7 @@ class AlertEngineTest {
     @Test
     fun aRingingAlarmTakesTheMainPillFromACallAndARecording() {
         val ringing = alert("ring", pkg = "com.google.android.deskclock", mode = IslandMode.Alarm, category = "alarm", title = "Alarm", text = "7:00")
-        val voice = alert("voice", pkg = "com.sec.android.app.voicenote", mode = IslandMode.VoiceRecording, category = null)
+        val voice = alert("voice", pkg = "com.sec.android.app.voicenote", mode = IslandMode.AudioRecording, category = null)
         assertEquals(listOf("ring", "call"), keys(AlertEngine().evaluate(listOf(voice, call(), ringing), 0)))
     }
 
@@ -402,7 +402,7 @@ class AlertEngineTest {
     @Test
     fun aVoiceRecordingAndThePrivacyIndicatorArePersistentTasks() {
         val engine = AlertEngine()
-        val voice = alert("voice", pkg = "com.google.android.apps.recorder", mode = IslandMode.VoiceRecording, category = null)
+        val voice = alert("voice", pkg = "com.google.android.apps.recorder", mode = IslandMode.AudioRecording, category = null)
         val privacy = alert("system_privacy_indicator", pkg = "com.agupta07505.smartisland", mode = IslandMode.PrivacyIndicator, category = "privacy_camera_microphone")
         engine.evaluate(listOf(voice), 0)
         // Newest persistent first; a message waits behind both and they never time out.

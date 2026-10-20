@@ -91,7 +91,12 @@ internal fun IdleDashboard(
     onLaunchApp: (String) -> Unit,
     onCollapse: () -> Unit,
     onInputStateChanged: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /**
+     * The app area while the search box is empty: upstream's launcher pager (pinned apps, recents and the Utilities
+     * page). Null keeps the four-icon mini launcher below.
+     */
+    launcher: (@Composable () -> Unit)? = null
 ) {
     val context = LocalContext.current
     var query by remember { mutableStateOf("") }
@@ -172,7 +177,15 @@ internal fun IdleDashboard(
             StatusBadges()
         }
 
-        Row(
+        if (launcher != null && trimmed.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Color(0xFF151515))
+                    .padding(vertical = 8.dp, horizontal = 8.dp)
+            ) { launcher() }
+        } else Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(24.dp))

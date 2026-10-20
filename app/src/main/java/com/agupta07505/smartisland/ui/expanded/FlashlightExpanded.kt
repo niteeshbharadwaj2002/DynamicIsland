@@ -7,8 +7,6 @@
 
 package com.agupta07505.smartisland.ui.expanded
 
-import com.agupta07505.smartisland.R
-import androidx.compose.ui.res.stringResource
 import android.content.Context
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
@@ -30,7 +28,7 @@ import androidx.compose.material.icons.rounded.FlashlightOn
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import com.agupta07505.smartisland.ui.IslandText as Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,7 +73,7 @@ fun FlashlightExpanded(
             ) {
                 Icon(
                     imageVector = Icons.Rounded.FlashlightOn,
-                    contentDescription = stringResource(R.string.a11y_flashlight_active),
+                    contentDescription = "Flashlight Active",
                     tint = torchColor,
                     modifier = Modifier.size(24.dp)
                 )
@@ -84,7 +82,7 @@ fun FlashlightExpanded(
             Column {
                 Text(
                     text = "Flashlight ON",
-                    color = Color.White,
+                    color = LocalIslandPalette.current.text,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )

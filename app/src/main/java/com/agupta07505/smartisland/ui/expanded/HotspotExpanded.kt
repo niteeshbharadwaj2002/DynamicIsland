@@ -9,7 +9,6 @@ package com.agupta07505.smartisland.ui.expanded
 
 import com.agupta07505.smartisland.R
 import androidx.compose.ui.res.stringResource
-import com.agupta07505.smartisland.ui.IslandPalette
 import android.content.Intent
 import android.provider.Settings
 import android.widget.Toast
@@ -20,20 +19,18 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.WifiTethering
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import com.agupta07505.smartisland.ui.IslandText as Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -45,20 +42,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.agupta07505.smartisland.data.SmartIslandCommand
 import com.agupta07505.smartisland.data.SmartIslandSettings
-import com.agupta07505.smartisland.di.SmartIslandRepositories
 import com.agupta07505.smartisland.model.IslandNotification
 import com.agupta07505.smartisland.ui.bounceClick
 import com.agupta07505.smartisland.util.formatNotificationTime
 import com.agupta07505.smartisland.util.HotspotUtil
+import com.agupta07505.smartisland.di.SmartIslandRepositories
 
 @Composable
 fun HotspotExpanded(
@@ -135,13 +130,11 @@ fun HotspotExpanded(
             .padding(start = 18.dp, top = 20.dp, end = 18.dp, bottom = bottomPadding),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Top Header Row matching NotificationExpanded alignment
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Default Hotspot Icon (42.dp matching NotificationExpanded)
             Box(
                 modifier = Modifier
                     .size(42.dp)
@@ -157,11 +150,10 @@ fun HotspotExpanded(
                 )
             }
 
-            // Title & Subtitle Column matching NotificationExpanded font sizes
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "Mobile Hotspot",
-                    color = Color.White,
+                    color = LocalIslandPalette.current.text,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     fontSize = 17.sp,
@@ -170,7 +162,7 @@ fun HotspotExpanded(
                 )
                 Text(
                     text = ssid?.let { "Network: $it" } ?: cleanSubtitle,
-                    color = IslandPalette.secondaryLabel,
+                    color = LocalIslandPalette.current.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     fontSize = 13.sp,
@@ -178,7 +170,6 @@ fun HotspotExpanded(
                 )
             }
 
-            // Right side: Badge Tag ("Active") & Timestamp
             Column(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -210,7 +201,7 @@ fun HotspotExpanded(
 
                 Text(
                     text = formatNotificationTime(notification.timeMillis),
-                    color = IslandPalette.secondaryLabel,
+                    color = LocalIslandPalette.current.textTertiary,
                     fontSize = 11.sp
                 )
             }
@@ -221,7 +212,7 @@ fun HotspotExpanded(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(12.dp))
-                .background(IslandPalette.fill)
+                .background(LocalIslandPalette.current.tint(0.133f))
                 .padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
             Column(
@@ -245,7 +236,7 @@ fun HotspotExpanded(
                         )
                         Text(
                             text = "Connected Devices",
-                            color = Color.White,
+                            color = LocalIslandPalette.current.text,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -268,14 +259,14 @@ fun HotspotExpanded(
                     ) {
                         Text(
                             text = "Throughput",
-                            color = IslandPalette.secondaryLabel,
+                            color = LocalIslandPalette.current.textSecondary,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Normal
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(
                                 text = throughputSnapshot.formatTx(),
-                                color = IslandPalette.secondaryLabel,
+                                color = LocalIslandPalette.current.textSecondary,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium
                             )
@@ -291,7 +282,7 @@ fun HotspotExpanded(
             }
         }
 
-        // Action Buttons Row (Single Hotspot Settings + unique extra system actions)
+        // Action buttons: exactly what the notification shade offers, nothing added.
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -301,7 +292,7 @@ fun HotspotExpanded(
                 modifier = Modifier
                     .height(40.dp)
                     .clip(RoundedCornerShape(20.dp))
-                    .background(IslandPalette.fill)
+                    .background(LocalIslandPalette.current.tint(0.133f))
                     .bounceClick(turnOffHotspot)
                     .padding(horizontal = 12.dp),
                 contentAlignment = Alignment.Center
@@ -318,7 +309,7 @@ fun HotspotExpanded(
                     )
                     Text(
                         text = if (turnOffAction != null) "Turn Off Hotspot" else "Turn Off in Settings",
-                        color = IslandPalette.label,
+                        color = LocalIslandPalette.current.text,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -330,24 +321,17 @@ fun HotspotExpanded(
                     modifier = Modifier
                         .height(40.dp)
                         .clip(RoundedCornerShape(20.dp))
-                        .background(IslandPalette.fillStrong)
+                        .background(LocalIslandPalette.current.tint(0.2f))
                         .bounceClick {
-                            if (action.pendingIntent != null) {
-                                triggerAction(context, notification.packageName, action.pendingIntent, action.title, notification.contentIntent)
-                            } else {
-                                Toast.makeText(context, "Clicked: ${action.title}", Toast.LENGTH_SHORT).show()
-                            }
-                            val repo = SmartIslandRepositories.notificationRepository(context)
-                            repo.removeNotification(notification.key)
-                            repo.sendCommand(SmartIslandCommand.CancelNotification(notification.key))
-                            onCollapse()
+                            // Like the shade: fire the app's button; the app updates or removes its notification.
+                            notification.fireAction(context, action)
                         }
                         .padding(horizontal = 12.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = action.title,
-                        color = Color.White,
+                        color = LocalIslandPalette.current.text,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium
                     )

@@ -48,13 +48,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.agupta07505.smartisland.R
 import com.agupta07505.smartisland.model.IslandNotification
-import com.agupta07505.smartisland.ui.IslandPalette
+import com.agupta07505.smartisland.ui.NotchPalette
 import com.agupta07505.smartisland.ui.animateFloatCalm
 import com.agupta07505.smartisland.ui.rememberIslandAnimationsActive
 import com.agupta07505.smartisland.util.GatedAction
 import com.agupta07505.smartisland.util.IslandControl
 
-private val AlarmColor = IslandPalette.warning
+private val AlarmColor = NotchPalette.warning
 
 /** The bell's pulse (scale), 1 while animations are paused (screen off) or system animations are off. */
 @Composable
@@ -183,7 +183,7 @@ fun AlarmExpanded(
                 if (label != null) {
                     Text(
                         text = label,
-                        color = IslandPalette.secondaryLabel,
+                        color = NotchPalette.secondaryLabel,
                         fontSize = 12.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -207,7 +207,7 @@ fun AlarmExpanded(
                     IslandPillButton(
                         label = stringResource(R.string.island_alarm_snooze),
                         icon = Icons.Rounded.Snooze,
-                        background = IslandPalette.fillStrong,
+                        background = NotchPalette.fillStrong,
                         modifier = Modifier.weight(1f)
                     ) {
                         fireIslandControl(context, notification, snooze, GatedAction.AlarmControl, removeAlert = true, onDone = onCollapse)
@@ -217,7 +217,7 @@ fun AlarmExpanded(
                     IslandPillButton(
                         label = stringResource(R.string.island_alarm_stop),
                         icon = Icons.Rounded.AlarmOff,
-                        background = IslandPalette.danger,
+                        background = NotchPalette.danger,
                         modifier = Modifier.weight(1f)
                     ) {
                         fireIslandControl(context, notification, stop, GatedAction.AlarmControl, removeAlert = true, onDone = onCollapse)

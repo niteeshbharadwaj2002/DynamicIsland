@@ -39,7 +39,7 @@ class DebugAlertReceiver : BroadcastReceiver() {
         val (mode, category) = when (kind) {
             "call", "ongoing_call" -> IslandMode.IncomingCall to "call"
             "alarm" -> IslandMode.Alarm to "alarm"
-            "voice" -> IslandMode.VoiceRecording to null
+            "voice" -> IslandMode.AudioRecording to null
             "camera" -> IslandMode.PrivacyIndicator to PrivacyIndicatorAlert.CATEGORY_CAMERA
             "mic" -> IslandMode.PrivacyIndicator to PrivacyIndicatorAlert.CATEGORY_MICROPHONE
             "camera_mic" -> IslandMode.PrivacyIndicator to PrivacyIndicatorAlert.CATEGORY_BOTH

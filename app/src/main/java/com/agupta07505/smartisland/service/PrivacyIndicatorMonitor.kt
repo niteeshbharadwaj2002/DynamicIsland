@@ -124,7 +124,10 @@ class PrivacyIndicatorMonitor(
         shizukuPollJob = null
         runCatchingLogged(TAG, "Stopping app-op watch failed") {
             val listener = appOpsListener
-            if (listener != null) context.getSystemService(AppOpsManager::class.java)?.stopWatchingActive(listener)
+            // The listener only exists when startAppOps ran, which needs Android 11 (R).
+            if (listener != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                context.getSystemService(AppOpsManager::class.java)?.stopWatchingActive(listener)
+            }
         }
         runCatchingLogged(TAG, "Unregistering camera callback failed") {
             cameraCallback?.let { context.getSystemService(CameraManager::class.java)?.unregisterAvailabilityCallback(it) }

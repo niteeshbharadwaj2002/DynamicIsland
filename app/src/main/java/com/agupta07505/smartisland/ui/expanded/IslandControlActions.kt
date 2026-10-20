@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.sp
 import com.agupta07505.smartisland.di.SmartIslandRepositories
 import com.agupta07505.smartisland.model.IslandNotification
 import com.agupta07505.smartisland.model.IslandNotificationAction
-import com.agupta07505.smartisland.ui.IslandPalette
+import com.agupta07505.smartisland.ui.NotchPalette
 import com.agupta07505.smartisland.ui.bounceClick
 import com.agupta07505.smartisland.util.GatedAction
 import com.agupta07505.smartisland.util.IslandControl
@@ -119,6 +119,6 @@ internal fun IslandRoundButton(
         ) {
             Icon(icon, contentDescription = label, tint = Color.White, modifier = Modifier.size(22.dp))
         }
-        Text(text = label, color = IslandPalette.secondaryLabel, fontSize = 11.sp, maxLines = 1)
+        Text(text = label, color = NotchPalette.secondaryLabel, fontSize = 11.sp, maxLines = 1)
     }
 }

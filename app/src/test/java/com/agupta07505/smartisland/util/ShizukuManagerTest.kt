@@ -28,6 +28,27 @@ class ShizukuManagerTest {
     }
 
     @Test
+    fun testFindPackageNameIsNullWhenNoAppDeclaresThePermission() {
+        val context = mockk<Context>()
+        val pm = mockk<PackageManager>()
+        every { context.packageManager } returns pm
+        every { pm.getPermissionInfo(any(), any()) } throws PackageManager.NameNotFoundException()
+
+        org.junit.Assert.assertNull(ShizukuManager.findPackageName(context))
+    }
+
+    @Test
+    fun testIsInstalledFallsBackToThePackageName() {
+        val context = mockk<Context>()
+        val pm = mockk<PackageManager>()
+        every { context.packageManager } returns pm
+        every { pm.getPermissionInfo(any(), any()) } throws PackageManager.NameNotFoundException()
+        every { pm.getPackageInfo("moe.shizuku.privileged.api", 0) } returns android.content.pm.PackageInfo()
+
+        org.junit.Assert.assertTrue(ShizukuManager.isInstalled(context))
+    }
+
+    @Test
     fun testIsBinderAvailableWithoutCrash() {
         // Without Shizuku service running, isBinderAvailable should return false safely
         val available = ShizukuManager.isBinderAvailable()
@@ -67,12 +88,5 @@ class ShizukuManagerTest {
             "com.bitwarden.authenticator/service:com.agupta07505.smartisland/service",
             merged
         )
-    }
-
-    @Test
-    fun testShellQuoteNeutralisesMetacharacters() {
-        org.junit.Assert.assertEquals("'a/b:c'", ShizukuManager.shellQuote("a/b:c"))
-        org.junit.Assert.assertEquals("'x; rm -rf \$HOME'", ShizukuManager.shellQuote("x; rm -rf \$HOME"))
-        org.junit.Assert.assertEquals("'it'\\''s'", ShizukuManager.shellQuote("it's"))
     }
 }

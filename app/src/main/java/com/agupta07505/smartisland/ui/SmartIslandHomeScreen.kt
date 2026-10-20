@@ -7,37 +7,23 @@
 
 package com.agupta07505.smartisland.ui
 
-import com.agupta07505.smartisland.ui.components.SmartIslandSwitch
+import androidx.compose.material.icons.rounded.Security
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
-import com.agupta07505.smartisland.ui.components.BackBar
-import com.agupta07505.smartisland.ui.components.FilledActionButton
-import com.agupta07505.smartisland.ui.components.GroupedRow
-import com.agupta07505.smartisland.ui.components.GroupedSection
-import com.agupta07505.smartisland.ui.components.LargeTitleHeader
-import com.agupta07505.smartisland.ui.components.StatusKind
-import com.agupta07505.smartisland.ui.components.StatusLabel
-import com.agupta07505.smartisland.ui.components.SwitchRow
-import com.agupta07505.smartisland.ui.components.TintedActionButton
-import android.widget.Toast
-import androidx.compose.material.icons.rounded.EmojiEmotions
-import com.agupta07505.smartisland.ui.sections.BuddySection
-import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -52,7 +38,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -72,41 +57,33 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
-import androidx.compose.material.icons.rounded.Alarm
 import androidx.compose.material.icons.rounded.Apps
-import androidx.compose.material.icons.rounded.AvTimer
-import androidx.compose.material.icons.rounded.BatteryChargingFull
-import androidx.compose.material.icons.rounded.BluetoothConnected
-import androidx.compose.material.icons.rounded.Call
-import androidx.compose.material.icons.rounded.CloudDownload
-import androidx.compose.material.icons.rounded.Commit
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Explore
-import androidx.compose.material.icons.rounded.FileDownload
+import com.agupta07505.smartisland.ui.sections.SupportSection
+import com.agupta07505.smartisland.ui.sections.DeveloperOptionsSection
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.People
+import androidx.compose.material.icons.rounded.Code
+
 import androidx.compose.material.icons.rounded.FlashOn
-import androidx.compose.material.icons.rounded.FlashlightOn
 import androidx.compose.material.icons.rounded.Gesture
 import androidx.compose.material.icons.rounded.History
-import androidx.compose.material.icons.rounded.HourglassBottom
-import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.Mic
-import androidx.compose.material.icons.rounded.MusicNote
-import androidx.compose.material.icons.rounded.Navigation
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Palette
-import androidx.compose.material.icons.rounded.People
-import androidx.compose.material.icons.rounded.PrivacyTip
-import androidx.compose.material.icons.rounded.Security
+import androidx.compose.material.icons.rounded.BugReport
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SettingsBackupRestore
 import androidx.compose.material.icons.rounded.Shield
+import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.Tune
-import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material.icons.rounded.Warning
-import androidx.compose.material.icons.rounded.WifiTethering
+import androidx.compose.material.icons.rounded.FontDownload
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Widgets
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
+import com.agupta07505.smartisland.ui.glass.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.Icon
@@ -117,36 +94,35 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
+import com.agupta07505.smartisland.ui.glass.LocalGlassDark
+import com.agupta07505.smartisland.ui.glass.LocalLiquidGlass
+import com.agupta07505.smartisland.ui.glass.ThemedBackdrop
+import com.agupta07505.smartisland.ui.glass.glassEdge
+import com.agupta07505.smartisland.ui.glass.Switch
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
+import com.agupta07505.smartisland.ui.components.CollapsibleCard
+import com.agupta07505.smartisland.ui.components.GroupedRow
+import com.agupta07505.smartisland.ui.components.GroupedSection
+import com.agupta07505.smartisland.ui.components.StatusKind
+import com.agupta07505.smartisland.ui.components.StatusLabel
+import com.agupta07505.smartisland.ui.components.SwitchRow
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.translate
-import androidx.compose.ui.graphics.layer.GraphicsLayer
-import androidx.compose.ui.graphics.layer.drawLayer
-import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
-import android.os.Build
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -167,30 +143,58 @@ import com.agupta07505.smartisland.data.INotificationRepository
 import com.agupta07505.smartisland.data.SmartIslandSettings
 import com.agupta07505.smartisland.data.SmartIslandSettingsRepository
 import com.agupta07505.smartisland.di.SmartIslandRepositories
-import com.agupta07505.smartisland.model.IslandMode
-import com.agupta07505.smartisland.ui.sections.AboutSection
+import com.agupta07505.smartisland.ui.sections.DemoSection
+import com.agupta07505.smartisland.ui.sections.EventTogglesSection
+import com.agupta07505.smartisland.ui.sections.IslandFontPicker
+import com.agupta07505.smartisland.ui.sections.LandscapeSection
+import com.agupta07505.smartisland.ui.sections.OrientationTab
+import com.agupta07505.smartisland.ui.sections.OrientationTabs
 import com.agupta07505.smartisland.ui.sections.AppShortcutsSection
+import com.agupta07505.smartisland.ui.sections.AnimationSpeedSection
+import com.agupta07505.smartisland.ui.sections.MergeStyleSection
+import com.agupta07505.smartisland.ui.sections.IdleWidgetsSection
+import com.agupta07505.smartisland.ui.sections.IdleWidgetsSettingsSection
+import com.agupta07505.smartisland.ui.sections.BuddySection
+import com.agupta07505.smartisland.ui.sections.WeatherSettingsCard
+import androidx.compose.material.icons.rounded.Pets
+import com.agupta07505.smartisland.ui.sections.NetSpeedSettingsCard
+import com.agupta07505.smartisland.ui.sections.CalendarSettingsCard
+import com.agupta07505.smartisland.ui.search.searchAnchor
+import com.agupta07505.smartisland.ui.sections.AboutSection
 import com.agupta07505.smartisland.ui.sections.BackupRestoreSection
 import com.agupta07505.smartisland.ui.sections.CustomizationsSection
-import com.agupta07505.smartisland.ui.sections.DeveloperOptionsSection
+import com.agupta07505.smartisland.ui.sections.DiagnosticsSection
+import com.agupta07505.smartisland.ui.sections.FaceIdSettingsSection
+import com.agupta07505.smartisland.ui.sections.TimingSection
 import com.agupta07505.smartisland.ui.sections.GesturesSection
 import com.agupta07505.smartisland.ui.sections.NotificationHistorySection
 import com.agupta07505.smartisland.ui.sections.NotificationsAndPrivacySection
 import com.agupta07505.smartisland.ui.sections.PermissionsSection
 import com.agupta07505.smartisland.ui.sections.PositionsSection
-import com.agupta07505.smartisland.ui.sections.SupportSection
 import com.agupta07505.smartisland.util.SystemServiceRecovery
 import com.agupta07505.smartisland.util.runCatchingLogged
+import com.agupta07505.smartisland.ui.search.LocalSearchFocus
+import com.agupta07505.smartisland.ui.search.SEARCH_FOCUS_ARMED_MS
+import com.agupta07505.smartisland.ui.search.SearchFocusState
+import com.agupta07505.smartisland.ui.search.SearchTarget
+import com.agupta07505.smartisland.ui.search.SettingsSearch
+import com.agupta07505.smartisland.ui.search.SettingsSearchEntry
+import com.agupta07505.smartisland.ui.search.SettingsSearchField
+import com.agupta07505.smartisland.ui.search.SettingsSearchResults
+import com.agupta07505.smartisland.ui.search.buildSettingsSearchIndex
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
-/** Bottom tabs, named as labelled (Rule_Book §11.2). */
-private enum class StudioTab {
-    Home,
-    Layout,
+internal enum class StudioTab {
+    Studio,
+    Position,
+    Demo,
     Settings
 }
 
-private enum class FeatureDetailSection {
+internal enum class FeatureDetailSection {
     NotificationRules,
     AppShortcuts,
     NotificationHistory,
@@ -198,21 +202,34 @@ private enum class FeatureDetailSection {
     GesturesGuide,
     PermissionsCenter,
     BackupRestore,
-    AboutApp,
+    Diagnostics,
+    Timing,
+    IdleWidgets,
+    About,
     SupportCommunity,
     DeveloperOptions,
+    FaceIdSettings,
     Buddy,
-    SecureApps
+    SecureApps,
+    WeatherSettings,
+    NetSpeedSettings,
+    CalendarSettings
 }
+
+private val IDLE_SETTINGS_PAGES = setOf(
+    FeatureDetailSection.WeatherSettings,
+    FeatureDetailSection.NetSpeedSettings,
+    FeatureDetailSection.CalendarSettings
+)
 
 @SuppressLint("BatteryLife")
 @Composable
 fun SmartIslandHomeScreen(
     repository: SmartIslandSettingsRepository? = null,
     notificationRepository: INotificationRepository? = null,
-    openPermissionsOnStart: Boolean = false,
-    /** Bumped by MainActivity when a foreground check finds a required permission missing (Rule_Book §7.1). */
-    permissionRouteRequest: Int = 0
+    /** A section the island asked the app to open, such as the Utilities page's settings button; null when none. */
+    openSection: String? = null,
+    onOpenSectionHandled: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -233,7 +250,7 @@ fun SmartIslandHomeScreen(
     val settings by resolvedRepository.settings.collectAsStateWithLifecycle(initialValue = SmartIslandSettings.Default)
     val scope = rememberCoroutineScope()
 
-    var showWelcomeDialog by remember { mutableStateOf(false) }
+    var showWelcomeDialog by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         if (!resolvedRepository.isWelcomeDialogShown()) {
@@ -241,33 +258,84 @@ fun SmartIslandHomeScreen(
         }
     }
 
+    var showTour by rememberSaveable { mutableStateOf(false) }
+
     if (showWelcomeDialog) {
         WelcomeDialog(
             onDismiss = {
                 showWelcomeDialog = false
                 scope.launch { resolvedRepository.setWelcomeDialogShown(true) }
             },
-            onStarClick = {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/agupta07505/SmartIsland"))
-                runCatching { context.startActivity(intent) }
-            },
-            onJoinCommunityClick = {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://telegram.me/SmartIslandApp"))
-                runCatching { context.startActivity(intent) }
+            onTakeTour = {
+                showWelcomeDialog = false
+                showTour = true
+                scope.launch { resolvedRepository.setWelcomeDialogShown(true) }
             }
         )
+    }
+
+    if (showTour) {
+        com.agupta07505.smartisland.ui.sections.NewUserTour(settings = settings, onFinish = { showTour = false })
     }
 
     var overlayGranted by remember { mutableStateOf(isAccessibilityServiceEnabled(context)) }
     var notificationGranted by remember { mutableStateOf(isNotificationListenerEnabled(context)) }
     var batteryIgnored by remember { mutableStateOf(isBatteryOptimizationIgnored(context)) }
 
+    val batteryRefreshHandler = remember { Handler(Looper.getMainLooper()) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            batteryRefreshHandler.removeCallbacksAndMessages(null)
+        }
+    }
+
+    fun refreshBatteryOptimizationWithRetry() {
+        batteryRefreshHandler.removeCallbacksAndMessages(null)
+
+        val initialState = isBatteryOptimizationIgnored(context)
+        batteryIgnored = initialState
+
+        var attempts = 0
+
+        val refreshRunnable = object : Runnable {
+            override fun run() {
+                val currentState = isBatteryOptimizationIgnored(context)
+                batteryIgnored = currentState
+                attempts++
+
+                if (currentState != initialState || attempts >= 8) {
+                    return
+                }
+
+                batteryRefreshHandler.postDelayed(this, 150L)
+            }
+        }
+
+        batteryRefreshHandler.postDelayed(refreshRunnable, 150L)
+    }
+
+    var bluetoothGranted by remember { mutableStateOf(isBluetoothConnectPermissionGranted(context)) }
+
+    val bluetoothPermissionLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission()
+        ) { granted ->
+            bluetoothGranted = granted
+
+            if (granted) {
+                SystemServiceRecovery.resetAccessibilityRefreshAttempt()
+                SystemServiceRecovery.requestRecovery(context)
+            }
+        }
+
     DisposableEffect(lifecycleOwner, context) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 overlayGranted = isAccessibilityServiceEnabled(context)
                 notificationGranted = isNotificationListenerEnabled(context)
-                batteryIgnored = isBatteryOptimizationIgnored(context)
+                refreshBatteryOptimizationWithRetry()
+                bluetoothGranted = isBluetoothConnectPermissionGranted(context)
                 SystemServiceRecovery.requestRecovery(context)
             }
         }
@@ -275,34 +343,72 @@ fun SmartIslandHomeScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    var selectedTab by remember { mutableStateOf(if (openPermissionsOnStart) StudioTab.Settings else StudioTab.Home) }
-    var activeDetailSection by remember {
-        mutableStateOf(if (openPermissionsOnStart) FeatureDetailSection.PermissionsCenter else null)
+    var selectedTab by rememberSaveable { mutableStateOf(StudioTab.Studio) }
+    var orientationTab by rememberSaveable { mutableStateOf(OrientationTab.Portrait) }
+    var activeDetailSection by rememberSaveable { mutableStateOf<FeatureDetailSection?>(null) }
+    var transitionDirection by rememberSaveable { mutableIntStateOf(1) }
+
+    // Settings search: the query survives rotation; the focus state tells the chosen row to
+    // scroll into view and flash once its screen is showing.
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    val searchFocus = remember { SearchFocusState() }
+    val configuration = LocalConfiguration.current
+    val searchIndex = remember(context, configuration) {
+        buildSettingsSearchIndex { id -> context.getString(id) }
     }
-    var transitionDirection by remember { mutableStateOf(1) } // 1 = forward, -1 = backward
+    val searchResults = remember(searchIndex, searchQuery) {
+        val byId = searchIndex.associateBy { it.item.id }
+        SettingsSearch.search(searchIndex.map { it.item }, searchQuery).mapNotNull { byId[it.id] }
+    }
+    // A jump stays armed for a few seconds, then is forgotten so the row never flashes again
+    // when the user later opens the same screen by hand.
+    LaunchedEffect(searchFocus.token) {
+        if (searchFocus.key != null) {
+            delay(SEARCH_FOCUS_ARMED_MS)
+            searchFocus.clear()
+        }
+    }
+    val onSearchPick: (SettingsSearchEntry) -> Unit = { entry ->
+        when (val target = entry.target) {
+            is SearchTarget.Tab -> {
+                transitionDirection = if (target.tab.ordinal > selectedTab.ordinal) 1 else -1
+                selectedTab = target.tab
+                target.landscape?.let {
+                    orientationTab = if (it) OrientationTab.Landscape else OrientationTab.Portrait
+                }
+                // Already on the Settings tab: show the normal overview, where the item is.
+                if (target.tab == StudioTab.Settings) searchQuery = ""
+            }
+            is SearchTarget.Detail -> {
+                transitionDirection = 1
+                activeDetailSection = target.section
+            }
+        }
+        searchFocus.jumpTo(entry.rowKey)
+    }
 
-    // Active preview mode for interactive live preview
-    var previewMode by remember { mutableStateOf(IslandMode.Music) }
+    val canEnable = overlayGranted && notificationGranted
 
-    val canEnable = overlayGranted && notificationGranted && batteryIgnored
-
-    // A required grant went missing while the app was away: go straight back to the permissions setup.
-    LaunchedEffect(permissionRouteRequest) {
-        if (permissionRouteRequest > 0 && activeDetailSection != FeatureDetailSection.PermissionsCenter) {
+    // The island's settings button: open the App Shortcuts configuration, then forget the request.
+    LaunchedEffect(openSection) {
+        if (openSection == com.agupta07505.smartisland.util.UtilityActions.SECTION_APP_SHORTCUTS) {
+            transitionDirection = 1
+            activeDetailSection = FeatureDetailSection.AppShortcuts
+            onOpenSectionHandled()
+        } else if (openSection == com.agupta07505.smartisland.util.UtilityActions.SECTION_PERMISSIONS) {
             transitionDirection = 1
             activeDetailSection = FeatureDetailSection.PermissionsCenter
+            onOpenSectionHandled()
         }
     }
 
     BackHandler(enabled = activeDetailSection != null) {
         transitionDirection = -1
-        activeDetailSection = null
+        // The weather page is opened from the Idle widgets page, so back goes there; every other page goes home.
+        activeDetailSection = if (activeDetailSection in IDLE_SETTINGS_PAGES) FeatureDetailSection.IdleWidgets else null
     }
 
-    // The page is recorded once into this layer so the glass tab bar can draw it, blurred, behind itself.
-    val pageBackdrop = rememberGraphicsLayer()
-    var pageTopInRoot by remember { mutableFloatStateOf(0f) }
-
+    CompositionLocalProvider(LocalSearchFocus provides searchFocus) {
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
@@ -312,24 +418,14 @@ fun SmartIslandHomeScreen(
                     onTabSelected = { tab ->
                         transitionDirection = if (tab.ordinal > selectedTab.ordinal) 1 else -1
                         selectedTab = tab
-                    },
-                    backdrop = pageBackdrop,
-                    backdropTopInRoot = { pageTopInRoot }
+                    }
                 )
             }
         }
     ) { scaffoldPadding ->
-        // The page runs on under the translucent tab bar; its bottom padding keeps the last row reachable.
-        val barPadding = scaffoldPadding.calculateBottomPadding()
         AnimatedContent(
             targetState = activeDetailSection,
-            modifier = Modifier
-                .padding(top = scaffoldPadding.calculateTopPadding())
-                .onGloballyPositioned { pageTopInRoot = it.positionInRoot().y }
-                .drawWithContent {
-                    pageBackdrop.record { this@drawWithContent.drawContent() }
-                    drawLayer(pageBackdrop)
-                },
+            modifier = Modifier.padding(scaffoldPadding),
             transitionSpec = {
                 if (transitionDirection == 1) {
                     (slideInHorizontally(initialOffsetX = { it }) + fadeIn())
@@ -341,42 +437,41 @@ fun SmartIslandHomeScreen(
             },
             label = "ScreenTransition"
         ) { detailSection ->
+            Box(Modifier.fillMaxSize()) {
+            ThemedBackdrop()
             if (detailSection == null) {
                 val screenWidthDp = LocalConfiguration.current.screenWidthDp
-                val horizontalPad = if (screenWidthDp > 600) Dimens.ScreenMarginWide else Dimens.ScreenMargin
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background),
-                    contentAlignment = Alignment.TopCenter
-                ) {
+                val horizontalPad = contentSidePadding(screenWidthDp)
                 Column(
                     modifier = Modifier
-                        .widthIn(max = 640.dp)
                         .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background)
                         .verticalScroll(rememberScrollState())
                         .padding(
                             start = horizontalPad,
                             end = horizontalPad,
-                            top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp,
-                            bottom = 32.dp + barPadding
+                            top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 12.dp,
+                            bottom = 32.dp
                         ),
-                    verticalArrangement = Arrangement.spacedBy(Dimens.SectionSpacing)
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    LargeTitleHeader(
-                        title = when (selectedTab) {
-                            StudioTab.Home -> stringResource(R.string.app_name)
-                            StudioTab.Layout -> stringResource(R.string.tab_layout)
-                            StudioTab.Settings -> stringResource(R.string.tab_settings)
+                    StudioTopHeader(
+                        isIslandEnabled = settings.enabled,
+                        canEnable = canEnable,
+                        onHealthClick = {
+                            transitionDirection = 1
+                            activeDetailSection = FeatureDetailSection.PermissionsCenter
                         }
                     )
 
                     when (selectedTab) {
-                        StudioTab.Home -> {
-                            // 1. Master Power Switch Card
+                        StudioTab.Studio -> {
                             MasterPowerCard(
                                 enabled = settings.enabled,
                                 canEnable = canEnable,
+                                overlayGranted = overlayGranted,
+                                notificationGranted = notificationGranted,
+                                batteryIgnored = batteryIgnored,
                                 onCheckedChange = { turnOn ->
                                     if (turnOn) {
                                         SystemServiceRecovery.requestRecovery(context)
@@ -389,39 +484,93 @@ fun SmartIslandHomeScreen(
                                 }
                             )
 
-                            // 2. Interactive Simulation Lab
-                            SimulationLabCard(
-                                activeMode = previewMode,
-                                onModeSelect = { mode ->
-                                    previewMode = mode
-                                    resolvedNotificationRepository?.showDemo(mode)
-                                },
-                                onClearAll = {
-                                    resolvedNotificationRepository?.clearTestNotifications()
-                                    Toast.makeText(context, context.getString(R.string.toast_cleared_test_notifications), Toast.LENGTH_SHORT).show()
-                                }
+                            // Portrait / Landscape switch, then event toggles for that profile
+                            OrientationTabs(
+                                selected = orientationTab,
+                                onSelected = { orientationTab = it }
                             )
-
-                        }
-
-                        StudioTab.Layout -> {
-                            PositionsSection(
+                            EventTogglesSection(
                                 settings = settings,
                                 repository = resolvedRepository,
-                                onNavigateToBackup = {
+                                landscape = orientationTab == OrientationTab.Landscape,
+                                onOpenFaceIdSettings = {
                                     transitionDirection = 1
-                                    activeDetailSection = FeatureDetailSection.BackupRestore
+                                    activeDetailSection = FeatureDetailSection.FaceIdSettings
                                 }
+                            )
+                        }
+
+                        StudioTab.Position -> {
+                            OrientationTabs(
+                                selected = orientationTab,
+                                onSelected = { orientationTab = it }
+                            )
+                            run {
+                                if (orientationTab == OrientationTab.Landscape) {
+                                    LandscapeSection(
+                                        settings = settings,
+                                        repository = resolvedRepository
+                                    )
+                                } else {
+                                    PositionsSection(
+                                        settings = settings,
+                                        repository = resolvedRepository,
+                                        onNavigateToBackup = {
+                                            transitionDirection = 1
+                                            activeDetailSection = FeatureDetailSection.BackupRestore
+                                        }
+                                    )
+                                }
+                            }
+                            AnimationSpeedSection(
+                                settings = settings,
+                                repository = resolvedRepository,
+                                landscape = orientationTab == OrientationTab.Landscape
+                            )
+                            MergeStyleSection(
+                                settings = settings,
+                                repository = resolvedRepository,
+                                landscape = orientationTab == OrientationTab.Landscape
+                            )
+                            IdleWidgetsSection(
+                                settings = settings,
+                                repository = resolvedRepository,
+                                onOpenSettings = {
+                                    transitionDirection = 1
+                                    activeDetailSection = FeatureDetailSection.IdleWidgets
+                                }
+                            )
+                        }
+
+                        StudioTab.Demo -> {
+                            DemoSection(
+                                settings = settings,
+                                notificationRepository = resolvedNotificationRepository
                             )
                         }
 
                         StudioTab.Settings -> {
                             SettingsOverviewSection(
                                 settings = settings,
+                                searchQuery = searchQuery,
+                                onSearchQueryChange = { searchQuery = it },
+                                searchResults = searchResults,
+                                onSearchPick = onSearchPick,
                                 overlayGranted = overlayGranted,
                                 notificationGranted = notificationGranted,
                                 batteryIgnored = batteryIgnored,
-                                onBatteryWarningClick = { requestIgnoreBatteryOptimizations(context) },
+                                onThemeModeChange = { mode ->
+                                    scope.launch { resolvedRepository.setThemeMode(mode) }
+                                },
+                                onLiquidGlassChange = { on -> scope.launch { resolvedRepository.setLiquidGlassTheme(on) } },
+                                onMaterialYouChange = { on -> scope.launch { resolvedRepository.setMaterialYou(on) } },
+                                onAccentChange = { argb -> scope.launch { resolvedRepository.setAccentColor(argb) } },
+                                onIslandFontChange = { font ->
+                                    scope.launch { resolvedRepository.setIslandFont(font) }
+                                },
+                                onFontMixChange = { enabled, light, regular, medium ->
+                                    scope.launch { resolvedRepository.setFontMix(enabled, light, regular, medium) }
+                                },
                                 onNavigateTo = { section ->
                                     transitionDirection = 1
                                     activeDetailSection = section
@@ -430,18 +579,6 @@ fun SmartIslandHomeScreen(
                         }
                     }
 
-                    Spacer(Modifier.height(8.dp))
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = stringResource(R.string.made_by),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                        )
-                    }
-                }
                 }
             } else {
                 DetailScreenHost(
@@ -451,14 +588,31 @@ fun SmartIslandHomeScreen(
                     overlayGranted = overlayGranted,
                     notificationGranted = notificationGranted,
                     batteryIgnored = batteryIgnored,
+                    bluetoothGranted = bluetoothGranted,
                     onBack = {
                         transitionDirection = -1
-                        activeDetailSection = null
+                        activeDetailSection = if (detailSection in IDLE_SETTINGS_PAGES) FeatureDetailSection.IdleWidgets else null
+                    },
+                    onBluetoothClick = {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            if (!bluetoothGranted) {
+                                bluetoothPermissionLauncher.launch(
+                                    Manifest.permission.BLUETOOTH_CONNECT
+                                )
+                            } else {
+                                val intent = Intent(
+                                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                    Uri.parse("package:${context.packageName}")
+                                )
+                                context.startActivity(intent)
+                            }
+                        }
                     },
                     onRefreshPermissions = {
                         overlayGranted = isAccessibilityServiceEnabled(context)
                         notificationGranted = isNotificationListenerEnabled(context)
-                        batteryIgnored = isBatteryOptimizationIgnored(context)
+                        refreshBatteryOptimizationWithRetry()
+                        bluetoothGranted = isBluetoothConnectPermissionGranted(context)
                     },
                     onNavigateTo = { section ->
                         transitionDirection = 1
@@ -466,409 +620,562 @@ fun SmartIslandHomeScreen(
                     }
                 )
             }
+            }
+        }
+    }
+    }
+}
+
+private const val MAX_CONTENT_WIDTH_DP = 640
+
+private fun contentSidePadding(screenWidthDp: Int): androidx.compose.ui.unit.Dp {
+    val base = when {
+        screenWidthDp < 360 -> 14
+        screenWidthDp > 600 -> 28
+        else -> 20
+    }
+    val centred = (screenWidthDp - MAX_CONTENT_WIDTH_DP) / 2
+    return maxOf(base, centred).dp
+}
+
+@Composable
+private fun StudioTopHeader(
+    isIslandEnabled: Boolean,
+    canEnable: Boolean,
+    onHealthClick: () -> Unit
+) {
+    val context = LocalContext.current
+    val appIcon = remember(context) {
+        runCatchingLogged("HeaderSection", "Failed to get application icon") {
+            val drawable = context.packageManager.getApplicationIcon(context.packageName)
+            val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: 144
+            val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: 144
+            val bitmap = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
+            val canvas = android.graphics.Canvas(bitmap)
+            drawable.setBounds(0, 0, width, height)
+            drawable.draw(canvas)
+            bitmap.asImageBitmap()
+        }
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            if (appIcon != null) {
+                Image(
+                    bitmap = appIcon,
+                    contentDescription = "Smart Island Logo",
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .background(
+                            brush = Brush.linearGradient(
+                                listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("SI", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+            }
+            Column {
+                Text(
+                    text = stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = stringResource(R.string.app_subtitle),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        val statusColor = when {
+            !canEnable -> Color(0xFFE88C25)
+            isIslandEnabled -> Color(0xFF0F9F6E)
+            else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+        }
+        val statusText = when {
+            !canEnable -> stringResource(R.string.status_setup_needed)
+            isIslandEnabled -> stringResource(R.string.status_active)
+            else -> stringResource(R.string.status_ready)
+        }
+
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(20.dp))
+                .background(statusColor.copy(alpha = 0.12f))
+                .border(1.dp, statusColor.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
+                .clickable(onClick = onHealthClick)
+                .padding(horizontal = 12.dp, vertical = 6.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(statusColor, CircleShape)
+                )
+                Text(
+                    text = statusText,
+                    color = statusColor,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }
 
 /**
- * Rule_Book 11.2: the master switch sits alone in its own full-width grouped item at the top. When a
- * permission is missing, the way to fix it is a separate group below, never a row inside the switch's group.
+ * Rule_Book 11.2: the master switch sits alone in its own grouped item at the top. When a permission is missing,
+ * the way to fix it is a separate group below (the chips say what is missing), never a row inside the switch's group.
  */
 @Composable
 private fun MasterPowerCard(
     enabled: Boolean,
     canEnable: Boolean,
+    overlayGranted: Boolean,
+    notificationGranted: Boolean,
+    batteryIgnored: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     onSetupPermissionsClick: () -> Unit
 ) {
-    GroupedSection {
-        SwitchRow(
-            title = stringResource(R.string.master_switch_title),
-            subtitle = if (canEnable) {
-                if (enabled) stringResource(R.string.master_switch_active_desc)
-                else stringResource(R.string.master_switch_ready_desc)
-            } else stringResource(R.string.master_switch_missing_desc),
-            checked = enabled,
-            enabled = canEnable || enabled,
-            onCheckedChange = onCheckedChange
-        )
-    }
-    if (!canEnable) {
-        GroupedSection(header = stringResource(R.string.home_permissions_needed_header).uppercase()) {
-            GroupedRow(
-                title = stringResource(R.string.btn_grant_required_permissions),
-                onClick = onSetupPermissionsClick,
-                trailing = {
-                    StatusLabel(
-                        text = stringResource(R.string.status_setup_needed),
-                        kind = StatusKind.Warning
-                    )
-                }
+    Column(
+        modifier = Modifier.fillMaxWidth().animateContentSize(),
+        verticalArrangement = Arrangement.spacedBy(Dimens.SectionSpacing)
+    ) {
+        GroupedSection {
+            SwitchRow(
+                title = stringResource(R.string.master_switch_title),
+                subtitle = if (canEnable) {
+                    if (enabled) stringResource(R.string.master_switch_active_desc)
+                    else stringResource(R.string.master_switch_ready_desc)
+                } else stringResource(R.string.master_switch_missing_desc),
+                checked = enabled,
+                enabled = canEnable || enabled,
+                onCheckedChange = onCheckedChange
             )
         }
-    }
-}
-
-@Composable
-private fun SimulationLabCard(
-    activeMode: IslandMode,
-    onModeSelect: (IslandMode) -> Unit,
-    onClearAll: () -> Unit
-) {
-    data class ModeItem(val mode: IslandMode, val icon: ImageVector, val labelRes: Int)
-    val modes = remember {
-        listOf(
-            ModeItem(IslandMode.Music, Icons.Rounded.MusicNote, R.string.mode_music_player),
-            ModeItem(IslandMode.IncomingCall, Icons.Rounded.Call, R.string.mode_incoming_call),
-            ModeItem(IslandMode.Notification, Icons.Rounded.Notifications, R.string.mode_notification),
-            ModeItem(IslandMode.Battery, Icons.Rounded.BatteryChargingFull, R.string.mode_battery_charge),
-            ModeItem(IslandMode.LiveActivity, Icons.Rounded.Navigation, R.string.mode_live_activity),
-            ModeItem(IslandMode.Navigation, Icons.Rounded.Explore, R.string.mode_turn_navigation),
-            ModeItem(IslandMode.DownloadUpload, Icons.Rounded.FileDownload, R.string.mode_file_transfer),
-            ModeItem(IslandMode.Hotspot, Icons.Rounded.WifiTethering, R.string.mode_hotspot_share),
-            ModeItem(IslandMode.Bluetooth, Icons.Rounded.BluetoothConnected, R.string.mode_bluetooth),
-            ModeItem(IslandMode.Flashlight, Icons.Rounded.FlashlightOn, R.string.mode_flashlight),
-            ModeItem(IslandMode.ScreenRecording, Icons.Rounded.Videocam, R.string.mode_screen_recording),
-            ModeItem(IslandMode.Timer, Icons.Rounded.HourglassBottom, R.string.mode_timer),
-            ModeItem(IslandMode.Stopwatch, Icons.Rounded.AvTimer, R.string.mode_stopwatch),
-            ModeItem(IslandMode.Alarm, Icons.Rounded.Alarm, R.string.mode_alarm),
-            ModeItem(IslandMode.VoiceRecording, Icons.Rounded.Mic, R.string.mode_voice_recording),
-            ModeItem(IslandMode.PrivacyIndicator, Icons.Rounded.PrivacyTip, R.string.mode_privacy_indicator)
-        )
-    }
-
-    // Rule_Book 11.2: a tight squircle grid, 4 columns (3 on narrow phones), standard Material symbols.
-    GroupedSection(
-        header = stringResource(R.string.simulation_lab_title).uppercase(),
-        footer = stringResource(R.string.simulation_lab_desc)
-    ) {
-        BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(10.dp)
-        ) {
-            val columns = if (maxWidth >= 320.dp) 4 else 3
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                modes.chunked(columns).forEach { rowItems ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        rowItems.forEach { item ->
-                            ModeTile(
-                                label = stringResource(item.labelRes),
-                                icon = item.icon,
-                                isSelected = activeMode == item.mode,
-                                onClick = { onModeSelect(item.mode) },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                        repeat(columns - rowItems.size) {
-                            Spacer(modifier = Modifier.weight(1f))
-                        }
-                    }
+        if (!canEnable) {
+            GroupedSection(header = stringResource(R.string.home_permissions_needed_header)) {
+                // What is still missing, at a glance: one chip per required permission.
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Dimens.RowHorizontal, vertical = Dimens.RowVertical),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    SetupChip("Accessibility", overlayGranted, onSetupPermissionsClick)
+                    SetupChip("Notifications", notificationGranted, onSetupPermissionsClick)
                 }
+                GroupedRow(
+                    title = stringResource(R.string.btn_grant_required_permissions),
+                    onClick = onSetupPermissionsClick,
+                    trailing = {
+                        StatusLabel(
+                            text = stringResource(R.string.status_setup_needed),
+                            kind = StatusKind.Warning
+                        )
+                    }
+                )
             }
         }
     }
+}
 
-    // Destructive action in its own full-width group, in semantic red (Rule_Book 11.2).
-    GroupedSection {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(role = Role.Button, onClick = onClearAll)
-                .heightIn(min = Dimens.MinTouch)
-                .padding(horizontal = Dimens.RowHorizontal, vertical = Dimens.RowVertical),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = stringResource(R.string.btn_clear_all_test_notifications),
-                style = MaterialTheme.typography.bodyLarge,
-                color = DestructiveRed
-            )
+@Composable
+private fun ThemeModeSelector(selected: String, onSelected: (String) -> Unit) {
+    val options = listOf("system" to "System", "light" to "Light", "dark" to "Dark")
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        options.forEach { (id, label) ->
+            val isSelected = selected == id
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(if (isSelected) MaterialTheme.colorScheme.surface else Color.Transparent)
+                    .clickable { onSelected(id) }
+                    .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                    color = if (isSelected) MaterialTheme.colorScheme.onSurface
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
 
-/** iOS system red, the one destructive color the Home tab uses (Rule_Book 11.2). */
-private val DestructiveRed = Color(0xFFFF3B30)
-
-/**
- * Squircle preview tile: icon over a short label. Static gray when idle; when active, the accent at 15% behind a
- * solid-accent icon and label, in semibold, so selection never relies on color alone.
- */
 @Composable
-private fun ModeTile(
-    label: String,
-    icon: ImageVector,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val accent = MaterialTheme.colorScheme.primary
-    Column(
-        modifier = modifier
-            .heightIn(min = 72.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(if (isSelected) accent.copy(alpha = 0.15f) else MaterialTheme.semantic.fill)
-            .selectable(selected = isSelected, role = Role.RadioButton, onClick = onClick)
-            .padding(horizontal = 4.dp, vertical = 10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically)
+private fun SetupChip(label: String, granted: Boolean, onClick: () -> Unit) {
+    val color = if (granted) Color(0xFF0F9F6E) else Color(0xFFE88C25)
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(color.copy(alpha = 0.12f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = if (isSelected) accent else MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.size(24.dp)
-        )
         Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-            color = if (isSelected) accent else MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
+            text = if (granted) "\u2713" else "!",
+            color = color,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold
         )
+        Text(text = label, color = color, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
 @Composable
 private fun SettingsOverviewSection(
     settings: SmartIslandSettings,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    searchResults: List<SettingsSearchEntry>,
+    onSearchPick: (SettingsSearchEntry) -> Unit,
     overlayGranted: Boolean,
     notificationGranted: Boolean,
     batteryIgnored: Boolean,
-    onBatteryWarningClick: () -> Unit,
+    onThemeModeChange: (String) -> Unit,
+    onLiquidGlassChange: (Boolean) -> Unit,
+    onMaterialYouChange: (Boolean) -> Unit,
+    onAccentChange: (Long) -> Unit,
+    onIslandFontChange: (String) -> Unit,
+    onFontMixChange: (Boolean, String, String, String) -> Unit,
     onNavigateTo: (FeatureDetailSection) -> Unit
 ) {
-    val canEnable = overlayGranted && notificationGranted && batteryIgnored
-    val sectionIcon = Dimens.SeparatorInset
+    val canEnable = overlayGranted && notificationGranted
 
-    Column(verticalArrangement = Arrangement.spacedBy(Dimens.SectionSpacing)) {
-        // Rule_Book 7.2: stays up for as long as Android may still kill the island in the background.
-        if (!batteryIgnored) {
-            GroupedSection(dividerInset = sectionIcon) {
-                GroupedRow(
-                    title = stringResource(R.string.battery_warning_title),
-                    subtitle = stringResource(R.string.battery_warning_desc),
-                    icon = Icons.Rounded.Warning,
-                    onClick = onBatteryWarningClick,
-                    trailing = {
-                        StatusLabel(
-                            text = stringResource(R.string.battery_warning_action),
-                            kind = StatusKind.Warning
-                        )
-                    }
-                )
-            }
-        }
-
-        GroupedSection(
-            header = stringResource(R.string.category_behaviors_launcher),
-            dividerInset = sectionIcon
-        ) {
-            GroupedRow(
-                title = stringResource(R.string.card_notifications_privacy_title),
-                icon = Icons.Rounded.Notifications,
-                value = if (settings.showOnLockScreen) stringResource(R.string.card_notifications_privacy_status_lock) else null,
-                onClick = { onNavigateTo(FeatureDetailSection.NotificationRules) }
-            )
-            GroupedRow(
-                title = stringResource(R.string.card_app_shortcuts_title),
-                icon = Icons.Rounded.Apps,
-                value = if (settings.enableAppShortcuts) {
-                    stringResource(R.string.card_app_shortcuts_status, settings.shortcutPackages.size)
-                } else null,
-                onClick = { onNavigateTo(FeatureDetailSection.AppShortcuts) }
-            )
-            GroupedRow(
-                title = stringResource(R.string.card_notification_history_title),
-                icon = Icons.Rounded.History,
-                value = if (settings.enableNotificationHistory) stringResource(R.string.card_notification_history_status_active) else null,
-                onClick = { onNavigateTo(FeatureDetailSection.NotificationHistory) }
-            )
-        }
-
-        GroupedSection(
-            header = stringResource(R.string.category_appearance_controls),
-            dividerInset = sectionIcon
-        ) {
-            GroupedRow(
-                title = stringResource(R.string.card_color_studio_title),
-                icon = Icons.Rounded.Palette,
-                value = stringResource(R.string.card_color_studio_status, (settings.opacity * 100).toInt()),
-                onClick = { onNavigateTo(FeatureDetailSection.ColorStudio) }
-            )
-            GroupedRow(
-                title = stringResource(R.string.card_gestures_guide_title),
-                icon = Icons.Rounded.Gesture,
-                onClick = { onNavigateTo(FeatureDetailSection.GesturesGuide) }
-            )
-            GroupedRow(
-                title = stringResource(R.string.buddy_title),
-                icon = Icons.Rounded.EmojiEmotions,
-                value = stringResource(if (settings.buddyEnabled) R.string.buddy_status_on else R.string.buddy_status_off),
-                onClick = { onNavigateTo(FeatureDetailSection.Buddy) }
-            )
-        }
-
-        GroupedSection(
-            header = stringResource(R.string.category_system_core),
-            dividerInset = sectionIcon
-        ) {
-            GroupedRow(
+    val SystemGroup: @Composable () -> Unit = {
+        SettingsCategoryGroup(title = stringResource(R.string.category_system_core)) {
+            FeatureStudioNavigationCard(
                 title = stringResource(R.string.card_permissions_setup_title),
+                subtitle = "Accessibility, notification access, battery",
                 icon = Icons.Rounded.Shield,
-                onClick = { onNavigateTo(FeatureDetailSection.PermissionsCenter) },
-                trailing = {
-                    if (!canEnable) {
-                        StatusLabel(
-                            text = stringResource(R.string.status_action_required),
-                            kind = StatusKind.Warning
-                        )
-                    }
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+                iconColor = BadgeGreen,
+                statusText = if (!canEnable) stringResource(R.string.status_action_required) else null,
+                statusColor = if (canEnable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary,
+                onClick = { onNavigateTo(FeatureDetailSection.PermissionsCenter) }
             )
-            GroupedRow(
+
+            FeatureStudioNavigationCard(
                 title = stringResource(R.string.card_backup_restore_title),
+                subtitle = "Export or import all settings",
                 icon = Icons.Rounded.SettingsBackupRestore,
+                iconColor = BadgeBlue,
                 onClick = { onNavigateTo(FeatureDetailSection.BackupRestore) }
             )
-            GroupedRow(
-                title = "Secure App Blacklist",
-                icon = Icons.Rounded.Security,
-                value = if (settings.secureAppPackages.isNotEmpty()) "${settings.secureAppPackages.size} added" else null,
-                onClick = { onNavigateTo(FeatureDetailSection.SecureApps) }
-            )
-        }
 
-        GroupedSection(
-            header = stringResource(R.string.category_about_community),
-            dividerInset = sectionIcon
-        ) {
-            GroupedRow(
-                title = stringResource(R.string.card_about_app_title),
-                icon = Icons.Rounded.Info,
-                value = "v${com.agupta07505.smartisland.BuildConfig.VERSION_NAME}",
-                onClick = { onNavigateTo(FeatureDetailSection.AboutApp) }
-            )
-            GroupedRow(
+            FeatureStudioNavigationCard(
                 title = stringResource(R.string.card_support_requests_title),
+                subtitle = "Report issues, feature requests & community",
                 icon = Icons.Rounded.People,
+                iconColor = BadgePink,
                 onClick = { onNavigateTo(FeatureDetailSection.SupportCommunity) }
             )
-        }
 
-        GroupedSection(
-            header = stringResource(R.string.category_developer_options),
-            dividerInset = sectionIcon
-        ) {
-            GroupedRow(
+            FeatureStudioNavigationCard(
                 title = stringResource(R.string.card_developer_options_title),
-                icon = Icons.Rounded.Tune,
-                onClick = { onNavigateTo(FeatureDetailSection.DeveloperOptions) },
-                trailing = {
-                    if (settings.recordLogs) {
-                        StatusLabel(
-                            text = stringResource(R.string.status_recording_active),
-                            kind = StatusKind.Danger
-                        )
-                    }
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        modifier = Modifier.size(20.dp)
+                subtitle = "Diagnostics, log recording & developer options",
+                icon = Icons.Rounded.Code,
+                iconColor = BadgeSlate,
+                statusText = if (settings.recordLogs) "Recording" else null,
+                statusColor = MaterialTheme.colorScheme.primary,
+                onClick = { onNavigateTo(FeatureDetailSection.DeveloperOptions) }
+            )
+
+            FeatureStudioNavigationCard(
+                title = stringResource(R.string.card_about_title),
+                subtitle = stringResource(R.string.card_about_subtitle),
+                icon = Icons.Rounded.Info,
+                iconColor = BadgeSlate,
+                onClick = { onNavigateTo(FeatureDetailSection.About) }
+            )
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(Dimens.SectionSpacing)) {
+        SettingsSearchField(query = searchQuery, onQueryChange = onSearchQueryChange)
+
+        if (searchQuery.isNotBlank()) {
+            SettingsSearchResults(query = searchQuery, results = searchResults, onPick = onSearchPick)
+        } else {
+            // Appearance: the app's own theme, then the island's colours. (Position, size, shadow and the
+            // animation choices are on the Layout tab.)
+            // The theme controls are not rows, so they sit above the grouped navigation rows.
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = stringResource(R.string.category_appearance_controls).uppercase(),
+                    style = MaterialTheme.typography.bodySmall,
+                    letterSpacing = 0.4.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = Dimens.RowHorizontal)
+                )
+                ThemeModeSelector(selected = settings.themeMode, onSelected = onThemeModeChange)
+
+                com.agupta07505.smartisland.ui.sections.AppThemeOptions(
+                    settings = settings,
+                    onLiquidGlassChange = onLiquidGlassChange,
+                    onMaterialYouChange = onMaterialYouChange,
+                    onAccentChange = onAccentChange
+                )
+
+                GroupedSection(dividerInset = Dimens.SeparatorInset) {
+                    FeatureStudioNavigationCard(
+                        title = stringResource(R.string.card_color_studio_title),
+                        subtitle = "Colours, opacity, gradients and card styles",
+                        icon = Icons.Rounded.Palette,
+                        iconColor = BadgeViolet,
+                        statusText = stringResource(R.string.card_color_studio_status, (settings.opacity * 100).toInt()),
+                        onClick = { onNavigateTo(FeatureDetailSection.ColorStudio) }
+                    )
+
+                    FeatureStudioNavigationCard(
+                        title = stringResource(R.string.buddy_title),
+                        subtitle = stringResource(R.string.buddy_description),
+                        icon = Icons.Rounded.Pets,
+                        iconColor = BadgePink,
+                        statusText = stringResource(if (settings.buddyEnabled) R.string.buddy_status_on else R.string.buddy_status_off),
+                        onClick = { onNavigateTo(FeatureDetailSection.Buddy) }
                     )
                 }
-            )
+
+                CollapsibleCard(
+                    title = stringResource(R.string.island_font_title),
+                    stateKey = "settings_appearance_fonts",
+                    summary = "Typography and font mixing",
+                    icon = Icons.Rounded.FontDownload,
+                    initiallyExpanded = false
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        IslandFontPicker(selected = settings.islandFont, onSelected = onIslandFontChange)
+                        com.agupta07505.smartisland.ui.sections.IslandFontMixSection(settings = settings, onChange = onFontMixChange)
+                    }
+                }
+            }
+
+            // Features: what shows on the island and which apps may use it.
+            SettingsCategoryGroup(title = stringResource(R.string.category_behaviors_launcher)) {
+                FeatureStudioNavigationCard(
+                    title = stringResource(R.string.card_notifications_privacy_title),
+                    subtitle = "Which apps and events show, lock screen privacy",
+                    icon = Icons.Rounded.Notifications,
+                    statusText = if (settings.showOnLockScreen) stringResource(R.string.card_notifications_privacy_status_lock) else null,
+                    onClick = { onNavigateTo(FeatureDetailSection.NotificationRules) }
+                )
+
+                FeatureStudioNavigationCard(
+                    title = stringResource(R.string.card_notification_history_title),
+                    subtitle = "Browse notifications the island has shown",
+                    icon = Icons.Rounded.History,
+                    iconColor = BadgeIndigo,
+                    statusText = if (settings.enableNotificationHistory) stringResource(R.string.card_notification_history_status_active) else null,
+                    statusColor = if (settings.enableNotificationHistory) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    onClick = { onNavigateTo(FeatureDetailSection.NotificationHistory) }
+                )
+
+                FeatureStudioNavigationCard(
+                    title = stringResource(R.string.card_app_shortcuts_title),
+                    subtitle = "Launch favourite apps from the island",
+                    icon = Icons.Rounded.Apps,
+                    iconColor = BadgeTeal,
+                    statusText = if (settings.enableAppShortcuts) {
+                        stringResource(R.string.card_app_shortcuts_status, settings.shortcutPackages.size)
+                    } else null,
+                    statusColor = if (settings.enableAppShortcuts) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    onClick = { onNavigateTo(FeatureDetailSection.AppShortcuts) }
+                )
+
+                FeatureStudioNavigationCard(
+                    title = stringResource(R.string.secure_apps_title),
+                    subtitle = stringResource(R.string.secure_apps_desc),
+                    icon = Icons.Rounded.Security,
+                    statusText = if (settings.secureAppPackages.isNotEmpty()) "${settings.secureAppPackages.size}" else null,
+                    onClick = { onNavigateTo(FeatureDetailSection.SecureApps) }
+                )
+            }
+
+            // Interaction: how the island answers your hands, and how long things stay.
+            SettingsCategoryGroup(title = stringResource(R.string.category_interaction)) {
+                FeatureStudioNavigationCard(
+                    title = stringResource(R.string.card_gestures_guide_title),
+                    subtitle = "Swipes, taps, long press, sensitivity and vibration",
+                    icon = Icons.Rounded.Gesture,
+                    iconColor = BadgePink,
+                    onClick = { onNavigateTo(FeatureDetailSection.GesturesGuide) }
+                )
+
+                FeatureStudioNavigationCard(
+                    title = stringResource(R.string.idle_widgets_title),
+                    subtitle = stringResource(R.string.card_idle_widgets_subtitle),
+                    icon = Icons.Rounded.Widgets,
+                    iconColor = BadgeAmber,
+                    statusText = if (settings.idleWidgetsEnabled || settings.idleWidgetsEnabledLandscape) {
+                        stringResource(R.string.status_active)
+                    } else null,
+                    statusColor = MaterialTheme.colorScheme.primary,
+                    onClick = { onNavigateTo(FeatureDetailSection.IdleWidgets) }
+                )
+
+                FeatureStudioNavigationCard(
+                    title = stringResource(R.string.card_timing_title),
+                    subtitle = stringResource(R.string.card_timing_subtitle),
+                    icon = Icons.Rounded.Timer,
+                    iconColor = BadgeSky,
+                    onClick = { onNavigateTo(FeatureDetailSection.Timing) }
+                )
+            }
+
+            // System: permissions, backup, developer options, about.
+            SystemGroup()
         }
     }
 }
 
-/**
- * Translucent glass tab bar (Rule_Book 11.2): the page scrolls on underneath it. On Android 12+ the bar draws
- * [backdrop] (the page, recorded by the caller) blurred behind a semi-transparent tint; earlier versions have no
- * RenderEffect, so the tint is simply more opaque. No indicator pill; the selected tab is in the accent color.
- * [backdropTopInRoot] is where the recorded page starts, so the blur lines up with what is really underneath.
- */
+/** An inset-grouped list section with a small all-caps header; its children are [FeatureStudioNavigationCard] rows. */
+@Composable
+private fun SettingsCategoryGroup(
+    title: String,
+    content: @Composable () -> Unit
+) {
+    GroupedSection(header = title, dividerInset = Dimens.SeparatorInset, content = content)
+}
+
+private val BadgeIndigo = Color(0xFF6366F1)
+private val BadgeTeal = Color(0xFF14B8A6)
+private val BadgePink = Color(0xFFEC4899)
+private val BadgeAmber = Color(0xFFF59E0B)
+private val BadgeSky = Color(0xFF0EA5E9)
+private val BadgeViolet = Color(0xFF8B5CF6)
+private val BadgeBlue = Color(0xFF3B82F6)
+private val BadgeSlate = Color(0xFF64748B)
+private val BadgeGreen = Color(0xFF16A34A)
+
+/** One navigation row of a grouped list: icon tile, title, subtitle, a status on the right and a chevron. */
+@Composable
+private fun FeatureStudioNavigationCard(
+    title: String,
+    icon: ImageVector,
+    @Suppress("UNUSED_PARAMETER") iconColor: Color = MaterialTheme.colorScheme.primary,
+    statusText: String? = null,
+    statusColor: Color = MaterialTheme.colorScheme.primary,
+    subtitle: String? = null,
+    onClick: () -> Unit
+) {
+    GroupedRow(
+        title = title,
+        subtitle = subtitle,
+        icon = icon,
+        onClick = onClick,
+        trailing = {
+            if (statusText != null) {
+                Text(
+                    text = statusText,
+                    color = statusColor,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    )
+}
+
 @Composable
 private fun StudioBottomNavigationBar(
     selectedTab: StudioTab,
-    onTabSelected: (StudioTab) -> Unit,
-    backdrop: GraphicsLayer? = null,
-    backdropTopInRoot: () -> Float = { 0f }
+    onTabSelected: (StudioTab) -> Unit
 ) {
-    val tabs = listOf(
-        Triple(StudioTab.Home, Icons.Rounded.FlashOn, R.string.tab_home),
-        Triple(StudioTab.Layout, Icons.Rounded.Tune, R.string.tab_layout),
-        Triple(StudioTab.Settings, Icons.Rounded.Settings, R.string.tab_settings)
-    )
-    val canBlur = backdrop != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-    val tint = MaterialTheme.semantic.bar.copy(alpha = if (canBlur) GLASS_TINT_ALPHA_BLURRED else GLASS_TINT_ALPHA_FLAT)
-    val blurLayer = rememberGraphicsLayer()
-    var barTopInRoot by remember { mutableFloatStateOf(0f) }
-    Column(
-        modifier = Modifier
-            .onGloballyPositioned { barTopInRoot = it.positionInRoot().y }
-            .drawBehind {
-                if (canBlur) {
-                    val radius = GLASS_BLUR_RADIUS.toPx()
-                    blurLayer.renderEffect = BlurEffect(radius, radius, TileMode.Clamp)
-                    blurLayer.record {
-                        translate(top = backdropTopInRoot() - barTopInRoot) { drawLayer(backdrop) }
-                    }
-                    drawLayer(blurLayer)
-                }
-                drawRect(tint)
-            }
+    NavigationBar(
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 6.dp
     ) {
-        HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.semantic.separator)
-        NavigationBar(
-            containerColor = Color.Transparent,
-            tonalElevation = 0.dp
-        ) {
-            tabs.forEach { (tab, icon, labelRes) ->
-                val label = stringResource(labelRes)
-                NavigationBarItem(
-                    selected = selectedTab == tab,
-                    onClick = { onTabSelected(tab) },
-                    icon = { Icon(icon, contentDescription = null) },
-                    label = {
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = if (selectedTab == tab) FontWeight.SemiBold else FontWeight.Medium
-                        )
-                    },
-                    colors = NavigationBarItemDefaults.colors(
-                        indicatorColor = Color.Transparent,
-                        selectedIconColor = MaterialTheme.colorScheme.primary,
-                        selectedTextColor = MaterialTheme.colorScheme.primary,
-                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                )
-            }
-        }
+        NavigationBarItem(
+            selected = selectedTab == StudioTab.Studio,
+            onClick = { onTabSelected(StudioTab.Studio) },
+            icon = { Icon(Icons.Rounded.FlashOn, contentDescription = stringResource(R.string.tab_studio)) },
+            label = { Text(stringResource(R.string.tab_studio), fontWeight = FontWeight.SemiBold) },
+            colors = NavigationBarItemDefaults.colors(
+                indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                selectedIconColor = MaterialTheme.colorScheme.primary,
+                selectedTextColor = MaterialTheme.colorScheme.primary
+            )
+        )
+        NavigationBarItem(
+            selected = selectedTab == StudioTab.Position,
+            onClick = { onTabSelected(StudioTab.Position) },
+            icon = { Icon(Icons.Rounded.Tune, contentDescription = stringResource(R.string.tab_position)) },
+            label = { Text(stringResource(R.string.tab_position), fontWeight = FontWeight.SemiBold) },
+            colors = NavigationBarItemDefaults.colors(
+                indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                selectedIconColor = MaterialTheme.colorScheme.primary,
+                selectedTextColor = MaterialTheme.colorScheme.primary
+            )
+        )
+        NavigationBarItem(
+            selected = selectedTab == StudioTab.Demo,
+            onClick = { onTabSelected(StudioTab.Demo) },
+            icon = { Icon(Icons.Rounded.Science, contentDescription = stringResource(R.string.tab_demo)) },
+            label = { Text(stringResource(R.string.tab_demo), fontWeight = FontWeight.SemiBold) },
+            colors = NavigationBarItemDefaults.colors(
+                indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                selectedIconColor = MaterialTheme.colorScheme.primary,
+                selectedTextColor = MaterialTheme.colorScheme.primary
+            )
+        )
+        NavigationBarItem(
+            selected = selectedTab == StudioTab.Settings,
+            onClick = { onTabSelected(StudioTab.Settings) },
+            icon = { Icon(Icons.Rounded.Settings, contentDescription = stringResource(R.string.tab_settings)) },
+            label = { Text(stringResource(R.string.tab_settings), fontWeight = FontWeight.SemiBold) },
+            colors = NavigationBarItemDefaults.colors(
+                indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                selectedIconColor = MaterialTheme.colorScheme.primary,
+                selectedTextColor = MaterialTheme.colorScheme.primary
+            )
+        )
     }
 }
-
-private val GLASS_BLUR_RADIUS = 24.dp
-private const val GLASS_TINT_ALPHA_BLURRED = 0.72f
-private const val GLASS_TINT_ALPHA_FLAT = 0.94f
 
 @SuppressLint("BatteryLife")
 @Composable
@@ -879,7 +1186,9 @@ private fun DetailScreenHost(
     overlayGranted: Boolean,
     notificationGranted: Boolean,
     batteryIgnored: Boolean,
+    bluetoothGranted: Boolean,
     onBack: () -> Unit,
+    onBluetoothClick: () -> Unit,
     onRefreshPermissions: () -> Unit,
     onNavigateTo: (FeatureDetailSection) -> Unit = {}
 ) {
@@ -889,49 +1198,68 @@ private fun DetailScreenHost(
     val isScrollableParent = section != FeatureDetailSection.NotificationHistory
     val scrollModifier = if (isScrollableParent) Modifier.verticalScroll(rememberScrollState()) else Modifier
     val screenWidthDp = LocalConfiguration.current.screenWidthDp
-    val horizontalPad = if (screenWidthDp > 600) Dimens.ScreenMarginWide else Dimens.ScreenMargin
+    val horizontalPad = contentSidePadding(screenWidthDp)
 
-    val title = when (section) {
-        FeatureDetailSection.NotificationRules -> stringResource(R.string.detail_title_notifications_privacy)
-        FeatureDetailSection.AppShortcuts -> stringResource(R.string.detail_title_app_shortcuts)
-        FeatureDetailSection.NotificationHistory -> stringResource(R.string.detail_title_notification_history)
-        FeatureDetailSection.ColorStudio -> stringResource(R.string.detail_title_color_studio)
-        FeatureDetailSection.GesturesGuide -> stringResource(R.string.detail_title_gestures_guide)
-        FeatureDetailSection.PermissionsCenter -> stringResource(R.string.detail_title_permissions_center)
-        FeatureDetailSection.BackupRestore -> stringResource(R.string.detail_title_backup_restore)
-        FeatureDetailSection.AboutApp -> stringResource(R.string.detail_title_about_app)
-        FeatureDetailSection.SupportCommunity -> stringResource(R.string.detail_title_support_community)
-        FeatureDetailSection.DeveloperOptions -> stringResource(R.string.detail_title_developer_options)
-        FeatureDetailSection.Buddy -> stringResource(R.string.detail_title_buddy)
-        FeatureDetailSection.SecureApps -> "Secure Apps"
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-        contentAlignment = Alignment.TopCenter
-    ) {
     Column(
         modifier = Modifier
-            .widthIn(max = 640.dp)
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .then(scrollModifier)
             .padding(
                 start = horizontalPad,
                 end = horizontalPad,
-                top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding(),
+                top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 12.dp,
                 bottom = if (isScrollableParent) 28.dp else 12.dp
             ),
-        verticalArrangement = Arrangement.spacedBy(Dimens.SectionSpacing)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Column {
-            BackBar(
-                parentTitle = stringResource(R.string.tab_settings),
-                onBack = onBack,
-                modifier = Modifier.offset(x = (-8).dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                    contentDescription = "Back",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            val title = when (section) {
+                FeatureDetailSection.NotificationRules -> stringResource(R.string.detail_title_notifications_privacy)
+                FeatureDetailSection.AppShortcuts -> stringResource(R.string.detail_title_app_shortcuts)
+                FeatureDetailSection.NotificationHistory -> stringResource(R.string.detail_title_notification_history)
+                FeatureDetailSection.ColorStudio -> stringResource(R.string.detail_title_color_studio)
+                FeatureDetailSection.GesturesGuide -> stringResource(R.string.detail_title_gestures_guide)
+                FeatureDetailSection.PermissionsCenter -> stringResource(R.string.detail_title_permissions_center)
+                FeatureDetailSection.BackupRestore -> stringResource(R.string.detail_title_backup_restore)
+                FeatureDetailSection.Diagnostics -> "Diagnostic log"
+                FeatureDetailSection.Timing -> stringResource(R.string.detail_title_timing)
+                FeatureDetailSection.IdleWidgets -> stringResource(R.string.idle_widgets_title)
+                FeatureDetailSection.About -> stringResource(R.string.detail_title_about)
+                FeatureDetailSection.SupportCommunity -> stringResource(R.string.detail_title_support_community)
+                FeatureDetailSection.DeveloperOptions -> stringResource(R.string.detail_title_developer_options)
+                FeatureDetailSection.FaceIdSettings -> "Face ID settings"
+                FeatureDetailSection.Buddy -> stringResource(R.string.detail_title_buddy)
+                FeatureDetailSection.SecureApps -> stringResource(R.string.secure_apps_title)
+                FeatureDetailSection.WeatherSettings -> stringResource(R.string.weather_cfg_title)
+                FeatureDetailSection.NetSpeedSettings -> stringResource(R.string.net_cfg_title)
+                FeatureDetailSection.CalendarSettings -> stringResource(R.string.cal_cfg_title)
+            }
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Bold
             )
-            LargeTitleHeader(title = title)
         }
 
         when (section) {
@@ -961,6 +1289,7 @@ private fun DetailScreenHost(
                     overlayGranted = overlayGranted,
                     notificationGranted = notificationGranted,
                     batteryIgnored = batteryIgnored,
+                    bluetoothGranted = bluetoothGranted,
                     onOverlayClick = {
                         context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                     },
@@ -975,18 +1304,40 @@ private fun DetailScreenHost(
                             context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
                         }
                     },
-                    onBatteryClick = { requestIgnoreBatteryOptimizations(context) },
+                    onBatteryClick = {
+                        runCatching {
+                            context.startActivity(
+                                Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                                    .setData(Uri.parse("package:${context.packageName}"))
+                            )
+                        }.onFailure {
+                            context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                        }
+                    },
+                    onBluetoothClick = onBluetoothClick,
                     onRefreshPermissions = onRefreshPermissions
                 )
             }
             FeatureDetailSection.BackupRestore -> {
                 BackupRestoreSection(settings = settings, repository = repository)
             }
-            FeatureDetailSection.AboutApp -> {
-                AboutSection(
+            FeatureDetailSection.Diagnostics -> {
+                DeveloperOptionsSection(settings = settings, repository = repository)
+            }
+            FeatureDetailSection.Timing -> {
+                TimingSection(settings = settings, repository = repository)
+            }
+            FeatureDetailSection.IdleWidgets -> {
+                IdleWidgetsSettingsSection(
                     settings = settings,
-                    repository = repository
+                    repository = repository,
+                    onOpenWeatherSettings = { onNavigateTo(FeatureDetailSection.WeatherSettings) },
+                    onOpenNetSpeedSettings = { onNavigateTo(FeatureDetailSection.NetSpeedSettings) },
+                    onOpenCalendarSettings = { onNavigateTo(FeatureDetailSection.CalendarSettings) }
                 )
+            }
+            FeatureDetailSection.About -> {
+                AboutSection(settings = settings, repository = repository)
             }
             FeatureDetailSection.SupportCommunity -> {
                 SupportSection()
@@ -994,14 +1345,25 @@ private fun DetailScreenHost(
             FeatureDetailSection.DeveloperOptions -> {
                 DeveloperOptionsSection(settings = settings, repository = repository)
             }
+            FeatureDetailSection.FaceIdSettings -> {
+                FaceIdSettingsSection(settings = settings, repository = repository)
+            }
             FeatureDetailSection.Buddy -> {
                 BuddySection(settings = settings, repository = repository)
             }
             FeatureDetailSection.SecureApps -> {
                 com.agupta07505.smartisland.ui.sections.SecureAppsSection(settings = settings, repository = repository)
             }
+            FeatureDetailSection.WeatherSettings -> {
+                WeatherSettingsCard(settings = settings, repository = repository, modifier = Modifier.searchAnchor("idle.weather"))
+            }
+            FeatureDetailSection.NetSpeedSettings -> {
+                NetSpeedSettingsCard(settings = settings, repository = repository, modifier = Modifier.searchAnchor("idle.netspeed"))
+            }
+            FeatureDetailSection.CalendarSettings -> {
+                CalendarSettingsCard(modifier = Modifier.searchAnchor("idle.calendar"))
+            }
         }
-    }
     }
 }
 
@@ -1033,19 +1395,6 @@ private fun isAccessibilityServiceEnabled(context: Context): Boolean {
     return false
 }
 
-/** Asks Android to exempt the app from battery optimization, or opens the exemption list if it can't. */
-@SuppressLint("BatteryLife")
-private fun requestIgnoreBatteryOptimizations(context: Context) {
-    runCatching {
-        context.startActivity(
-            Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-                .setData(Uri.parse("package:${context.packageName}"))
-        )
-    }.onFailure {
-        runCatching { context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
-    }
-}
-
 private fun isBatteryOptimizationIgnored(context: Context): Boolean {
     if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.M) return true
     val pm = context.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
@@ -1055,8 +1404,7 @@ private fun isBatteryOptimizationIgnored(context: Context): Boolean {
 @Composable
 private fun WelcomeDialog(
     onDismiss: () -> Unit,
-    onStarClick: () -> Unit,
-    onJoinCommunityClick: () -> Unit
+    onTakeTour: () -> Unit
 ) {
     val context = LocalContext.current
     val appIcon = remember(context) {
@@ -1076,53 +1424,148 @@ private fun WelcomeDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Column(
+        Card(
             modifier = Modifier
                 .fillMaxWidth(0.9f)
-                .widthIn(max = 420.dp)
-                .clip(RoundedCornerShape(28.dp))
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(16.dp),
+            shape = RoundedCornerShape(26.dp),
+            // Fully opaque: the glass theme makes `surface` translucent, which left this dialog hard to read.
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 1f)
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 10.dp)
         ) {
-            if (appIcon != null) {
-                Image(
-                    bitmap = appIcon,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(72.dp)
-                        .clip(RoundedCornerShape(16.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                if (appIcon != null) {
+                    Image(
+                        bitmap = appIcon,
+                        contentDescription = "Smart Island Logo",
+                        modifier = Modifier
+                            .size(68.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(68.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                shape = RoundedCornerShape(18.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("SI", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+
+                Text(
+                    text = stringResource(R.string.welcome_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
                 )
+
+                Text(
+                    text = stringResource(R.string.welcome_desc),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 20.sp
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Button(
+                    onClick = {
+                        runCatchingLogged("WelcomeDialog", "Failed to open GitHub link") {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/agupta07505/SmartIsland")))
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary
+                    )
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Star,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.onSecondary
+                        )
+                        Text(
+                            stringResource(R.string.star_on_github),
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSecondary
+                        )
+                    }
+                }
+
+                OutlinedButton(
+                    onClick = {
+                        runCatchingLogged("WelcomeDialog", "Failed to open Telegram link") {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://telegram.me/SmartIslandApp")))
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.People,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            stringResource(R.string.join_telegram),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                ElevatedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.elevatedButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Text(stringResource(R.string.btn_get_started), fontWeight = FontWeight.Bold)
+                }
+
+                TextButton(onClick = onTakeTour, modifier = Modifier.fillMaxWidth()) {
+                    Text("Take a quick tour of the gestures", fontWeight = FontWeight.SemiBold)
+                }
             }
-            Text(
-                text = stringResource(R.string.welcome_title),
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.semantics { heading() }
-            )
-            Text(
-                text = stringResource(R.string.welcome_desc),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            FilledActionButton(
-                text = stringResource(R.string.btn_get_started),
-                onClick = onDismiss
-            )
-            TintedActionButton(
-                text = stringResource(R.string.star_on_github),
-                onClick = onStarClick
-            )
-            TintedActionButton(
-                text = stringResource(R.string.join_telegram),
-                onClick = onJoinCommunityClick
-            )
         }
     }
+}
+
+private fun isBluetoothConnectPermissionGranted(context: Context): Boolean {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+        return true
+    }
+
+    return ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.BLUETOOTH_CONNECT
+    ) == PackageManager.PERMISSION_GRANTED
 }
 
 @Preview(showBackground = true, name = "Light Mode")

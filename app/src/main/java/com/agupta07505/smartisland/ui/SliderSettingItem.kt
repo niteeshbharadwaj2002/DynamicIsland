@@ -54,9 +54,11 @@ fun SliderSettingItem(
     modifier: Modifier = Modifier,
     onValueChangeFinished: (() -> Unit)? = null,
     suffix: String = "dp",
-    step: Float = 1f
+    step: Float = 1f,
+    /** Formats the shown value; null shows the rounded value and [suffix]. */
+    valueText: ((Float) -> String)? = null
 ) {
-    val valueText = "${value.roundToInt()} $suffix"
+    val shownValue = valueText?.invoke(value) ?: "${value.roundToInt()} $suffix"
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -74,7 +76,7 @@ fun SliderSettingItem(
                 modifier = Modifier.weight(1f)
             )
             Text(
-                text = valueText,
+                text = shownValue,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -109,7 +111,7 @@ fun SliderSettingItem(
                 valueRange = range,
                 modifier = Modifier
                     .weight(1f)
-                    .semantics { contentDescription = "$label, $valueText" },
+                    .semantics { contentDescription = "$label, $shownValue" },
                 colors = colors,
                 thumb = {
                     Box(

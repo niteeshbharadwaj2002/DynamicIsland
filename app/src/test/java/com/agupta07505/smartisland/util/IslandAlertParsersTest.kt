@@ -79,37 +79,25 @@ class IslandAlertParsersTest {
         assertFalse(ringing("msg", fsi = true, labels = listOf("Snooze", "Stop"), text = "Wake up", clock = false))
     }
 
-    // ---- Voice recorder ----
+    // ---- Voice recorder (upstream owns the AudioRecording mode, see UPDATE_CHECKLIST M3.2) ----
 
     @Test
     fun voiceRecordersAreNotScreenRecorders() {
-        assertTrue(OemDeviceRules.isVoiceRecording("com.sec.android.app.voicenote", "Recording 00:12"))
-        assertTrue(OemDeviceRules.isVoiceRecording("com.google.android.apps.recorder", "Recording"))
-        assertTrue(OemDeviceRules.isVoiceRecording("com.example.notes", "Voice recording in progress"))
-        assertFalse(OemDeviceRules.isVoiceRecording("com.sec.android.app.screenrecorder", "Recording screen"))
-        assertFalse(OemDeviceRules.isVoiceRecording("com.whatsapp", "Sam"))
-        assertTrue(OemDeviceRules.isVoiceRecorderPackage("com.sec.android.app.voicenote"))
-        assertFalse(OemDeviceRules.isVoiceRecorderPackage("com.sec.android.app.screenrecorder"))
+        assertTrue(OemDeviceRules.isAudioRecording("com.sec.android.app.voicenote", "Recording 00:12"))
+        assertTrue(OemDeviceRules.isAudioRecording("com.google.android.apps.recorder", "Recording"))
+        assertTrue(OemDeviceRules.isAudioRecording("com.example.notes", "Voice recording in progress"))
+        assertFalse(OemDeviceRules.isAudioRecording("com.sec.android.app.screenrecorder", "Recording screen"))
+        assertFalse(OemDeviceRules.isAudioRecording("com.whatsapp", "Sam"))
+        assertTrue(OemDeviceRules.isRecorderPackage("com.sec.android.app.voicenote"))
+        assertFalse(OemDeviceRules.isRecorderPackage("com.sec.android.app.screenrecorder"))
     }
 
     @Test
-    fun theRecordingClockUsesTheChronometerThenTheShownDuration() {
-        val now = 100_000L
-        assertEquals(40_000L, VoiceRecordingClock.startMillis(now, chronometerWhenMs = 40_000L, shownElapsedSeconds = 5, previousStartMs = null))
-        assertEquals(58_000L, VoiceRecordingClock.startMillis(now, chronometerWhenMs = null, shownElapsedSeconds = 42, previousStartMs = 1L))
-        assertEquals(90_000L, VoiceRecordingClock.startMillis(now, chronometerWhenMs = null, shownElapsedSeconds = null, previousStartMs = 90_000L))
-        assertEquals(now, VoiceRecordingClock.startMillis(now, chronometerWhenMs = 200_000L, shownElapsedSeconds = null, previousStartMs = null))
-    }
-
-    @Test
-    fun aPausedRecordingStandsStill() {
-        // Running: counts from the start.
-        assertEquals(42L, VoiceRecordingClock.displaySeconds(nowMs = 52_000L, startMs = 10_000L, paused = false, shownElapsedSeconds = null, frozenSeconds = null))
-        // Paused: the app's shown duration, else what the island showed when it paused.
-        assertEquals(30L, VoiceRecordingClock.displaySeconds(nowMs = 99_000L, startMs = 10_000L, paused = true, shownElapsedSeconds = 30L, frozenSeconds = 12L))
-        assertEquals(12L, VoiceRecordingClock.displaySeconds(nowMs = 99_000L, startMs = 10_000L, paused = true, shownElapsedSeconds = null, frozenSeconds = 12L))
-        assertEquals("00:42", VoiceRecordingClock.format(42))
-        assertEquals("1:01:05", VoiceRecordingClock.format(3665))
+    fun theRecordingClockReadsTheShownDurationAndFreezesWhenPaused() {
+        assertEquals(42_000L, RecordingClock.parseElapsedMs("Recording 00:42"))
+        assertEquals(3_665_000L, RecordingClock.parseElapsedMs("1:01:05"))
+        assertTrue(RecordingClock.isPaused(listOf("Resume", "Stop"), "Recording"))
+        assertFalse(RecordingClock.isPaused(listOf("Pause", "Stop"), "Recording"))
     }
 
     // ---- Privacy indicator ----

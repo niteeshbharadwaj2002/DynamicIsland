@@ -50,17 +50,18 @@ class IslandViewModelSuppressionTest {
         val notifRepo = SmartIslandNotificationRepository()
         val viewModel = IslandViewModel(mockk<SmartIslandSettingsRepository>(relaxed = true), notifRepo)
         notifRepo.postNotification(note("music", IslandMode.Music))
-        testDispatcher.scheduler.advanceUntilIdle()
+        // runCurrent, not advanceUntilIdle: upstream's idle timeout would otherwise put the paused card away in virtual time.
+        testDispatcher.scheduler.runCurrent()
         assertEquals(1, viewModel.visibleNotifications.value.size)
 
         viewModel.setImmersive(true)
-        testDispatcher.scheduler.advanceUntilIdle()
+        testDispatcher.scheduler.runCurrent()
         assertTrue(viewModel.isImmersive.value)
         assertTrue(viewModel.visibleNotifications.value.isEmpty())
         assertTrue(viewModel.isSuppressed.value)
 
         viewModel.setImmersive(false)
-        testDispatcher.scheduler.advanceUntilIdle()
+        testDispatcher.scheduler.runCurrent()
         assertEquals(listOf("music"), viewModel.visibleNotifications.value.map { it.key })
         assertFalse(viewModel.isSuppressed.value)
     }

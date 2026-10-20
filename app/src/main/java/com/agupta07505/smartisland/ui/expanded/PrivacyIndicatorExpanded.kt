@@ -41,7 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.agupta07505.smartisland.R
 import com.agupta07505.smartisland.model.IslandNotification
-import com.agupta07505.smartisland.ui.IslandPalette
+import com.agupta07505.smartisland.ui.NotchPalette
 import com.agupta07505.smartisland.util.GatedAction
 import com.agupta07505.smartisland.util.KeyguardGate
 import com.agupta07505.smartisland.util.PrivacyIndicatorAlert
@@ -186,7 +186,7 @@ fun PrivacyIndicatorExpanded(
                         text = notification?.text?.takeIf { it.isNotBlank() }
                             ?.let { stringResource(R.string.island_app_using_microphone, it) }
                             ?: stringResource(R.string.island_unknown_app_using_microphone),
-                        color = if (cameraOn) IslandPalette.secondaryLabel else Color.White
+                        color = if (cameraOn) NotchPalette.secondaryLabel else Color.White
                     )
                 }
             }
@@ -195,7 +195,7 @@ fun PrivacyIndicatorExpanded(
             IslandPillButton(
                 label = stringResource(R.string.island_privacy_dashboard),
                 icon = Icons.Rounded.PrivacyTip,
-                background = IslandPalette.fill
+                background = NotchPalette.fill
             ) {
                 KeyguardGate.run(context, GatedAction.OpenApp, onCollapse) {
                     openPrivacyDashboard(context)

@@ -7,12 +7,9 @@
 
 package com.agupta07505.smartisland.ui.expanded
 
-import com.agupta07505.smartisland.R
-import androidx.compose.ui.res.stringResource
-import com.agupta07505.smartisland.ui.IslandPalette
-import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,17 +20,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.DirectionsCar
-import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.TwoWheeler
 import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.Navigation
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import com.agupta07505.smartisland.ui.IslandText as Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -43,8 +37,6 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -52,11 +44,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.clickable
 import com.agupta07505.smartisland.data.SmartIslandSettings
-import com.agupta07505.smartisland.di.SmartIslandRepositories
 import com.agupta07505.smartisland.model.IslandNotification
 import com.agupta07505.smartisland.ui.bounceClick
+import com.agupta07505.smartisland.util.NavigationCardText
 import com.agupta07505.smartisland.util.NavigationParser
-import com.agupta07505.smartisland.util.RideInfo
 import com.agupta07505.smartisland.util.TurnDirection
 
 @Composable
@@ -67,38 +58,26 @@ fun NavigationExpanded(
     onCollapse: () -> Unit = {},
     settings: SmartIslandSettings = SmartIslandSettings.Default
 ) {
+    val context = LocalContext.current
     val navColor = Color(settings.navigationColor)
 
-    // Uber / Ola / Rapido: the ride card instead of turn-by-turn (Rule_Book 4.14).
-    val ride = remember(notification) {
-        notification?.let { NavigationParser.parseRide(it.packageName, it.title, it.text, bigText = null) }
-    }
-    if (notification != null && ride != null) {
-        RideExpanded(notification, ride, bottomPadding, navColor, onOpenNotification, onCollapse)
-        return
-    }
-
-    val navInfo = remember(notification) {
+    val card = remember(notification) {
         if (notification == null) {
-            Tuple3("In 300 m", "Turn left onto MG Road", "24 min remaining • 8.5 km", TurnDirection.LEFT)
+            NavigationCardText(
+                distance = "In 300 m",
+                instruction = "Turn left onto MG Road",
+                detail = "Stay in the left lane",
+                eta = "24 min remaining \u2022 8.5 km"
+            )
         } else {
-            val title = notification.title
-            val text = notification.text
-            val combined = "$title $text".lowercase()
-
-            val pattern = java.util.regex.Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*(?:m|km|ft|mi|miles?|meters?)\\b", java.util.regex.Pattern.CASE_INSENSITIVE)
-            val matcher = pattern.matcher(combined)
-            val dist = if (matcher.find()) "In ${matcher.group(0)}" else "In 200 m"
-            val turnDir = NavigationParser.parseTurnDirection(combined)
-
-            val mainTitle = if (title.isNotBlank()) title else "Navigation"
-            val subText = if (text.isNotBlank()) text else "Turn-by-turn guidance"
-
-            Tuple3(dist, mainTitle, subText, turnDir)
+            NavigationParser.cardText(notification.title, notification.text)
         }
     }
-
-    val (distanceText, maneuverTitle, subStatusText, turnDirection) = navInfo
+    val turnDirection = remember(notification) {
+        if (notification == null) TurnDirection.LEFT
+        else NavigationParser.parseTurnDirection("${notification.title} ${notification.text}".lowercase())
+    }
+    val distanceText = card.distance
 
     val angle = when (turnDirection) {
         TurnDirection.LEFT -> -90f
@@ -112,12 +91,11 @@ fun NavigationExpanded(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .wrapContentHeight()
+            .heightIn(min = NAVIGATION_EXPANDED_HEIGHT)
             .clickable { onOpenNotification() }
             .padding(start = 18.dp, top = 20.dp, end = 18.dp, bottom = bottomPadding),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
-        // Top Section: App Icon + App Name & ETA Subtitle + Navigation Badge
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -157,7 +135,7 @@ fun NavigationExpanded(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = notification?.appName ?: "Google Maps",
-                    color = Color.White,
+                    color = LocalIslandPalette.current.text,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     fontSize = 17.sp,
@@ -165,8 +143,8 @@ fun NavigationExpanded(
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = subStatusText,
-                    color = IslandPalette.secondaryLabel,
+                    text = card.eta.ifEmpty { "Turn-by-turn guidance" },
+                    color = LocalIslandPalette.current.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     fontSize = 13.sp,
@@ -174,7 +152,6 @@ fun NavigationExpanded(
                 )
             }
 
-            // Distance / Maneuver Badge
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(14.dp))
@@ -191,19 +168,18 @@ fun NavigationExpanded(
             }
         }
 
-        // Maneuver Direction Card
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(14.dp))
-                .background(IslandPalette.fill)
-                .padding(14.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                .background(LocalIslandPalette.current.pick(Color(0xFF1E293B), Color(0xFFE4E2E6)))
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(NAVIGATION_ARROW_CIRCLE)
                     .clip(CircleShape)
                     .background(navColor.copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center
@@ -213,7 +189,7 @@ fun NavigationExpanded(
                         imageVector = Icons.Rounded.LocationOn,
                         contentDescription = null,
                         tint = navColor,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(NAVIGATION_ARROW_ICON)
                     )
                 } else {
                     Icon(
@@ -221,7 +197,7 @@ fun NavigationExpanded(
                         contentDescription = null,
                         tint = navColor,
                         modifier = Modifier
-                            .size(28.dp)
+                            .size(NAVIGATION_ARROW_ICON)
                             .rotate(angle)
                     )
                 }
@@ -229,13 +205,24 @@ fun NavigationExpanded(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = maneuverTitle,
-                    color = Color.White,
-                    fontSize = 16.sp,
+                    text = card.instruction,
+                    color = LocalIslandPalette.current.text,
+                    fontSize = 18.sp,
+                    lineHeight = 22.sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
+                if (card.detail.isNotEmpty()) {
+                    Text(
+                        text = card.detail,
+                        color = LocalIslandPalette.current.textSecondary,
+                        fontSize = 13.sp,
+                        lineHeight = 16.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
                 Text(
                     text = distanceText,
                     color = navColor,
@@ -245,230 +232,51 @@ fun NavigationExpanded(
             }
         }
 
-        NavigationActionsRow(notification, onOpenNotification, onCollapse)
-    }
-}
-
-/**
- * Ride-sharing Medium state (Rule_Book 4.14): driver avatar or vehicle glyph, driver name, vehicle, licence
- * plate, and the live ETA to the pickup or the drop.
- */
-@Composable
-private fun RideExpanded(
-    notification: IslandNotification,
-    ride: RideInfo,
-    bottomPadding: Dp,
-    accent: Color,
-    onOpenNotification: () -> Unit,
-    onCollapse: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .wrapContentHeight()
-            .clickable { onOpenNotification() }
-            .padding(start = 18.dp, top = 20.dp, end = 18.dp, bottom = bottomPadding),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        // Header: app icon, provider and the app's headline, ETA badge.
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val appIcon = notification.icon
-            if (appIcon != null) {
-                Image(
-                    bitmap = appIcon.asImageBitmap(),
-                    contentDescription = null,
+            if (notification != null && notification.actionIntents.isNotEmpty()) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
-                        .size(42.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(accent),
-                    contentAlignment = Alignment.Center
+                        .weight(1f)
+                        .horizontalScroll(androidx.compose.foundation.rememberScrollState())
                 ) {
-                    Icon(rideGlyph(ride), contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
-                }
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = ride.provider,
-                    color = Color.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    fontSize = 17.sp,
-                    lineHeight = 20.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = ride.statusText,
-                    color = IslandPalette.secondaryLabel,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    fontSize = 13.sp,
-                    lineHeight = 16.sp
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(accent.copy(alpha = 0.18f))
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = ride.etaLabel, color = accent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            }
-        }
-
-        // Driver card: avatar (the app's large icon is the driver photo) or vehicle glyph, name, vehicle, plate.
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background(IslandPalette.fill)
-                .padding(14.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val avatar = notification.largeIcon
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(accent.copy(alpha = 0.2f)),
-                contentAlignment = Alignment.Center
-            ) {
-                if (avatar != null) {
-                    Image(
-                        bitmap = avatar.asImageBitmap(),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize().clip(CircleShape)
-                    )
-                } else {
-                    Icon(rideGlyph(ride), contentDescription = null, tint = accent, modifier = Modifier.size(26.dp))
-                }
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = ride.driverName ?: stringResource(R.string.ride_driver_fallback),
-                    color = Color.White,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (ride.vehicle != null) {
-                    Text(
-                        text = ride.vehicle,
-                        color = IslandPalette.secondaryLabel,
-                        fontSize = 12.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-            if (ride.licencePlate != null) {
-                // Styled like a number plate: dark text on a light plate.
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(Color(0xFFF2F2F7))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = ride.licencePlate,
-                        color = Color.Black,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Monospace,
-                        maxLines = 1
-                    )
-                }
-            }
-        }
-
-        NavigationActionsRow(notification, onOpenNotification, onCollapse)
-    }
-}
-
-private fun rideGlyph(ride: RideInfo): ImageVector =
-    if (ride.packageName == "com.rapido.passenger") Icons.Rounded.TwoWheeler else Icons.Rounded.DirectionsCar
-
-/** The app's own actions (up to two) and the open-app chevron, shared by the Maps and ride cards. */
-@Composable
-private fun NavigationActionsRow(
-    notification: IslandNotification?,
-    onOpenNotification: () -> Unit,
-    onCollapse: () -> Unit
-) {
-    val context = LocalContext.current
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (notification != null && notification.actionIntents.isNotEmpty()) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-            ) {
-                notification.actionIntents.take(2).forEach { action ->
-                    Box(
-                        modifier = Modifier
-                            .height(40.dp)
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(IslandPalette.fill)
-                            .bounceClick {
-                                if (action.pendingIntent != null) {
-                                    triggerAction(context, notification.packageName, action.pendingIntent, action.title, notification.contentIntent)
-                                } else {
-                                    Toast.makeText(context, "Clicked: ${action.title}", Toast.LENGTH_SHORT).show()
+                    // Every button the app put in its notification, not just the first two.
+                    notification.actionIntents.forEach { action ->
+                        Box(
+                            modifier = Modifier
+                                .height(28.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(LocalIslandPalette.current.chipFill)
+                                .bounceClick {
+                                    // Like the shade: fire the app's button and leave the card to the app,
+                                    // which removes or updates its notification itself.
+                                    notification.fireAction(context, action)
                                 }
-                                val repo = SmartIslandRepositories.notificationRepository(context)
-                                repo.removeNotification(notification.key)
-                                repo.sendCommand(com.agupta07505.smartisland.data.SmartIslandCommand.CancelNotification(notification.key))
-                                onCollapse()
-                            }
-                            .padding(horizontal = 12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = action.title,
-                            color = IslandPalette.label,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                                .padding(horizontal = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = action.title,
+                                color = Color(0xFF1F2937),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                 }
+            } else {
+                Spacer(modifier = Modifier.weight(1f))
             }
-        } else {
-            Spacer(modifier = Modifier.weight(1f))
-        }
-
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .bounceClick { onOpenNotification() }
-                .padding(10.dp)
-                .clip(CircleShape)
-                .background(IslandPalette.fill),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.KeyboardArrowDown,
-                contentDescription = stringResource(R.string.a11y_open_app),
-                tint = Color.White,
-                modifier = Modifier.size(16.dp)
-            )
         }
     }
 }
 
-private data class Tuple3<A, B, C, D>(val a: A, val b: B, val c: C, val d: D)
+private val NAVIGATION_ARROW_CIRCLE = 56.dp
+private val NAVIGATION_ARROW_ICON = 36.dp
+
+internal val NAVIGATION_EXPANDED_HEIGHT = 240.dp

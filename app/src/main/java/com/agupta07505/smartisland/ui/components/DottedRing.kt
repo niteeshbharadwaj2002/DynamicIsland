@@ -7,7 +7,7 @@
 
 package com.agupta07505.smartisland.ui.components
 
-import com.agupta07505.smartisland.ui.IslandPalette
+import com.agupta07505.smartisland.ui.NotchPalette
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -20,7 +20,7 @@ fun DottedRing(
     progress: Float,
     rotationAngle: Float,
     modifier: Modifier = Modifier,
-    color: Color = IslandPalette.success
+    color: Color = NotchPalette.success
 ) {
     Canvas(modifier = modifier) {
         val radius = size.minDimension / 2f
@@ -32,7 +32,7 @@ fun DottedRing(
             val x = (center.x + radius * Math.cos(angle)).toFloat()
             val y = (center.y + radius * Math.sin(angle)).toFloat()
             val isActive = i < activeDotsCount
-            val dotColor = if (isActive) color else IslandPalette.fillStrong
+            val dotColor = if (isActive) color else NotchPalette.fillStrong
             drawCircle(color = dotColor, radius = dotRadius, center = Offset(x, y))
         }
     }
