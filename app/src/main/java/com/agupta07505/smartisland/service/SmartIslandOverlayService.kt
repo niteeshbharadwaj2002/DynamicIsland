@@ -2570,6 +2570,7 @@ class SmartIslandOverlayService : AccessibilityService() {
          * be the manifest's `specialUse`; Android 10-13 have no such constant, so they take the manifest's types.
          * Before Android 10 the type is ignored.
          */
+        @android.annotation.SuppressLint("InlinedApi") // each constant is only read on the SDK that has it (sdkInt branch)
         internal fun overlayForegroundServiceType(sdkInt: Int): Int = when {
             sdkInt >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
             sdkInt >= Build.VERSION_CODES.Q -> ServiceInfo.FOREGROUND_SERVICE_TYPE_MANIFEST
