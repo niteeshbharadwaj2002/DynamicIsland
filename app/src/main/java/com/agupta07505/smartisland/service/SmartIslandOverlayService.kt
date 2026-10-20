@@ -595,7 +595,23 @@ class SmartIslandOverlayService : AccessibilityService() {
                     islandView?.let { view ->
                         view.post { view.requestLayout() }
                     }
-                    updateWindowLayoutParams(expanded, viewModel.settings.value)
+                    if (expanded) {
+                        updateWindowLayoutParams(true, viewModel.settings.value)
+                    } else {
+                        // When collapsing on platforms where touchableRegion reflection is restricted (e.g. Android 16),
+                        // allow Compose's 350ms spring collapse animation to finish smoothly BEFORE shrinking
+                        // the WindowManager window bounds to the physical pill. Shrinking at t=0 causes
+                        // an abrupt surface resize and visual glitch/flicker mid-animation.
+                        val isTouchableRegion = isTouchableRegionSupported.value
+                        if (isTouchableRegion) {
+                            updateWindowLayoutParams(false, viewModel.settings.value)
+                        } else {
+                            collapseJob = serviceScope.launch {
+                                kotlinx.coroutines.delay(350L)
+                                updateWindowLayoutParams(false, viewModel.settings.value)
+                            }
+                        }
+                    }
                 }
             }
         }
