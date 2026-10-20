@@ -20,4 +20,12 @@
     <string name="secure_apps_desc">Apps the island treats as secure: alerts never pop open over them.</string>
     <string name="motion_blur_title">Backdrop blur</string>
     <string name="motion_blur_desc">Blur the screen behind the idle dashboard (Android 12 and newer). Older versions keep the glass look.</string>
+    <string name="layout_group_presets">Quick presets</string>
+    <string name="layout_group_exempt_apps">Exempt apps</string>
+    <string name="layout_group_size_position">Size and position</string>
+    <string name="layout_group_shadow">Shadow</string>
+    <string name="layout_group_motion">Motion physics</string>
+    <string name="layout_group_expanded">Expanded</string>
+    <string name="layout_group_collapsed">Collapsed</string>
+    <string name="motion_preset_values_short">k %1$d · d %2$s</string>
 </resources>

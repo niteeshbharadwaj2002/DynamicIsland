@@ -7,42 +7,26 @@
 
 package com.agupta07505.smartisland.ui.sections
 
-import com.agupta07505.smartisland.ui.components.SmartIslandSwitch
-import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import com.agupta07505.smartisland.ui.glass.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import com.agupta07505.smartisland.ui.glass.Switch
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import com.agupta07505.smartisland.R
+import com.agupta07505.smartisland.ui.Dimens
+import com.agupta07505.smartisland.ui.components.CollapsibleGroup
+import com.agupta07505.smartisland.ui.components.GroupedRow
+import com.agupta07505.smartisland.ui.components.GroupedSection
+import com.agupta07505.smartisland.ui.components.SegmentedChoiceRow
+import com.agupta07505.smartisland.ui.components.SwitchRow
 import com.agupta07505.smartisland.data.SmartIslandSettings
 import com.agupta07505.smartisland.data.SmartIslandSettingsRepository
 import com.agupta07505.smartisland.ui.SliderSettingItem
-import com.agupta07505.smartisland.ui.components.CollapsibleCard
 import com.agupta07505.smartisland.ui.search.searchAnchor
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
@@ -80,63 +64,32 @@ fun LandscapeSection(
     var pillOpacity by remember(settings.landscapeOpacity) { mutableFloatStateOf(settings.landscapeOpacity) }
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(Dimens.SectionSpacing)
     ) {
         // The only "show in landscape" switch in the app.
-        Box(modifier = Modifier.searchAnchor("layout.show_landscape")) {
-            LandscapeCard {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.toggle_show_in_landscape_title),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = stringResource(R.string.toggle_show_in_landscape_desc),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    SmartIslandSwitch(
-                        checked = settings.showInLandscape,
-                        onCheckedChange = { scope.launch { repository.setShowInLandscape(it) } }
-                    )
-                }
-            }
+        GroupedSection(modifier = Modifier.searchAnchor("layout.show_landscape")) {
+            SwitchRow(
+                title = stringResource(R.string.toggle_show_in_landscape_title),
+                checked = settings.showInLandscape,
+                onCheckedChange = { scope.launch { repository.setShowInLandscape(it) } }
+            )
         }
 
         // Distance from the screen's side edge: one number shared by the idle circle and the bar.
-        Box(modifier = Modifier.searchAnchor("layout.edge_inset")) {
-            LandscapeCard {
-                GroupLabel(stringResource(R.string.landscape_edge_inset_title))
-                SliderSettingItem(
-                    label = stringResource(R.string.landscape_edge_inset_label),
-                    value = circleInset,
-                    range = SmartIslandSettings.MIN_CIRCLE_EDGE_INSET..SmartIslandSettings.MAX_CIRCLE_EDGE_INSET,
-                    onValueChange = { circleInset = it },
-                    onValueChangeFinished = { scope.launch { repository.setLandscapeCircleEdgeInset(circleInset) } }
-                )
-                HintText(stringResource(R.string.landscape_edge_inset_desc))
-            }
+        GroupedSection(modifier = Modifier.searchAnchor("layout.edge_inset")) {
+            SliderSettingItem(
+                label = stringResource(R.string.landscape_edge_inset_title),
+                value = circleInset,
+                range = SmartIslandSettings.MIN_CIRCLE_EDGE_INSET..SmartIslandSettings.MAX_CIRCLE_EDGE_INSET,
+                onValueChange = { circleInset = it },
+                onValueChangeFinished = { scope.launch { repository.setLandscapeCircleEdgeInset(circleInset) } }
+            )
         }
 
-        CollapsibleCard(
-            title = "Idle cutout",
-            stateKey = "land_idle",
-            summary = "The small circle shown when nothing is on the island",
-            initiallyExpanded = false
-        ) {
-            GroupLabel("Position")
-            ChoiceRow(
+        CollapsibleGroup(title = "Idle cutout", stateKey = "land_idle") {
+            SegmentedChoiceRow(
+                title = "Position",
                 options = listOf(
                     SmartIslandSettings.LANDSCAPE_POSITION_AUTO to "Camera",
                     SmartIslandSettings.LANDSCAPE_POSITION_LEFT to "Left",
@@ -146,10 +99,6 @@ fun LandscapeSection(
                 selected = settings.landscapeCirclePosition,
                 onSelect = { scope.launch { repository.setLandscapeCirclePosition(it) } }
             )
-            HintText("Camera sits on the camera cutout, or the top corner on the camera's side if none is reported.")
-
-            GroupDivider()
-            GroupLabel("Size and look")
             SliderSettingItem(
                 label = "Size",
                 value = circleSize,
@@ -168,9 +117,6 @@ fun LandscapeSection(
                 },
                 onValueChangeFinished = { scope.launch { repository.setLandscapeCircleOpacity(circleOpacity) } }
             )
-
-            GroupDivider()
-            GroupLabel("Fine tuning")
             SliderSettingItem(
                 label = "Horizontal offset",
                 value = circleXAdjust.coerceIn(-landscapeHalfWidthDp, landscapeHalfWidthDp),
@@ -199,22 +145,21 @@ fun LandscapeSection(
             if (settings.landscapeCirclePosition == SmartIslandSettings.LANDSCAPE_POSITION_LEFT ||
                 settings.landscapeCirclePosition == SmartIslandSettings.LANDSCAPE_POSITION_RIGHT
             ) {
-                OutlinedButton(onClick = {
-                    circleY = (landscapeHeightDp / 2f - circleSize / 2f)
-                        .coerceIn(SmartIslandSettings.MIN_Y_OFFSET, SmartIslandSettings.MAX_LANDSCAPE_Y_OFFSET)
-                    scope.launch { repository.setLandscapeCircleYOffset(circleY) }
-                }) { Text("Centre on the side edge") }
+                GroupedRow(
+                    title = "Centre on the side edge",
+                    showChevron = false,
+                    onClick = {
+                        circleY = (landscapeHeightDp / 2f - circleSize / 2f)
+                            .coerceIn(SmartIslandSettings.MIN_Y_OFFSET, SmartIslandSettings.MAX_LANDSCAPE_Y_OFFSET)
+                        scope.launch { repository.setLandscapeCircleYOffset(circleY) }
+                    }
+                )
             }
         }
 
-        CollapsibleCard(
-            title = "Cutout with content",
-            stateKey = "land_content",
-            summary = "The bar shown while a notification or event is on the island",
-            initiallyExpanded = false
-        ) {
-            GroupLabel("Position")
-            ChoiceRow(
+        CollapsibleGroup(title = "Cutout with content", stateKey = "land_content") {
+            SegmentedChoiceRow(
+                title = "Position",
                 options = listOf(
                     SmartIslandSettings.LANDSCAPE_POSITION_LEFT to "Left",
                     SmartIslandSettings.LANDSCAPE_POSITION_MIDDLE to "Top middle",
@@ -226,10 +171,6 @@ fun LandscapeSection(
                 } ?: SmartIslandSettings.LANDSCAPE_POSITION_MIDDLE,
                 onSelect = { scope.launch { repository.setLandscapePillPosition(it) } }
             )
-            HintText("In a corner the opened card moves up near the screen edge; in the middle it drops just below the bar.")
-
-            GroupDivider()
-            GroupLabel("Size")
             SliderSettingItem(
                 label = "Width",
                 value = pillWidth,
@@ -244,21 +185,11 @@ fun LandscapeSection(
                 onValueChange = { pillHeight = it },
                 onValueChangeFinished = { scope.launch { repository.setLandscapePillGeometry(settings.landscapeWidth, pillHeight, settings.landscapeXOffset, settings.landscapeYOffset) } }
             )
-
-            GroupDivider()
-            GroupLabel("Size with a card")
-            HintText("The pill that only carries the idle widgets has the width above. With a card on it, it can stretch wider and shrinks back when the card is put away.")
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text("Same size as idle cutout", modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
-                SmartIslandSwitch(
-                    checked = settings.contentPillSameAsIdleLandscape,
-                    onCheckedChange = { scope.launch { repository.setContentPillSameAsIdle(true, it) } }
-                )
-            }
+            SwitchRow(
+                title = "Same size as idle cutout",
+                checked = settings.contentPillSameAsIdleLandscape,
+                onCheckedChange = { scope.launch { repository.setContentPillSameAsIdle(true, it) } }
+            )
             if (!settings.contentPillSameAsIdleLandscape) {
                 SliderSettingItem(
                     label = "Cutout width with content",
@@ -270,9 +201,6 @@ fun LandscapeSection(
                     onValueChangeFinished = { scope.launch { repository.setContentPillWidthPercent(true, contentPercent) } }
                 )
             }
-
-            GroupDivider()
-            GroupLabel("Fine tuning")
             SliderSettingItem(
                 label = "Horizontal offset",
                 value = pillX.coerceIn(-landscapeHalfWidthDp, landscapeHalfWidthDp),
@@ -290,15 +218,16 @@ fun LandscapeSection(
             if (settings.landscapePillPosition == SmartIslandSettings.LANDSCAPE_POSITION_LEFT ||
                 settings.landscapePillPosition == SmartIslandSettings.LANDSCAPE_POSITION_RIGHT
             ) {
-                OutlinedButton(onClick = {
-                    pillY = (landscapeHeightDp / 2f - settings.landscapeHeight / 2f)
-                        .coerceIn(SmartIslandSettings.MIN_Y_OFFSET, SmartIslandSettings.MAX_LANDSCAPE_Y_OFFSET)
-                    scope.launch { repository.setLandscapePillGeometry(settings.landscapeWidth, settings.landscapeHeight, settings.landscapeXOffset, pillY) }
-                }) { Text("Centre on the side edge") }
+                GroupedRow(
+                    title = "Centre on the side edge",
+                    showChevron = false,
+                    onClick = {
+                        pillY = (landscapeHeightDp / 2f - settings.landscapeHeight / 2f)
+                            .coerceIn(SmartIslandSettings.MIN_Y_OFFSET, SmartIslandSettings.MAX_LANDSCAPE_Y_OFFSET)
+                        scope.launch { repository.setLandscapePillGeometry(settings.landscapeWidth, settings.landscapeHeight, settings.landscapeXOffset, pillY) }
+                    }
+                )
             }
-
-            GroupDivider()
-            GroupLabel("Look")
             SliderSettingItem(
                 label = "Opacity",
                 value = pillOpacity * 100f,
@@ -312,97 +241,12 @@ fun LandscapeSection(
             )
         }
 
-        CollapsibleCard(
-            title = "Exempt apps",
+        CollapsibleGroup(
+            title = stringResource(LayoutGroup.ExemptApps.titleRes),
             stateKey = "land_exempt_apps",
-            summary = "Apps that switch the island totally off in landscape",
-            initiallyExpanded = false
+            searchKey = LayoutGroup.ExemptApps.searchKey
         ) {
-            ExemptAppsCard(settings = settings, repository = repository, landscape = true)
-        }
-    }
-}
-
-@Composable
-private fun LandscapeCard(content: @Composable () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = null,
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            content()
-        }
-    }
-}
-
-@Composable
-private fun GroupLabel(text: String) {
-    Text(
-        text = text.uppercase(),
-        style = MaterialTheme.typography.labelSmall,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        letterSpacing = 0.8.sp,
-        modifier = Modifier.padding(top = 4.dp)
-    )
-}
-
-@Composable
-private fun HintText(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
-}
-
-@Composable
-private fun GroupDivider() {
-    HorizontalDivider(
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
-        modifier = Modifier.padding(vertical = 6.dp)
-    )
-}
-
-@Composable
-private fun ChoiceRow(
-    options: List<Pair<String, String>>,
-    selected: String,
-    onSelect: (String) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-            .padding(3.dp),
-        horizontalArrangement = Arrangement.spacedBy(3.dp)
-    ) {
-        options.forEach { (value, label) ->
-            val isSelected = value == selected
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(9.dp))
-                    .background(if (isSelected) MaterialTheme.colorScheme.primary else androidx.compose.ui.graphics.Color.Transparent)
-                    .clickable { onSelect(value) }
-                    .padding(vertical = 8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary
-                    else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            ExemptAppsRows(settings = settings, repository = repository, landscape = true)
         }
     }
 }

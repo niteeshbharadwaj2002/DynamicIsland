@@ -9,6 +9,8 @@ package com.agupta07505.smartisland.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -32,7 +35,20 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.animation.animateContentSize
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.font.FontWeight
+import com.agupta07505.smartisland.R
+import com.agupta07505.smartisland.ui.search.LocalSearchFocus
+import com.agupta07505.smartisland.ui.search.searchAnchor
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -212,7 +228,7 @@ fun SwitchRow(
         modifier = modifier
             .fillMaxWidth()
             .then(
-                if (enabled) Modifier.clickable(role = Role.Switch) { onCheckedChange(!checked) } else Modifier
+                if (enabled) Modifier.toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange) else Modifier
             )
             .defaultMinSize(minHeight = Dimens.MinTouch)
             .padding(horizontal = Dimens.RowHorizontal, vertical = Dimens.RowVertical),
@@ -320,4 +336,118 @@ fun StatusLabel(text: String, kind: StatusKind, modifier: Modifier = Modifier) {
 @Composable
 fun SectionGap() {
     Spacer(Modifier.height(Dimens.SectionSpacing))
+}
+
+
+/**
+ * A grouped card that folds: its first row is the group title (plus an optional summary [value] and a chevron), the
+ * rows of [content] follow while it is open. Used for every group on the Layout screen so they share one look.
+ *
+ * [searchKey] makes the whole group a settings-search target; a jump to that key opens the group first.
+ */
+@Composable
+fun CollapsibleGroup(
+    title: String,
+    stateKey: String,
+    modifier: Modifier = Modifier,
+    value: String? = null,
+    searchKey: String? = null,
+    initiallyExpanded: Boolean = false,
+    content: @Composable () -> Unit
+) {
+    var expanded by rememberSaveable(stateKey) { mutableStateOf(initiallyExpanded) }
+    val searchFocus = LocalSearchFocus.current
+    LaunchedEffect(searchFocus?.token) {
+        if (searchKey != null && searchFocus?.key == searchKey) expanded = true
+    }
+    val stateText = stringResource(if (expanded) R.string.layout_group_expanded else R.string.layout_group_collapsed)
+    GroupedSection(modifier = modifier.searchAnchor(searchKey).animateContentSize()) {
+        GroupedRow(
+            title = title,
+            modifier = Modifier.semantics { stateDescription = stateText },
+            onClick = { expanded = !expanded },
+            trailing = {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (value != null) {
+                        Text(
+                            text = value,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Rounded.ExpandMore,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier
+                            .size(22.dp)
+                            .rotate(if (expanded) 180f else 0f)
+                    )
+                }
+            }
+        )
+        if (expanded) content()
+    }
+}
+
+/**
+ * A row holding an optional [title] and a segmented control of [options] (value to label). The chosen option is
+ * announced as selected; the control is only as tall as one row of text, so it keeps the group compact.
+ */
+@Composable
+fun <T> SegmentedChoiceRow(
+    options: List<Pair<T, String>>,
+    selected: T?,
+    onSelect: (T) -> Unit,
+    modifier: Modifier = Modifier,
+    title: String? = null
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = Dimens.RowHorizontal, vertical = Dimens.RowVertical),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        if (title != null) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(Dimens.ControlRadius))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                .padding(3.dp),
+            horizontalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            options.forEach { (value, label) ->
+                val isSelected = value == selected
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .defaultMinSize(minHeight = 36.dp)
+                        .clip(RoundedCornerShape(Dimens.ControlRadius - 2.dp))
+                        .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
+                        .selectable(selected = isSelected, role = Role.RadioButton, onClick = { onSelect(value) })
+                        .padding(horizontal = 4.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+    }
 }

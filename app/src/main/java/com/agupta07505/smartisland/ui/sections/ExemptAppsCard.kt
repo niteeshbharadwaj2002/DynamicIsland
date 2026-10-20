@@ -8,7 +8,6 @@
 package com.agupta07505.smartisland.ui.sections
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,9 +17,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -42,16 +38,18 @@ import com.agupta07505.smartisland.data.AppShortcutProvider
 import com.agupta07505.smartisland.data.LaunchableApp
 import com.agupta07505.smartisland.data.SmartIslandSettings
 import com.agupta07505.smartisland.data.SmartIslandSettingsRepository
+import com.agupta07505.smartisland.ui.components.GroupedRow
+import com.agupta07505.smartisland.ui.components.SegmentedChoiceRow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
  * Exempt apps: while one of the chosen apps is in the foreground the island is totally off (no pill, no widgets, no
- * cards).
+ * cards), or static in portrait. Emits the rows of a grouped card (see [com.agupta07505.smartisland.ui.components.CollapsibleGroup]).
  */
 @Composable
-fun ExemptAppsCard(
+fun ExemptAppsRows(
     settings: SmartIslandSettings,
     repository: SmartIslandSettingsRepository,
     landscape: Boolean
@@ -66,55 +64,29 @@ fun ExemptAppsCard(
     }
     val labels = remember(installed) { installed.associate { it.packageName to it.label } }
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = if (landscape) {
-                "The island is totally off in landscape while any of these apps is open."
-            } else {
-                "While any of these apps is open the island is either off (hidden, no popups, no gestures) or static (the collapsed island stays in place, but does nothing)."
-            },
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        if (exempt.isEmpty()) {
-            Text("No app selected.", style = MaterialTheme.typography.bodyMedium)
-        } else {
-            exempt.sortedBy { (labels[it] ?: it).lowercase() }.forEach { pkg ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(labels[pkg] ?: pkg, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        if (labels[pkg] != null) {
-                            Text(
-                                pkg, style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
+    // Rows of the surrounding grouped card: no sentence, just the apps and their choices.
+    if (exempt.isEmpty()) {
+        GroupedRow(title = "No app selected.", showChevron = false)
+    } else {
+        exempt.sortedBy { (labels[it] ?: it).lowercase() }.forEach { pkg ->
+            GroupedRow(
+                title = labels[pkg] ?: pkg,
+                showChevron = false,
+                trailing = {
                     TextButton(onClick = { scope.launch { repository.setIslandExemptApp(landscape, pkg, false) } }) { Text("Remove") }
                 }
-                if (!landscape) {
-                    val isStatic = pkg in staticApps
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            selected = !isStatic,
-                            onClick = { scope.launch { repository.setIslandExemptStatic(pkg, false) } },
-                            label = { Text("Island off") }
-                        )
-                        FilterChip(
-                            selected = isStatic,
-                            onClick = { scope.launch { repository.setIslandExemptStatic(pkg, true) } },
-                            label = { Text("Static island") }
-                        )
-                    }
-                }
+            )
+            if (!landscape) {
+                val isStatic = pkg in staticApps
+                SegmentedChoiceRow(
+                    options = listOf(false to "Island off", true to "Static island"),
+                    selected = isStatic,
+                    onSelect = { scope.launch { repository.setIslandExemptStatic(pkg, it) } }
+                )
             }
         }
-        OutlinedButton(onClick = { picking = true }) { Text("Select apps") }
     }
+    GroupedRow(title = "Select apps", onClick = { picking = true })
 
     if (picking) {
         var query by rememberSaveable { mutableStateOf("") }
