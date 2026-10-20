@@ -84,6 +84,9 @@ import com.agupta07505.smartisland.R
 import com.agupta07505.smartisland.data.SmartIslandSettings
 import com.agupta07505.smartisland.data.SmartIslandSettingsRepository
 import com.agupta07505.smartisland.ui.components.ClickableRowItem
+import com.agupta07505.smartisland.ui.components.GroupedRow
+import com.agupta07505.smartisland.ui.components.GroupedSection
+import com.agupta07505.smartisland.ui.Dimens
 import com.agupta07505.smartisland.util.runCatchingLogged
 import kotlinx.coroutines.launch
 
@@ -206,7 +209,7 @@ fun AboutSection(
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = "Smart Island does not collect, store, or transmit any user data, identifiers, or notification details. All operations and settings remain strictly on your device. Network queries are unauthenticated, read-only requests for GitHub repository updates.",
+                        text = "Smart Island does not collect, store, or transmit any user data, identifiers, or notification details. All operations and settings remain strictly on your device. This build has no internet permission at all, so nothing can leave the device.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         lineHeight = 18.sp
@@ -215,82 +218,62 @@ fun AboutSection(
             }
         }
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = null,
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = stringResource(R.string.about_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
+        GroupedSection(header = stringResource(R.string.about_title), dividerInset = Dimens.SeparatorInset) {
+            GroupedRow(
+                title = stringResource(R.string.version_title),
+                value = currentVersion,
+                icon = Icons.Rounded.Info,
+                onClick = {}
+            )
 
-                ClickableRowItem(
-                    label = stringResource(R.string.version_title),
-                    value = currentVersion,
-                    icon = Icons.Rounded.Info,
-                    onClick = {}
-                )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+            GroupedRow(
+                title = stringResource(R.string.privacy_policy_title),
+                subtitle = stringResource(R.string.privacy_policy_desc),
+                icon = Icons.Rounded.Lock,
+                onClick = {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/agupta07505/SmartIsland/blob/main/PRIVACY.md"))
+                    runCatchingLogged("AboutSection", "Failed to open Privacy Policy") {
+                        context.startActivity(intent)
+                    } ?: Toast.makeText(context, "Cannot open link", Toast.LENGTH_SHORT).show()
+                }
+            )
 
-                ClickableRowItem(
-                    label = stringResource(R.string.privacy_policy_title),
-                    subtitle = stringResource(R.string.privacy_policy_desc),
-                    icon = Icons.Rounded.Lock,
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/agupta07505/SmartIsland/blob/main/PRIVACY.md"))
-                        runCatchingLogged("AboutSection", "Failed to open Privacy Policy") {
-                            context.startActivity(intent)
-                        } ?: Toast.makeText(context, "Cannot open link", Toast.LENGTH_SHORT).show()
-                    }
-                )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+            GroupedRow(
+                title = stringResource(R.string.terms_of_use_title),
+                subtitle = stringResource(R.string.license_title),
+                icon = Icons.Rounded.Description,
+                onClick = {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/agupta07505/SmartIsland/blob/main/TERMS.md"))
+                    runCatchingLogged("AboutSection", "Failed to open Terms of Use") {
+                        context.startActivity(intent)
+                    } ?: Toast.makeText(context, "Cannot open link", Toast.LENGTH_SHORT).show()
+                }
+            )
 
-                ClickableRowItem(
-                    label = stringResource(R.string.terms_of_use_title),
-                    subtitle = stringResource(R.string.license_title),
-                    icon = Icons.Rounded.Description,
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/agupta07505/SmartIsland/blob/main/TERMS.md"))
-                        runCatchingLogged("AboutSection", "Failed to open Terms of Use") {
-                            context.startActivity(intent)
-                        } ?: Toast.makeText(context, "Cannot open link", Toast.LENGTH_SHORT).show()
-                    }
-                )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+            GroupedRow(
+                title = stringResource(R.string.repo_insights_title),
+                subtitle = stringResource(R.string.star_on_github),
+                icon = Icons.Rounded.Code,
+                onClick = {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/agupta07505/SmartIsland"))
+                    runCatchingLogged("AboutSection", "Failed to open Open Source link") {
+                        context.startActivity(intent)
+                    } ?: Toast.makeText(context, "Cannot open link", Toast.LENGTH_SHORT).show()
+                }
+            )
 
-                ClickableRowItem(
-                    label = stringResource(R.string.repo_insights_title),
-                    subtitle = stringResource(R.string.star_on_github),
-                    icon = Icons.Rounded.Code,
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/agupta07505/SmartIsland"))
-                        runCatchingLogged("AboutSection", "Failed to open Open Source link") {
-                            context.startActivity(intent)
-                        } ?: Toast.makeText(context, "Cannot open link", Toast.LENGTH_SHORT).show()
-                    }
-                )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
-
-                // Buddy artwork credit (Vorssaint).
-                ClickableRowItem(
-                    label = stringResource(R.string.about_acknowledgements_title),
-                    subtitle = stringResource(R.string.about_buddy_credit),
-                    icon = Icons.Rounded.Favorite,
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(com.agupta07505.smartisland.buddy.MascotAttribution.SOURCE_URL))
-                        runCatchingLogged("AboutSection", "Failed to open acknowledgements link") {
-                            context.startActivity(intent)
-                        } ?: Toast.makeText(context, "Cannot open link", Toast.LENGTH_SHORT).show()
-                    }
-                )
-            }
+            // Buddy artwork credit (Vorssaint).
+            GroupedRow(
+                title = stringResource(R.string.about_acknowledgements_title),
+                subtitle = stringResource(R.string.about_buddy_credit),
+                icon = Icons.Rounded.Favorite,
+                onClick = {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(com.agupta07505.smartisland.buddy.MascotAttribution.SOURCE_URL))
+                    runCatchingLogged("AboutSection", "Failed to open acknowledgements link") {
+                        context.startActivity(intent)
+                    } ?: Toast.makeText(context, "Cannot open link", Toast.LENGTH_SHORT).show()
+                }
+            )
         }
 
 

@@ -102,6 +102,11 @@ import com.agupta07505.smartisland.ui.glass.Switch
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import com.agupta07505.smartisland.ui.components.CollapsibleCard
+import com.agupta07505.smartisland.ui.components.GroupedRow
+import com.agupta07505.smartisland.ui.components.GroupedSection
+import com.agupta07505.smartisland.ui.components.StatusKind
+import com.agupta07505.smartisland.ui.components.StatusLabel
+import com.agupta07505.smartisland.ui.components.SwitchRow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -741,6 +746,10 @@ private fun StudioTopHeader(
     }
 }
 
+/**
+ * Rule_Book 11.2: the master switch sits alone in its own grouped item at the top. When a permission is missing,
+ * the way to fix it is a separate group below (the chips say what is missing), never a row inside the switch's group.
+ */
 @Composable
 private fun MasterPowerCard(
     enabled: Boolean,
@@ -751,83 +760,44 @@ private fun MasterPowerCard(
     onCheckedChange: (Boolean) -> Unit,
     onSetupPermissionsClick: () -> Unit
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    Column(
+        modifier = Modifier.fillMaxWidth().animateContentSize(),
+        verticalArrangement = Arrangement.spacedBy(Dimens.SectionSpacing)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.master_switch_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = if (canEnable) {
-                        if (enabled) stringResource(R.string.master_switch_active_desc)
-                        else stringResource(R.string.master_switch_ready_desc)
-                    } else stringResource(R.string.master_switch_missing_desc),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Switch(
+        GroupedSection {
+            SwitchRow(
+                title = stringResource(R.string.master_switch_title),
+                subtitle = if (canEnable) {
+                    if (enabled) stringResource(R.string.master_switch_active_desc)
+                    else stringResource(R.string.master_switch_ready_desc)
+                } else stringResource(R.string.master_switch_missing_desc),
                 checked = enabled,
                 enabled = canEnable || enabled,
                 onCheckedChange = onCheckedChange
             )
         }
-
         if (!canEnable) {
-            // What is still missing, at a glance: one chip per required permission.
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                SetupChip("Accessibility", overlayGranted, onSetupPermissionsClick)
-                SetupChip("Notifications", notificationGranted, onSetupPermissionsClick)
-            }
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onSetupPermissionsClick)
-                    .background(Color(0xFFE88C25).copy(alpha = 0.08f))
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
-                contentAlignment = Alignment.Center
-            ) {
+            GroupedSection(header = stringResource(R.string.home_permissions_needed_header)) {
+                // What is still missing, at a glance: one chip per required permission.
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Dimens.RowHorizontal, vertical = Dimens.RowVertical),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(
-                        Icons.Rounded.Warning,
-                        contentDescription = null,
-                        tint = Color(0xFFE88C25),
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Text(
-                        text = stringResource(R.string.btn_grant_required_permissions),
-                        color = Color(0xFFE88C25),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold
-                    )
+                    SetupChip("Accessibility", overlayGranted, onSetupPermissionsClick)
+                    SetupChip("Notifications", notificationGranted, onSetupPermissionsClick)
                 }
+                GroupedRow(
+                    title = stringResource(R.string.btn_grant_required_permissions),
+                    onClick = onSetupPermissionsClick,
+                    trailing = {
+                        StatusLabel(
+                            text = stringResource(R.string.status_setup_needed),
+                            kind = StatusKind.Warning
+                        )
+                    }
+                )
             }
         }
     }
@@ -957,7 +927,7 @@ private fun SettingsOverviewSection(
         }
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Dimens.SectionSpacing)) {
         SettingsSearchField(query = searchQuery, onQueryChange = onSearchQueryChange)
 
         if (searchQuery.isNotBlank()) {
@@ -965,7 +935,15 @@ private fun SettingsOverviewSection(
         } else {
             // Appearance: the app's own theme, then the island's colours. (Position, size, shadow and the
             // animation choices are on the Layout tab.)
-            SettingsCategoryGroup(title = stringResource(R.string.category_appearance_controls)) {
+            // The theme controls are not rows, so they sit above the grouped navigation rows.
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = stringResource(R.string.category_appearance_controls).uppercase(),
+                    style = MaterialTheme.typography.bodySmall,
+                    letterSpacing = 0.4.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = Dimens.RowHorizontal)
+                )
                 ThemeModeSelector(selected = settings.themeMode, onSelected = onThemeModeChange)
 
                 com.agupta07505.smartisland.ui.sections.AppThemeOptions(
@@ -975,23 +953,25 @@ private fun SettingsOverviewSection(
                     onAccentChange = onAccentChange
                 )
 
-                FeatureStudioNavigationCard(
-                    title = stringResource(R.string.card_color_studio_title),
-                    subtitle = "Colours, opacity, gradients and card styles",
-                    icon = Icons.Rounded.Palette,
-                    iconColor = BadgeViolet,
-                    statusText = stringResource(R.string.card_color_studio_status, (settings.opacity * 100).toInt()),
-                    onClick = { onNavigateTo(FeatureDetailSection.ColorStudio) }
-                )
+                GroupedSection(dividerInset = Dimens.SeparatorInset) {
+                    FeatureStudioNavigationCard(
+                        title = stringResource(R.string.card_color_studio_title),
+                        subtitle = "Colours, opacity, gradients and card styles",
+                        icon = Icons.Rounded.Palette,
+                        iconColor = BadgeViolet,
+                        statusText = stringResource(R.string.card_color_studio_status, (settings.opacity * 100).toInt()),
+                        onClick = { onNavigateTo(FeatureDetailSection.ColorStudio) }
+                    )
 
-                FeatureStudioNavigationCard(
-                    title = stringResource(R.string.buddy_title),
-                    subtitle = stringResource(R.string.buddy_description),
-                    icon = Icons.Rounded.Pets,
-                    iconColor = BadgePink,
-                    statusText = stringResource(if (settings.buddyEnabled) R.string.buddy_status_on else R.string.buddy_status_off),
-                    onClick = { onNavigateTo(FeatureDetailSection.Buddy) }
-                )
+                    FeatureStudioNavigationCard(
+                        title = stringResource(R.string.buddy_title),
+                        subtitle = stringResource(R.string.buddy_description),
+                        icon = Icons.Rounded.Pets,
+                        iconColor = BadgePink,
+                        statusText = stringResource(if (settings.buddyEnabled) R.string.buddy_status_on else R.string.buddy_status_off),
+                        onClick = { onNavigateTo(FeatureDetailSection.Buddy) }
+                    )
+                }
 
                 CollapsibleCard(
                     title = stringResource(R.string.island_font_title),
@@ -1085,22 +1065,13 @@ private fun SettingsOverviewSection(
     }
 }
 
+/** An inset-grouped list section with a small all-caps header; its children are [FeatureStudioNavigationCard] rows. */
 @Composable
 private fun SettingsCategoryGroup(
     title: String,
     content: @Composable () -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(
-            text = title.uppercase(),
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            letterSpacing = 0.8.sp,
-            modifier = Modifier.padding(start = 4.dp, top = 4.dp)
-        )
-        content()
-    }
+    GroupedSection(header = title, dividerInset = Dimens.SeparatorInset, content = content)
 }
 
 private val BadgeIndigo = Color(0xFF6366F1)
@@ -1113,79 +1084,41 @@ private val BadgeBlue = Color(0xFF3B82F6)
 private val BadgeSlate = Color(0xFF64748B)
 private val BadgeGreen = Color(0xFF16A34A)
 
+/** One navigation row of a grouped list: icon tile, title, subtitle, a status on the right and a chevron. */
 @Composable
 private fun FeatureStudioNavigationCard(
     title: String,
     icon: ImageVector,
-    iconColor: Color = MaterialTheme.colorScheme.primary,
+    @Suppress("UNUSED_PARAMETER") iconColor: Color = MaterialTheme.colorScheme.primary,
     statusText: String? = null,
     statusColor: Color = MaterialTheme.colorScheme.primary,
     subtitle: String? = null,
     onClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .glassEdge(RoundedCornerShape(14.dp), glass = LocalLiquidGlass.current, dark = LocalGlassDark.current)
-            .bounceClick(onClick)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(iconColor),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(19.dp)
-            )
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            if (subtitle != null) {
+    GroupedRow(
+        title = title,
+        subtitle = subtitle,
+        icon = icon,
+        onClick = onClick,
+        trailing = {
+            if (statusText != null) {
                 Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = statusText,
+                    color = statusColor,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
-        }
-        if (statusText != null) {
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = statusText,
-                color = statusColor,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.size(20.dp)
             )
-            Spacer(modifier = Modifier.width(4.dp))
         }
-        Icon(
-            imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-            modifier = Modifier.size(18.dp)
-        )
-    }
+    )
 }
 
 @Composable
