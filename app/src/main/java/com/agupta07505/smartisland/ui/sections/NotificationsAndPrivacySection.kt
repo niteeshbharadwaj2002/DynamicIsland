@@ -453,17 +453,6 @@ fun NotificationsAndPrivacySection(
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
 
                 ToggleRowItem(
-                    searchKey = "np.network_access",
-                    title = stringResource(R.string.toggle_network_access_title),
-                    subtitle = stringResource(R.string.toggle_network_access_desc),
-                    icon = Icons.Rounded.Public,
-                    checked = settings.allowNetworkChecks,
-                    onCheckedChange = { scope.launch { repository.setAllowNetworkChecks(it) } }
-                )
-
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-
-                ToggleRowItem(
                     searchKey = "np.transfer_speed",
                     title = stringResource(R.string.toggle_transfer_speed_title),
                     subtitle = stringResource(R.string.toggle_transfer_speed_desc),

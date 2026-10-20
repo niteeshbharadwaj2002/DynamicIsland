@@ -38,6 +38,15 @@ enum class IdleWidgetKind(val id: String) {
 
     companion object {
         fun fromId(id: String): IdleWidgetKind? = values().firstOrNull { it.id == id }
+
+        /**
+         * Widgets that need the network (weather lookup). This build stays offline (no INTERNET permission), so they
+         * are not offered in the pickers; stored ids and the rendering code are untouched.
+         */
+        val offlineHidden: Set<IdleWidgetKind> = setOf(Weather, Wind)
+
+        /** What the pickers list: every widget this offline build can actually show. */
+        fun selectable(): List<IdleWidgetKind> = values().filter { it !in offlineHidden }
     }
 }
 

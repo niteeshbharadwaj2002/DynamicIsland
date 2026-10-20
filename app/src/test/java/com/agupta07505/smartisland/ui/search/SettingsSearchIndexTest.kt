@@ -50,7 +50,8 @@ class SettingsSearchIndexTest {
     @Test
     fun everyDetailScreenIsReachable() {
         val reachable = index.map { it.target }.filterIsInstance<SearchTarget.Detail>().map { it.section }.toSet()
-        assertEquals(FeatureDetailSection.entries.toSet(), reachable)
+        // Weather settings are hidden in the offline NotchIQ build (decision D1), so they are not searchable.
+        assertEquals(FeatureDetailSection.entries.toSet() - FeatureDetailSection.WeatherSettings, reachable)
     }
 
     @Test

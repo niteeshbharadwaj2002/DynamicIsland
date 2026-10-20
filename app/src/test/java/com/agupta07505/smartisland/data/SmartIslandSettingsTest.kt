@@ -39,7 +39,7 @@ class SmartIslandSettingsTest {
         assertEquals(0xFFF59E0BL, settings.timerColor)
         assertEquals(0xFF06B6D4L, settings.stopwatchColor)
         assertEquals(true, settings.enableAppShortcuts)
-        assertEquals(true, settings.allowNetworkChecks)
+        assertEquals(false, settings.allowNetworkChecks) // offline build (NotchIQ D1)
         assertEquals(true, settings.showBluetoothBattery)
         assertEquals(true, settings.enableBatteryMode)
         assertEquals(false, settings.enableNotificationCooldown)

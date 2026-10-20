@@ -216,10 +216,6 @@ internal fun buildSettingsSearchIndex(str: (Int) -> String): List<SettingsSearch
         listOf("foreground", "app open", "music", "navigation", "timer", "recording", "download", "live activity", "hide")
     )
     npToggle(
-        "network_access", R.string.toggle_network_access_title, R.string.toggle_network_access_desc,
-        listOf("internet", "online", "vpn location", "network checks", "release")
-    )
-    npToggle(
         "transfer_speed", R.string.toggle_transfer_speed_title, R.string.toggle_transfer_speed_desc,
         listOf("download", "upload", "traffic", "estimate", "speed")
     )
@@ -311,10 +307,7 @@ internal fun buildSettingsSearchIndex(str: (Int) -> String): List<SettingsSearch
         "idle.units", str(R.string.idle_units_title), idle, idleScreen, Icons.Rounded.Timer,
         str(R.string.idle_units_note), listOf("celsius", "fahrenheit", "temperature", "unit", "wind", "kmh", "mph", "knots", "metric", "imperial"), "idle.units"
     )
-    add(
-        "idle.weather", str(R.string.weather_cfg_title), detail(FeatureDetailSection.WeatherSettings), idleScreen, Icons.Rounded.Timer,
-        str(R.string.weather_cfg_intro), listOf("weather", "location", "city", "manual", "refresh", "interval", "provider", "open-meteo", "api", "key", "gps", "battery", "network", "pill", "feels like", "condition", "humidity", "uv", "sunrise", "sunset", "air quality", "rain", "forecast", "hourly", "animated", "icon", "battery saver", "notable", "only when", "hide at night", "night", "hot", "cold", "threshold", "severe", "alert", "storm", "smart"), "idle.weather"
-    )
+    // Weather settings are not indexed: weather is hidden in this offline build (no INTERNET permission).
     add(
         "idle.calendar", str(R.string.cal_cfg_title), detail(FeatureDetailSection.CalendarSettings), idleScreen, Icons.Rounded.Timer,
         str(R.string.cal_cfg_intro), listOf("calendar", "event", "next event", "meeting", "standup", "agenda", "date", "window", "permission"), "idle.calendar"
@@ -510,13 +503,6 @@ internal fun buildSettingsSearchIndex(str: (Int) -> String): List<SettingsSearch
         "about.screen", aboutScreen, detail(FeatureDetailSection.About), aboutScreen, Icons.Rounded.Info,
         str(R.string.card_about_subtitle),
         listOf("creator", "author", "original", "github", "link", "credits", "licence", "license", "gpl", "version", "animesh gupta")
-    )
-
-    val updatesScreen = str(R.string.card_updates_downloads_title)
-    add(
-        "updates.screen", updatesScreen, detail(FeatureDetailSection.UpdatesAndDownloads), updatesScreen, Icons.Rounded.Download,
-        str(R.string.card_updates_downloads_desc),
-        listOf("update", "download", "version", "github", "release", "apk", "check", "changelog")
     )
 
     val supportScreen = str(R.string.card_support_requests_title)

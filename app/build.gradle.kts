@@ -28,11 +28,15 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.agupta07505.smartisland"
+        applicationId = "com.niteeshbharadwaj.smartisland.personal"
         minSdk = 26
         targetSdk = 36
-        versionCode = 9
-        versionName = "7.6.0"
+        versionCode = 10
+        versionName = "7.6.0-personal"
+    }
+
+    androidResources {
+        localeFilters += setOf("en", "es", "ja", "pt", "zh")
     }
 
     buildFeatures {
@@ -62,6 +66,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Log stripping is on by default; build with -PkeepLogs to diagnose device issues.
+            if (!project.hasProperty("keepLogs")) {
+                proguardFiles("proguard-strip-logs.pro")
+            }
         }
     }
 
@@ -155,6 +163,7 @@ dependencies {
 
     debugImplementation(composeBom)
     debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("com.squareup.leakcanary:leakcanary-android:2.14")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("io.mockk:mockk:1.13.10")

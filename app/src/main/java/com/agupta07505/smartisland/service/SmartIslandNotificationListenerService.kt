@@ -607,7 +607,10 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
                 val lastSuppressedTime = suppressedKeys[sbn.key] ?: 0L
                 val isRecentInitialSuppression = (now - lastSuppressedTime) < INITIAL_SUPPRESSION_WINDOW_MS
 
-                if (reason == REASON_LISTENER_CANCEL && isRecentInitialSuppression) {
+                // Cancelling a group summary makes the system auto-cancel its children with
+                // REASON_GROUP_SUMMARY_CANCELED; that is our own doing, not the user dismissing them.
+                val cancelledByUs = reason == REASON_LISTENER_CANCEL || reason == REASON_GROUP_SUMMARY_CANCELED
+                if (cancelledByUs && isRecentInitialSuppression) {
                     // Suppressed from the shade less than 1.5 s ago: keep the island copy during the initial suppression.
                     android.util.Log.d(TAG, "Recent listener-cancel (<1.5s), keeping island: ${sbn.key}")
                     return@runSuspendCatchingLogged
@@ -984,7 +987,7 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
             settings.navigationEnabled,
             settings.deviceType
         )
-        android.util.Log.d(TAG, "handleNotificationPosted: mode=$mode key=${sbn.key} title=${extras.getCharSequence(Notification.EXTRA_TITLE)}")
+        android.util.Log.d(TAG, "handleNotificationPosted: mode=$mode key=${sbn.key}")
 
         // Quiet imports of what is already in the shade are not new alerts, so they neither count
         // towards the spam threshold nor get buffered.

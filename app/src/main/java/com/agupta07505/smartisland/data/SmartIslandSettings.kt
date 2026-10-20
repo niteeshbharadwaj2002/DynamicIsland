@@ -86,7 +86,8 @@ data class SmartIslandSettings(
     val enableMusicArtworkBackground: Boolean = true,
     val enableNotificationBackdrop: Boolean = true,
     val deviceType: String = "AUTO",
-    val allowNetworkChecks: Boolean = true,
+    /** Always off in this offline build (no INTERNET permission); the key stays so upstream backups still import. */
+    val allowNetworkChecks: Boolean = false,
     /** Show an estimated transfer card from device-wide network speed when no app notification exists. */
     val detectTransfersBySpeed: Boolean = true,
     val enableNotificationHistory: Boolean = false,

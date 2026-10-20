@@ -196,7 +196,7 @@ fun IdleWidgetsSettingsSection(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    CountBadge("${selected.size} / ${IdleWidgetKind.values().size}")
+                    CountBadge("${selected.size} / ${IdleWidgetKind.selectable().size}")
                 }
                 selected.forEach { kind ->
                     Row(
@@ -372,7 +372,7 @@ private fun WidgetSelectorDialog(
 ) {
     val selected = remember(storedIds) { IdleWidgets.parse(storedIds) }
     val pinned = remember(selected, pinnedFirst) { IdleWidgetKind.fromId(pinnedFirst)?.takeIf { it in selected } }
-    val others = IdleWidgetKind.values().filter { it !in selected }
+    val others = IdleWidgetKind.selectable().filter { it !in selected }
     // The dragged row follows the finger on the rows as they rest; the order is saved once, when the finger lifts.
     var dragged by remember { mutableStateOf<IdleWidgetKind?>(null) }
     var dragOffsetY by remember { mutableFloatStateOf(0f) }
@@ -428,7 +428,7 @@ private fun WidgetSelectorDialog(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                CountBadge("${selected.size} / ${IdleWidgetKind.values().size}")
+                CountBadge("${selected.size} / ${IdleWidgetKind.selectable().size}")
             }
         },
         text = {

@@ -173,6 +173,8 @@ object ShizukuManager {
         }.getOrNull()
     }
 
+    internal fun shellQuote(value: String): String = "'" + value.replace("'", "'\\''") + "'"
+
     internal fun mergeColonSeparated(currentList: String, newEntry: String): String {
         val list = currentList.split(':').filter { it.isNotBlank() }.toMutableList()
         if (!list.contains(newEntry)) {
@@ -235,10 +237,10 @@ object ShizukuManager {
             "appops set $pkg AUTO_START allow",
             "appops set $pkg RUN_IN_BACKGROUND allow",
             "appops set $pkg RUN_ANY_IN_BACKGROUND allow",
-            "settings put secure enabled_accessibility_services $mergedAccessibilityServices",
+            "settings put secure enabled_accessibility_services ${shellQuote(mergedAccessibilityServices)}",
             "settings put secure accessibility_enabled 1",
             "cmd notification allow_listener $notificationClass",
-            "settings put secure enabled_notification_listeners $mergedNotificationListeners",
+            "settings put secure enabled_notification_listeners ${shellQuote(mergedNotificationListeners)}",
             "am set-standby-bucket $pkg active",
             "dumpsys deviceidle whitelist +$pkg"
         ) + runtimePermissionCommands(pkg) + sensitiveNotificationCommands(pkg)
@@ -382,7 +384,7 @@ object ShizukuManager {
     ): List<String> = buildList {
         add("am force-stop $pkg")
         if (accessibilityWasEnabled) {
-            add("settings put secure enabled_accessibility_services $mergedAccessibilityServices")
+            add("settings put secure enabled_accessibility_services ${shellQuote(mergedAccessibilityServices)}")
             add("settings put secure accessibility_enabled 1")
         }
         if (notificationWasEnabled) add("cmd notification allow_listener $notificationComponent")

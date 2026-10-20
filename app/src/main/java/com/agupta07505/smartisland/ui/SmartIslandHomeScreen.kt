@@ -57,7 +57,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Apps
-import com.agupta07505.smartisland.ui.sections.UpdatesAndDownloadsSection
 import com.agupta07505.smartisland.ui.sections.SupportSection
 import com.agupta07505.smartisland.ui.sections.DeveloperOptionsSection
 import androidx.compose.material.icons.rounded.Download
@@ -199,7 +198,6 @@ internal enum class FeatureDetailSection {
     Timing,
     IdleWidgets,
     About,
-    UpdatesAndDownloads,
     SupportCommunity,
     DeveloperOptions,
     FaceIdSettings,
@@ -923,14 +921,6 @@ private fun SettingsOverviewSection(
             )
 
             FeatureStudioNavigationCard(
-                title = stringResource(R.string.card_updates_downloads_title),
-                subtitle = "Check GitHub releases and download updates",
-                icon = Icons.Rounded.Download,
-                iconColor = BadgeTeal,
-                onClick = { onNavigateTo(FeatureDetailSection.UpdatesAndDownloads) }
-            )
-
-            FeatureStudioNavigationCard(
                 title = stringResource(R.string.card_support_requests_title),
                 subtitle = "Report issues, feature requests & community",
                 icon = Icons.Rounded.People,
@@ -1296,7 +1286,6 @@ private fun DetailScreenHost(
                 FeatureDetailSection.Timing -> stringResource(R.string.detail_title_timing)
                 FeatureDetailSection.IdleWidgets -> stringResource(R.string.idle_widgets_title)
                 FeatureDetailSection.About -> stringResource(R.string.detail_title_about)
-                FeatureDetailSection.UpdatesAndDownloads -> stringResource(R.string.detail_title_updates_downloads)
                 FeatureDetailSection.SupportCommunity -> stringResource(R.string.detail_title_support_community)
                 FeatureDetailSection.DeveloperOptions -> stringResource(R.string.detail_title_developer_options)
                 FeatureDetailSection.FaceIdSettings -> "Face ID settings"
@@ -1388,9 +1377,6 @@ private fun DetailScreenHost(
             }
             FeatureDetailSection.About -> {
                 AboutSection(settings = settings, repository = repository)
-            }
-            FeatureDetailSection.UpdatesAndDownloads -> {
-                UpdatesAndDownloadsSection(settings = settings, repository = repository)
             }
             FeatureDetailSection.SupportCommunity -> {
                 SupportSection()

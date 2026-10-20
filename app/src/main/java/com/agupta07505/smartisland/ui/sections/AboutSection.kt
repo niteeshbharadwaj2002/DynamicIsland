@@ -83,11 +83,6 @@ import com.agupta07505.smartisland.R
 import com.agupta07505.smartisland.data.SmartIslandSettings
 import com.agupta07505.smartisland.data.SmartIslandSettingsRepository
 import com.agupta07505.smartisland.ui.components.ClickableRowItem
-import com.agupta07505.smartisland.util.GitHubApiService
-import com.agupta07505.smartisland.util.GitHubCommit
-import com.agupta07505.smartisland.util.GitHubContributor
-import com.agupta07505.smartisland.util.GitHubRelease
-import com.agupta07505.smartisland.util.GitHubRepoStats
 import com.agupta07505.smartisland.util.runCatchingLogged
 import kotlinx.coroutines.launch
 
@@ -100,12 +95,6 @@ fun AboutSection(
 ) {
     val context = LocalContext.current
     val currentVersion = remember(context) { getAppVersion(context) }
-    var repoStats by remember { mutableStateOf<GitHubRepoStats?>(null) }
-
-    LaunchedEffect(settings.allowNetworkChecks) {
-        if (!settings.allowNetworkChecks) return@LaunchedEffect
-        GitHubApiService.getRepoStats().onSuccess { repoStats = it }
-    }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -141,7 +130,7 @@ fun AboutSection(
                     RepoBadge(
                         icon = Icons.Rounded.Star,
                         label = "Stars",
-                        value = repoStats?.stars?.toString() ?: "—",
+                        value = "—",
                         tint = MaterialTheme.colorScheme.primary,
                         onClick = {
                             val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/agupta07505/SmartIsland"))
@@ -151,7 +140,7 @@ fun AboutSection(
                     RepoBadge(
                         icon = Icons.Rounded.ForkRight,
                         label = "Forks",
-                        value = repoStats?.forks?.toString() ?: "—",
+                        value = "—",
                         tint = MaterialTheme.colorScheme.primary,
                         onClick = {
                             val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/agupta07505/SmartIsland/fork"))
@@ -161,7 +150,7 @@ fun AboutSection(
                     RepoBadge(
                         icon = Icons.Rounded.BugReport,
                         label = "Issues",
-                        value = repoStats?.openIssues?.toString() ?: "—",
+                        value = "—",
                         tint = MaterialTheme.colorScheme.primary,
                         onClick = {
                             val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/agupta07505/SmartIsland/issues"))
@@ -171,7 +160,7 @@ fun AboutSection(
                     RepoBadge(
                         icon = Icons.Rounded.Description,
                         label = "License",
-                        value = repoStats?.licenseName ?: "GPL-3.0",
+                        value = "GPL-3.0",
                         tint = MaterialTheme.colorScheme.primary,
                         onClick = {
                             val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/agupta07505/SmartIsland/blob/main/LICENSE"))
