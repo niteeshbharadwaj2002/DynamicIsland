@@ -7,10 +7,10 @@
 -->
 <resources>
     <!-- Application Info -->
-    <string name="app_name">Smart Island Personal</string>
+    <string name="app_name">NotchIQ</string>
     <string name="app_subtitle">Floating Dynamic Overlay</string>
     <string name="app_description">Smart Island reimagines Android notifications with a beautiful floating experience, interactive controls, and fluid animations—keeping everything important just a glance away.</string>
-    <string name="accessibility_service_label">Smart Island Service</string>
+    <string name="accessibility_service_label">NotchIQ Service</string>
     <string name="accessibility_service_description">Enables the Smart Island overlay to sit on top of the status bar so you can tap the pill around your camera cutout without touch interference.</string>
     <string name="grant_accessibility">Grant Accessibility permission to start overlay over status bar</string>
     <string name="made_by">Made with ❤️ by Animesh Gupta</string>
@@ -23,7 +23,7 @@
     <string name="tab_system">System &amp; About</string>
 
     <!-- Master Switch & Status -->
-    <string name="master_switch_title">Smart Island</string>
+    <string name="master_switch_title">NotchIQ</string>
     <string name="master_switch_active_desc">Active</string>
     <string name="master_switch_ready_desc">Off — tap to start</string>
     <string name="master_switch_missing_desc">Permissions needed</string>
@@ -132,7 +132,7 @@
     <string name="status_update_available">New version %1$s is available</string>
     <string name="btn_download_apk">Download APK</string>
     <string name="detail_title_permissions_center">Permissions &amp; Setup Center</string>
-    <string name="detail_title_about_app">About Smart Island</string>
+    <string name="detail_title_about_app">About NotchIQ</string>
     <string name="detail_title_support_community">Support &amp; Feedback</string>
 
     <!-- Permissions Section -->
@@ -464,7 +464,7 @@
     <string name="license_desc">Free &amp; Open Source Software</string>
 
     <!-- About & GitHub Updates -->
-    <string name="about_title">About Smart Island</string>
+    <string name="about_title">About NotchIQ</string>
     <string name="github_update_center_title">GitHub Update Center</string>
     <string name="current_version_label">Current Version: v%1$s</string>
     <string name="btn_check_updates">Check</string>
