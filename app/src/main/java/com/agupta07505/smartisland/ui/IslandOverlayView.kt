@@ -61,14 +61,20 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.util.lerp
+import androidx.compose.ui.layout.layout
+import kotlin.math.roundToInt
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -300,10 +306,14 @@ fun IslandOverlayView(
     val compactGap = COMPACT_INDICATOR_GAP_DP.dp
     val miniPillWidth = pillWidthDp
     val circleSize = settings.height.dp
-    val compactShapes = compactNotificationShapes(notifications.size, expanded)
+    val compactShapes by remember(notifications.size, expanded) {
+        derivedStateOf { compactNotificationShapes(notifications.size, expanded) }
+    }
     val hasCompanion = if (settings.enableNotchMode) false else notifications.size >= 2
     val isCircleLeft = settings.circlePosition == SmartIslandSettings.CIRCLE_POSITION_LEFT
-    val collapsedGroupWidth = pillWidthDp + if (hasCompanion) compactGap + circleSize else 0.dp
+    val collapsedGroupWidth by remember(pillWidthDp, hasCompanion, compactGap, circleSize) {
+        derivedStateOf { pillWidthDp + if (hasCompanion) compactGap + circleSize else 0.dp }
+    }
 
     val desiredMainLeft = screenCenter + settings.xOffset.dp - pillWidthDp / 2f
     val (minMainLeft, maxMainLeft) = when {
@@ -311,33 +321,57 @@ fun IslandOverlayView(
         isCircleLeft -> (compactGap + circleSize + compactGap) to (screenWidth - compactGap - pillWidthDp).coerceAtLeast(compactGap + circleSize + compactGap)
         else -> compactGap to (screenWidth - compactGap - collapsedGroupWidth).coerceAtLeast(compactGap)
     }
-    val collapsedMainLeft = desiredMainLeft.coerceIn(minMainLeft, maxMainLeft)
-    val mainCenter = collapsedMainLeft + pillWidthDp / 2f
-    val circleLeft = if (isCircleLeft) {
-        collapsedMainLeft - compactGap - circleSize
-    } else {
-        collapsedMainLeft + pillWidthDp + compactGap
+    val collapsedMainLeft by remember(desiredMainLeft, minMainLeft, maxMainLeft) {
+        derivedStateOf { desiredMainLeft.coerceIn(minMainLeft, maxMainLeft) }
     }
-    val circleCenter = circleLeft + circleSize / 2f
-    val groupStart = if (isCircleLeft && hasCompanion) circleLeft else collapsedMainLeft
-    val groupEnd = if (!isCircleLeft && hasCompanion) circleLeft + circleSize else collapsedMainLeft + pillWidthDp
-    val groupCenter = (groupStart + groupEnd) / 2f
+    val mainCenter by remember(collapsedMainLeft, pillWidthDp) {
+        derivedStateOf { collapsedMainLeft + pillWidthDp / 2f }
+    }
+    val circleLeft by remember(isCircleLeft, collapsedMainLeft, compactGap, circleSize, pillWidthDp) {
+        derivedStateOf {
+            if (isCircleLeft) {
+                collapsedMainLeft - compactGap - circleSize
+            } else {
+                collapsedMainLeft + pillWidthDp + compactGap
+            }
+        }
+    }
+    val circleCenter by remember(circleLeft, circleSize) {
+        derivedStateOf { circleLeft + circleSize / 2f }
+    }
+    val groupStart by remember(isCircleLeft, hasCompanion, circleLeft, collapsedMainLeft) {
+        derivedStateOf { if (isCircleLeft && hasCompanion) circleLeft else collapsedMainLeft }
+    }
+    val groupEnd by remember(isCircleLeft, hasCompanion, circleLeft, circleSize, collapsedMainLeft, pillWidthDp) {
+        derivedStateOf { if (!isCircleLeft && hasCompanion) circleLeft + circleSize else collapsedMainLeft + pillWidthDp }
+    }
+    val groupCenter by remember(groupStart, groupEnd) {
+        derivedStateOf { (groupStart + groupEnd) / 2f }
+    }
 
-    val collapsedMainOffset = if (settings.enableNotchMode) {
-        settings.xOffset.dp
-    } else if (isFullWidth) {
-        mainCenter - screenCenter
-    } else {
-        mainCenter - groupCenter
+    val collapsedMainOffset by remember(settings.enableNotchMode, settings.xOffset, isFullWidth, mainCenter, screenCenter, groupCenter) {
+        derivedStateOf {
+            if (settings.enableNotchMode) {
+                settings.xOffset.dp
+            } else if (isFullWidth) {
+                mainCenter - screenCenter
+            } else {
+                mainCenter - groupCenter
+            }
+        }
     }
-    val expandedTopOffset = calculateExpandedTopOffset(
-        enableNotchMode = settings.enableNotchMode,
-        hasCompanion = hasCompanion,
-        statusBarHeightDp = statusBarHeight,
-        notchHeightDp = settings.height,
-        circleSizeDp = settings.height,
-        compactGapDp = COMPACT_INDICATOR_GAP_DP
-    ).dp
+    val expandedTopOffset by remember(settings.enableNotchMode, hasCompanion, statusBarHeight, settings.height) {
+        derivedStateOf {
+            calculateExpandedTopOffset(
+                enableNotchMode = settings.enableNotchMode,
+                hasCompanion = hasCompanion,
+                statusBarHeightDp = statusBarHeight,
+                notchHeightDp = settings.height,
+                circleSizeDp = settings.height,
+                compactGapDp = COMPACT_INDICATOR_GAP_DP
+            ).dp
+        }
+    }
     val isIdleHiding = PillLayout.pillIdleHiding(settings, notifications.size)
 
     var isAutoHidden by remember { mutableStateOf(false) }
@@ -367,17 +401,12 @@ fun IslandOverlayView(
     LaunchedEffect(buddyCanCameo) { MascotRuntime.controller.setCanCameo(buddyCanCameo) }
     val pillBackgroundColor = Color(settings.pillColor)
 
-    val width by transition.animateDp(transitionSpec = { dpSpec(targetState) }, label = "islandWidth") {
-        if (it) expandedWidth else if (isHiding) 0.dp else pillWidthDp
-    }
-    val height by transition.animateDp(transitionSpec = { dpSpec(targetState) }, label = "islandHeight") {
-        if (it) expandedHeight else if (isHiding) 0.dp else settings.height.dp
-    }
+    val expansionProgress by transition.animateFloat(
+        transitionSpec = { floatSpec(targetState) },
+        label = "expansionProgress"
+    ) { if (it) 1f else 0f }
     val yOffset by transition.animateDp(transitionSpec = { dpSpec(targetState) }, label = "islandYOffset") {
         if (it) expandedTopOffset else 0.dp
-    }
-    val radius by transition.animateDp(transitionSpec = { dpSpec(targetState) }, label = "islandRadius") {
-        if (it) expandedRadius else if (isHiding) 0.dp else settings.cornerRadius.dp
     }
     val animatedXOffset by transition.animateDp(transitionSpec = { dpSpec(targetState) }, label = "islandXOffset") {
         if (it) 0.dp else collapsedMainOffset
@@ -411,18 +440,12 @@ fun IslandOverlayView(
         if (it) 0.dp else (-6).dp
     }
 
-    val safeWidth = width.coerceAtLeast(0.dp)
-    val safeHeight = height.coerceAtLeast(0.dp)
-    val safeRadius = radius.coerceAtLeast(0.dp)
-
-    // Kinetic glow: the island's speed is read off the animated size on Compose's frame clock (dp per second,
-    // the larger of the width and height speeds) and the glow's blur follows KineticGlow.blurRadius(speed).
-    // While the island is still this coroutine is suspended and costs nothing; it samples once per frame only
-    // while the size is changing, and the glow is cleared once the size has held still for a few frames.
-    var glowRadiusDp by remember { mutableStateOf(0f) }
+    // Kinetic glow: the island's speed is tracked from expansionProgress without re-triggering composition passes.
+    // glowRadiusState is a mutableFloatState read exclusively during the Draw phase (.drawBehind).
+    val glowRadiusState = remember { mutableFloatStateOf(0f) }
     LaunchedEffect(settings.kineticGlow, reduceMotion, springPreset) {
         if (!settings.kineticGlow || reduceMotion) {
-            glowRadiusDp = 0f
+            glowRadiusState.floatValue = 0f
             return@LaunchedEffect
         }
         // Debug builds only: `adb shell settings put global debug_island_glow_dp 20` holds the glow at a fixed
@@ -430,45 +453,47 @@ fun IslandOverlayView(
         if (com.agupta07505.smartisland.BuildConfig.DEBUG) {
             val held = android.provider.Settings.Global.getString(context.contentResolver, "debug_island_glow_dp")?.toFloatOrNull()
             if (held != null) {
-                glowRadiusDp = held
+                glowRadiusState.floatValue = held
                 return@LaunchedEffect
             }
         }
-        // `width` and `height` are the live animated values; reading them here tracks every frame.
-        var lastWidth = width.value
-        var lastHeight = height.value
+        var lastProgress = expansionProgress
         while (true) {
-            androidx.compose.runtime.snapshotFlow { width.value != lastWidth || height.value != lastHeight }
+            androidx.compose.runtime.snapshotFlow { expansionProgress != lastProgress }
                 .first { it }
             var lastNanos = androidx.compose.runtime.withFrameNanos { it }
-            lastWidth = width.value
-            lastHeight = height.value
+            lastProgress = expansionProgress
             var stillFrames = 0
             var peakSpeed = 0f
             while (stillFrames < KINETIC_GLOW_SETTLE_FRAMES) {
                 val nanos = androidx.compose.runtime.withFrameNanos { it }
-                val w = width.value
-                val h = height.value
+                val p = expansionProgress
                 val dt = (nanos - lastNanos) / 1_000_000_000f
                 if (dt > 0f) {
-                    val speed = maxOf(kotlin.math.abs(w - lastWidth), kotlin.math.abs(h - lastHeight)) / dt
-                    glowRadiusDp = KineticGlow.blurRadius(speed)
-                    stillFrames = if (w == lastWidth && h == lastHeight) stillFrames + 1 else 0
+                    val deltaProgress = kotlin.math.abs(p - lastProgress)
+                    val maxDeltaDp = maxOf(
+                        kotlin.math.abs(expandedWidth.value - pillWidthDp.value),
+                        kotlin.math.abs(expandedHeight.value - settings.height)
+                    )
+                    val speed = (deltaProgress * maxDeltaDp) / dt
+                    glowRadiusState.floatValue = KineticGlow.blurRadius(speed)
+                    stillFrames = if (p == lastProgress) stillFrames + 1 else 0
                     if (com.agupta07505.smartisland.BuildConfig.DEBUG && speed > peakSpeed) {
                         peakSpeed = speed
-                        android.util.Log.d("IslandMotion", "preset=${springPreset.id} peakSpeed=%.0f dp/s glow=%.1f dp".format(peakSpeed, glowRadiusDp))
+                        android.util.Log.d("IslandMotion", "preset=${springPreset.id} peakSpeed=%.0f dp/s glow=%.1f dp".format(peakSpeed, glowRadiusState.floatValue))
                     }
                 }
                 lastNanos = nanos
-                lastWidth = w
-                lastHeight = h
+                lastProgress = p
             }
-            glowRadiusDp = 0f
+            glowRadiusState.floatValue = 0f
         }
     }
 
     // Tactile spring scale bounce animation only when user switches between active notifications
     val switchScaleAnim = remember { androidx.compose.animation.core.Animatable(1f) }
+    // Instantaneous tactile spring compression on ACTION_DOWN for ultra-low latency touch response
+    val springPressScale = remember { androidx.compose.animation.core.Animatable(1f) }
     var isInitialComposition by remember { mutableStateOf(true) }
     var lastSelectedIndex by remember { mutableStateOf(selectedIndex) }
     LaunchedEffect(selectedIndex) {
@@ -643,31 +668,50 @@ fun IslandOverlayView(
             animationSpec = androidx.compose.animation.core.tween(180),
             label = "islandShellColor"
         )
-        val mainShape = if (settings.enableNotchMode && !currentExpanded) {
-            RoundedCornerShape(
-                topStart = 0.dp,
-                topEnd = 0.dp,
-                bottomStart = safeRadius,
-                bottomEnd = safeRadius
-            )
-        } else {
-            RoundedCornerShape(safeRadius)
-        }
-
-        // Inner Box: The actual visible pill container, managing the black background shape and size animations
+        // Inner Box: The actual visible pill container, managing size morphing in Layout phase and GPU transformations in graphicsLayer
         Box(
             modifier = Modifier
-                .width(safeWidth)
-                .height(safeHeight)
+                .layout { measurable, _ ->
+                    val currentProgress = expansionProgress
+                    val targetW = if (isHiding && currentProgress == 0f) 0f
+                        else lerp(pillWidthDp.toPx(), expandedWidth.toPx(), currentProgress)
+                    val targetH = if (isHiding && currentProgress == 0f) 0f
+                        else lerp(settings.height.dp.toPx(), expandedHeight.toPx(), currentProgress)
+                    val currentWidth = targetW.roundToInt().coerceAtLeast(0)
+                    val currentHeight = targetH.roundToInt().coerceAtLeast(0)
+                    val placeable = measurable.measure(
+                        Constraints.fixed(currentWidth, currentHeight)
+                    )
+                    layout(currentWidth, currentHeight) {
+                        placeable.placeWithLayer(0, 0)
+                    }
+                }
                 .graphicsLayer {
                     translationX = animatedXOffset.toPx() + (if (!currentExpanded) pillDragOffsetX else 0f) + (if (ambientMode) burnInShiftXDp.dp.toPx() else 0f)
                     translationY = yOffset.toPx() + dragOffset + (if (ambientMode) burnInShiftYDp.dp.toPx() else 0f)
-                    scaleX = switchScaleAnim.value
-                    scaleY = switchScaleAnim.value
+                    scaleX = switchScaleAnim.value * springPressScale.value
+                    scaleY = switchScaleAnim.value * springPressScale.value
+                    val currentProgress = expansionProgress
+                    val currentRadius = lerp(settings.cornerRadius, expandedRadius.value, currentProgress)
+                    shape = if (settings.enableNotchMode && currentProgress == 0f) {
+                        RoundedCornerShape(
+                            topStart = 0.dp,
+                            topEnd = 0.dp,
+                            bottomStart = currentRadius.dp,
+                            bottomEnd = currentRadius.dp
+                        )
+                    } else {
+                        RoundedCornerShape(currentRadius.dp)
+                    }
+                    clip = true
                 }
                 .drawBehind {
-                    if (glowRadiusDp > 0f) {
-                        drawKineticGlow(glowRadiusDp.dp.toPx(), safeRadius.toPx())
+                    drawRect(color = shellColor)
+                    val glow = glowRadiusState.floatValue
+                    if (glow > 0f) {
+                        val currentProgress = expansionProgress
+                        val currentRadius = lerp(settings.cornerRadius, expandedRadius.value, currentProgress)
+                        drawKineticGlow(glow.dp.toPx(), currentRadius.dp.toPx())
                     }
                 }
                 .then(
@@ -677,17 +721,27 @@ fun IslandOverlayView(
                         } else {
                             settings.shadowElevation.dp
                         }
+                        val currentProgress = expansionProgress
+                        val currentRadius = lerp(settings.cornerRadius, expandedRadius.value, currentProgress)
+                        val activeShape = if (settings.enableNotchMode && currentProgress == 0f) {
+                            RoundedCornerShape(
+                                topStart = 0.dp,
+                                topEnd = 0.dp,
+                                bottomStart = currentRadius.dp,
+                                bottomEnd = currentRadius.dp
+                            )
+                        } else {
+                            RoundedCornerShape(currentRadius.dp)
+                        }
                         Modifier.shadow(
                             elevation = activeMainShadow,
-                            shape = mainShape,
+                            shape = activeShape,
                             clip = false,
                             ambientColor = Color.Black,
                             spotColor = Color.Black
                         )
                     } else Modifier
                 )
-                .clip(mainShape)
-                .background(shellColor)
                 .pointerInput(displayMetrics.density, isInputActive) {
                     if (isInputActive) return@pointerInput
                     awaitEachGesture {
@@ -713,6 +767,14 @@ fun IslandOverlayView(
                             MascotRuntime.controller.attend(touchXDp, touchYDp)
                         }
 
+                        // Immediate spring compression feedback on ACTION_DOWN
+                        scope.launch {
+                            springPressScale.animateTo(
+                                0.95f,
+                                spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium)
+                            )
+                        }
+
                         val holdJob = scope.launch {
                             kotlinx.coroutines.delay(HOLD_GESTURE_THRESHOLD_MS)
                             isHoldRegistered = true
@@ -733,6 +795,7 @@ fun IslandOverlayView(
                             if (change.isConsumed) childHandled = true
                             if (childHandled) {
                                 holdJob.cancel()
+                                scope.launch { springPressScale.animateTo(1.0f) }
                                 if (!change.pressed) break
                                 continue
                             }
@@ -740,6 +803,12 @@ fun IslandOverlayView(
                             if (change.changedToUp()) {
                                 change.consume()
                                 holdJob.cancel()
+                                scope.launch {
+                                    springPressScale.animateTo(
+                                        1.0f,
+                                        spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium)
+                                    )
+                                }
                                 val totalElapsedMs = System.currentTimeMillis() - pressTimeMs
                                 val currentNotification = currentNotifications.getOrNull(currentSelectedIndex)
 
@@ -902,6 +971,9 @@ fun IslandOverlayView(
                                     }
                                 }
                                 if (abs(dragAmountY) > 0.5f || abs(dragAmountX) > 0.5f) {
+                                    if (!isDragging) {
+                                        scope.launch { springPressScale.animateTo(1.0f) }
+                                    }
                                     isDragging = true
                                     dragAccumulatorY += dragAmountY
                                     dragAccumulatorX += dragAmountX
@@ -1184,15 +1256,14 @@ fun IslandOverlayView(
                     )
                     .clip(RoundedCornerShape(secondaryBubbleCorner))
                     .background(pillBackgroundColor.copy(alpha = settings.opacity))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) {
-                        if (secondaryIndex >= 0) {
-                            onPageSelected(secondaryIndex)
-                        }
-                        if (!currentExpanded) {
-                            currentOnToggle()
+                    .pointerInput(Unit) {
+                        detectTapGestures {
+                            if (secondaryIndex >= 0) {
+                                onPageSelected(secondaryIndex)
+                            }
+                            if (!currentExpanded) {
+                                currentOnToggle()
+                            }
                         }
                     },
                 contentAlignment = Alignment.Center
@@ -1254,15 +1325,14 @@ fun IslandOverlayView(
                     )
                     .clip(RoundedCornerShape(settings.cornerRadius.dp))
                     .background(pillBackgroundColor.copy(alpha = settings.opacity))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) {
-                        if (tertiaryIndex >= 0) {
-                            onPageSelected(tertiaryIndex)
-                        }
-                        if (!currentExpanded) {
-                            currentOnToggle()
+                    .pointerInput(Unit) {
+                        detectTapGestures {
+                            if (tertiaryIndex >= 0) {
+                                onPageSelected(tertiaryIndex)
+                            }
+                            if (!currentExpanded) {
+                                currentOnToggle()
+                            }
                         }
                     },
                 contentAlignment = Alignment.Center
