@@ -91,7 +91,8 @@ enum class IslandEvent(val id: String, val label: String, val shortLabel: String
          * that are never gated (Empty).
          */
         fun forNotification(n: IslandNotification): IslandEvent? = when (n.mode) {
-            IslandMode.Empty -> null
+            // A ringing alarm and the camera / microphone indicator are never gated by an event switch.
+            IslandMode.Empty, IslandMode.Alarm, IslandMode.PrivacyIndicator -> null
             IslandMode.Notification -> NOTIFICATION
             IslandMode.IncomingCall -> CALL
             IslandMode.Music -> MUSIC

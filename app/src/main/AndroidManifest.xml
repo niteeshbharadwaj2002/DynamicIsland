@@ -51,6 +51,16 @@
     <!-- Android 15+ screen-recording callback, to add FLAG_SECURE while recorded (Rule_Book 8.2). -->
     <uses-permission android:name="android.permission.DETECT_SCREEN_RECORDING" />
 
+    <!-- ADB-granted only: hides status-bar clutter via icon_blacklist (Rule_Book 10.2). -->
+    <uses-permission
+        android:name="android.permission.WRITE_SECURE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
+    <!-- Privileged/system builds only: names the app using the camera / mic (Rule_Book 4.15, 4.16).
+         Without it the privacy indicator falls back to camera availability and recording callbacks. -->
+    <uses-permission
+        android:name="android.permission.WATCH_APPOPS"
+        tools:ignore="ProtectedPermissions" />
+
     <queries>
         <!-- Lets the Shizuku check see the Shizuku app (Android 11+ hides apps that are not listed here). -->
         <package android:name="moe.shizuku.privileged.api" />
@@ -105,6 +115,16 @@
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|uiMode|density|fontScale|layoutDirection|locale"
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.SmartIsland.Picker" />
+
+        <!-- Invisible: asks the keyguard to unlock before a gated island action runs (Rule_Book 8.3). -->
+        <activity
+            android:name=".ui.UnlockTrampolineActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:launchMode="singleInstance"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
         <service
             android:name=".service.SmartIslandOverlayService"

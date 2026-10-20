@@ -156,7 +156,27 @@ object TimerStopwatchParser {
         "paused", "pause", "en pause", "pausado", "pausada", "angehalten", "sospeso", "sospesa", "रोक दिया गया", "已暂停", "一時停止中", "приостановлено"
     )
 
+    private val HR_DURATION_PATTERN = Pattern.compile("(\\d+)\\s*(?:h|hr|hrs|hours?)\\b", Pattern.CASE_INSENSITIVE)
+    private val MIN_DURATION_PATTERN = Pattern.compile("(\\d+)\\s*(?:m|min|mins|minutes?)\\b", Pattern.CASE_INSENSITIVE)
+    private val SEC_DURATION_PATTERN = Pattern.compile("(\\d+)\\s*(?:s|sec|secs|seconds?)\\b", Pattern.CASE_INSENSITIVE)
     private val ZERO_TIME_PATTERN = Pattern.compile("\\b0+[:.]00(?::00)?\\b")
+
+    private val TIMER_FINISH_KEYWORDS = listOf(
+        "time's up", "times up", "time is up", "timer finished",
+        "timer expired", "timer ended", "timer done"
+    )
+
+    /** A whole 0:00, 00:00 or 0:00:00 reading, not the tail of 1:00:00 or 10:00. */
+    private val STANDALONE_ZERO_TIME_PATTERN = Pattern.compile("(?<![\\d:.])0+[:.]00(?:[:.]00)?(?![\\d:.])")
+
+    /**
+     * True when a timer's shown title or text says it has run out ("Time's up", or a standalone 00:00).
+     * Pure string check, so the alert classifier can promote a finished timer to Critical without Android.
+     */
+    fun isFinishedTimerText(title: String, text: String): Boolean {
+        val shown = "$title $text".lowercase()
+        return TIMER_FINISH_KEYWORDS.any { shown.contains(it) } || STANDALONE_ZERO_TIME_PATTERN.matcher(shown).find()
+    }
 
     fun isAlarm(sbn: StatusBarNotification): Boolean {
         val notification = sbn.notification ?: return false
@@ -361,11 +381,7 @@ object TimerStopwatchParser {
 
         val fullText = extractFullText(notification)
 
-        val finishKeywords = listOf(
-            "time's up", "times up", "time is up", "timer finished",
-            "timer expired", "timer ended", "timer done"
-        )
-        if (finishKeywords.any { fullText.contains(it) }) return true
+        if (TIMER_FINISH_KEYWORDS.any { fullText.contains(it) }) return true
 
         val isZeroTime = ZERO_TIME_PATTERN.matcher(fullText).find()
         val flags = runCatching { notification.flags }.getOrDefault(0)
@@ -523,9 +539,9 @@ object TimerStopwatchParser {
             if (totalSeconds >= 0) return totalSeconds
         }
 
-        val hrMatcher = Pattern.compile("(\\d+)\\s*(?:h|hr|hrs|hours?)\\b", Pattern.CASE_INSENSITIVE).matcher(input)
-        val minMatcher = Pattern.compile("(\\d+)\\s*(?:m|min|mins|minutes?)\\b", Pattern.CASE_INSENSITIVE).matcher(input)
-        val secMatcher = Pattern.compile("(\\d+)\\s*(?:s|sec|secs|seconds?)\\b", Pattern.CASE_INSENSITIVE).matcher(input)
+        val hrMatcher = HR_DURATION_PATTERN.matcher(input)
+        val minMatcher = MIN_DURATION_PATTERN.matcher(input)
+        val secMatcher = SEC_DURATION_PATTERN.matcher(input)
         val hrs = if (hrMatcher.find()) hrMatcher.group(1)?.toLongOrNull() ?: 0L else 0L
         val mins = if (minMatcher.find()) minMatcher.group(1)?.toLongOrNull() ?: 0L else 0L
         val secs = if (secMatcher.find()) secMatcher.group(1)?.toLongOrNull() ?: 0L else 0L
@@ -588,5 +604,18 @@ object TimerStopwatchParser {
         } else {
             String.format(java.util.Locale.US, "%02d:%02d", minutes, seconds)
         }
+    }
+
+    /**
+     * Stopwatch readout with centiseconds, MM:SS.cc (Rule_Book §4.11). Past an hour the centiseconds give way to
+     * H:MM:SS so the text keeps roughly the same width in the pill.
+     */
+    fun formatStopwatchMillis(elapsedMs: Long): String {
+        val safeMs = elapsedMs.coerceAtLeast(0L)
+        if (safeMs >= 3_600_000L) return formatTime(safeMs / 1000L)
+        val minutes = safeMs / 60_000L
+        val seconds = (safeMs % 60_000L) / 1000L
+        val centis = (safeMs % 1000L) / 10L
+        return String.format(java.util.Locale.US, "%02d:%02d.%02d", minutes, seconds, centis)
     }
 }

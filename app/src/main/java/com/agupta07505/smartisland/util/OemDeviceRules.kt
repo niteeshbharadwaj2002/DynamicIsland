@@ -375,6 +375,12 @@ object OemDeviceRules {
         }
     }
 
+    /**
+     * A call from the phone's own dialer / in-call UI. Every other call (WhatsApp, Meet, Telegram) is VoIP and
+     * gets the app badge on the caller's avatar (Rule_Book §4.7).
+     */
+    fun isDialerCall(packageName: String): Boolean = packageName in ALL_OEM_INCALL_PACKAGES
+
     fun isHotspot(
         packageName: String,
         titleText: String
@@ -448,5 +454,28 @@ object OemDeviceRules {
         } catch (_: Throwable) { }
 
         return intents
+    }
+
+    /**
+     * OEM-specific status-bar margin profiles for dynamic width budget (Rule_Book §10.2).
+     */
+    data class OemWidthProfile(
+        val leftMarginDp: Float,
+        val rightMarginDp: Float,
+        val maxPillWidthDp: Float = 280f
+    )
+
+    fun getOemWidthProfile(deviceType: String? = null): OemWidthProfile {
+        val device = resolveEffectiveDevice(deviceType)
+        return when (device) {
+            OemDeviceType.SAMSUNG -> OemWidthProfile(leftMarginDp = 76f, rightMarginDp = 92f, maxPillWidthDp = 280f)
+            OemDeviceType.XIAOMI_REDMI_POCO -> OemWidthProfile(leftMarginDp = 70f, rightMarginDp = 86f, maxPillWidthDp = 275f)
+            OemDeviceType.REALME_OPPO_ONEPLUS -> OemWidthProfile(leftMarginDp = 68f, rightMarginDp = 84f, maxPillWidthDp = 280f)
+            OemDeviceType.VIVO_IQOO -> OemWidthProfile(leftMarginDp = 70f, rightMarginDp = 88f, maxPillWidthDp = 280f)
+            OemDeviceType.GOOGLE_PIXEL -> OemWidthProfile(leftMarginDp = 72f, rightMarginDp = 88f, maxPillWidthDp = 280f)
+            OemDeviceType.HUAWEI_HONOR -> OemWidthProfile(leftMarginDp = 74f, rightMarginDp = 90f, maxPillWidthDp = 280f)
+            OemDeviceType.MOTOROLA -> OemWidthProfile(leftMarginDp = 68f, rightMarginDp = 84f, maxPillWidthDp = 280f)
+            else -> OemWidthProfile(leftMarginDp = 72f, rightMarginDp = 88f, maxPillWidthDp = 280f)
+        }
     }
 }

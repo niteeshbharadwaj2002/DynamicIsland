@@ -19,6 +19,7 @@ import com.agupta07505.smartisland.util.MergeStyle
 import com.agupta07505.smartisland.util.GestureSensitivity
 import com.agupta07505.smartisland.util.HapticStrength
 import com.agupta07505.smartisland.util.IslandTimings
+import com.agupta07505.smartisland.ui.SpringPreset
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -175,6 +176,14 @@ data class SmartIslandSettings(
     val buddyVisits: String = MascotVisitFrequency.Normal.id,
     val buddyReacts: Boolean = true,
     val buddyHidesWhenIdle: Boolean = true,
+    /** [com.agupta07505.smartisland.ui.SpringPreset] id: how the island's size springs behave. */
+    val springPreset: String = SpringPreset.Standard.id,
+    /** Whether a faint glow flares while the island is moving fast ([com.agupta07505.smartisland.ui.KineticGlow]). */
+    val kineticGlow: Boolean = true,
+    val aodEnabled: Boolean = false,
+    val secureAppPackages: Set<String> = emptySet(),
+    /** Blur the screen behind the island (Android 12+ only); older versions use the glass look. */
+    val backdropBlur: Boolean = true,
     /**
      * Portrait collapsed cutout with content (a card on the pill): true keeps the idle cutout's size; false stretches
      * the pill to [contentPillWidthPercent] of its idle width when a card arrives and shrinks it back when the card
@@ -580,6 +589,13 @@ data class SmartIslandSettings(
         settingsObj.put("buddyVisits", buddyVisits)
         settingsObj.put("buddyReacts", buddyReacts)
         settingsObj.put("buddyHidesWhenIdle", buddyHidesWhenIdle)
+        settingsObj.put("springPreset", springPreset)
+        settingsObj.put("kineticGlow", kineticGlow)
+        settingsObj.put("aodEnabled", aodEnabled)
+        settingsObj.put("backdropBlur", backdropBlur)
+        val secureAppsArray = JSONArray()
+        secureAppPackages.forEach { secureAppsArray.put(it) }
+        settingsObj.put("secureAppPackages", secureAppsArray)
         settingsObj.put("landscapeShape", landscapeShape)
         settingsObj.put("landscapeWidth", landscapeWidth.toDouble())
         settingsObj.put("landscapeHeight", landscapeHeight.toDouble())
@@ -1030,6 +1046,11 @@ data class SmartIslandSettings(
                 buddyVisits = MascotVisitFrequency.fromId(obj.optString("buddyVisits", defaults.buddyVisits)).id,
                 buddyReacts = obj.optBoolean("buddyReacts", defaults.buddyReacts),
                 buddyHidesWhenIdle = obj.optBoolean("buddyHidesWhenIdle", defaults.buddyHidesWhenIdle),
+                springPreset = SpringPreset.fromId(obj.optString("springPreset", defaults.springPreset)).id,
+                kineticGlow = obj.optBoolean("kineticGlow", defaults.kineticGlow),
+                aodEnabled = obj.optBoolean("aodEnabled", defaults.aodEnabled),
+                backdropBlur = obj.optBoolean("backdropBlur", defaults.backdropBlur),
+                secureAppPackages = safeStringSet("secureAppPackages", defaults.secureAppPackages),
                 landscapeShape = obj.optString("landscapeShape", defaults.landscapeShape).let {
                     if (it == LANDSCAPE_SHAPE_PILL || it == LANDSCAPE_SHAPE_CIRCLE) it else defaults.landscapeShape
                 },

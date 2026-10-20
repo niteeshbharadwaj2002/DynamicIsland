@@ -245,7 +245,10 @@ internal fun rememberIslandSecondary(
         animationSpec = if (sideJumped) {
             androidx.compose.animation.core.snap()
         } else if (offsetFollowsExpand) {
-            spring<androidx.compose.ui.unit.Dp>(dampingRatio = islandSpringDamping(isLandscape), stiffness = animSpeed.stiffness(islandSpringStiffness(isLandscape)))
+            spring<androidx.compose.ui.unit.Dp>(
+                dampingRatio = islandSpringDamping(isLandscape, SpringPreset.fromId(settings.springPreset)),
+                stiffness = animSpeed.stiffness(islandSpringStiffness(isLandscape, SpringPreset.fromId(settings.springPreset)))
+            )
         } else {
             spring<androidx.compose.ui.unit.Dp>(dampingRatio = 1f, stiffness = animSpeed.stiffness(if (isLandscape) 150f else 220f))
         },
@@ -449,7 +452,17 @@ internal fun SecondaryBubbleContent(
         IslandMode.Stopwatch -> {
             StopwatchCollapsedGlyph(notification = notification, settings = settings)
         }
-        IslandMode.Notification, IslandMode.DownloadUpload, IslandMode.Empty -> {
+        IslandMode.Alarm -> com.agupta07505.smartisland.ui.expanded.AlarmCollapsedGlyph()
+        IslandMode.PrivacyIndicator -> com.agupta07505.smartisland.ui.expanded.PrivacyIndicatorCollapsedGlyph(notification)
+        IslandMode.Notification -> {
+            // A folded group shows its stacked sender badges in the companion bubble.
+            if (notification.groupCount > 1) {
+                StackedAlertBadges(notification = notification, color = Color(settings.notificationDotColor), size = 20.dp)
+            } else {
+                NotificationGlyph(notification = notification, settings = settings)
+            }
+        }
+        IslandMode.DownloadUpload, IslandMode.Empty -> {
             NotificationGlyph(notification = notification, settings = settings)
         }
     }

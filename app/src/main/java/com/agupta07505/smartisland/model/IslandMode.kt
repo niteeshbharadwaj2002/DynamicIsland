@@ -22,5 +22,9 @@ enum class IslandMode {
     ScreenRecording,
     AudioRecording,
     Timer,
-    Stopwatch
+    Stopwatch,
+    /** A ringing alarm (Rule_Book §4.10): Critical. */
+    Alarm,
+    /** Camera and/or microphone in use (Rule_Book §4.15, §4.16), one merged alert: Persistent. */
+    PrivacyIndicator
 }

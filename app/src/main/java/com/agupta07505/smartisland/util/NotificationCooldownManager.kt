@@ -146,7 +146,10 @@ object NotificationCooldownManager {
             mode == IslandMode.Battery ||
             mode == IslandMode.Flashlight ||
             mode == IslandMode.ScreenRecording ||
-            mode == IslandMode.AudioRecording
+            mode == IslandMode.AudioRecording ||
+            // A ringing alarm and a privacy indicator must never be throttled away.
+            mode == IslandMode.Alarm ||
+            mode == IslandMode.PrivacyIndicator
     }
 
     /** Returns and clears the buffered notification once the cooldown has ended. */

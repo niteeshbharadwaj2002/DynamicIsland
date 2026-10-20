@@ -81,8 +81,11 @@ internal class IslandLayout(
     private val originX: () -> Dp,
     private val originY: () -> Dp,
     private val expandProgressState: State<Float>,
-    private val hidingAlphaState: State<Float>
+    private val hidingAlphaState: State<Float>,
+    /** The kinetic glow's blur radius in dp (Rule_Book 2.3); read while drawing. */
+    private val glowRadiusState: State<Float>
 ) {
+    val glowRadius: Float get() = glowRadiusState.value
     val expandProgress: Float get() = expandProgressState.value
     val singleSurfaceAlpha: Float get() = singleSurfaceAlphaState.value
     /** The single island's shadow: it still fades in (the card island's shadow is off by then), the surface does not. */
@@ -299,17 +302,19 @@ internal fun rememberIslandLayout(
     // Landscape moves the pills and cards much further, so it gets softer, slower, less bouncy springs; portrait is
     // gentler.
     val animSpeed = settings.animationSpeed(isLandscape)
+    // Motion preset (Settings > Motion): a physical preset drives the island's springs, scaled by the speed setting.
+    val springPreset = SpringPreset.fromId(settings.springPreset)
     val sizeSpec = spring<androidx.compose.ui.unit.Dp>(
-        dampingRatio = islandSpringDamping(isLandscape),
-        stiffness = animSpeed.stiffness(islandSpringStiffness(isLandscape))
+        dampingRatio = islandSpringDamping(isLandscape, springPreset),
+        stiffness = animSpeed.stiffness(islandSpringStiffness(isLandscape, springPreset))
     )
     val sizeSpecFloat = spring<Float>(
-        dampingRatio = islandSpringDamping(isLandscape),
-        stiffness = animSpeed.stiffness(islandSpringStiffness(isLandscape))
+        dampingRatio = islandSpringDamping(isLandscape, springPreset),
+        stiffness = animSpeed.stiffness(islandSpringStiffness(isLandscape, springPreset))
     )
     val heightSpec = spring<androidx.compose.ui.unit.Dp>(
-        dampingRatio = islandSpringDamping(isLandscape) + 0.04f,
-        stiffness = animSpeed.stiffness(islandSpringStiffness(isLandscape))
+        dampingRatio = islandSpringDamping(isLandscape, springPreset) + 0.04f,
+        stiffness = animSpeed.stiffness(islandSpringStiffness(isLandscape, springPreset))
     )
     // Collapsed geometry changing while the island stays collapsed (a card arriving or leaving): no glide.
     val settleOrSnap: androidx.compose.animation.core.FiniteAnimationSpec<androidx.compose.ui.unit.Dp> =
@@ -434,28 +439,35 @@ internal fun rememberIslandLayout(
     // height / radius / vertical progress settle without overshoot).
     val collapseOnPill = !isHiding || hidingAlphaState.value > 0.01f
     // The expand spring as it really runs (speed-scaled), which the expand fades are read off.
-    val expandStiffness = animSpeed.stiffness(islandSpringStiffness(isLandscape))
-    val expandDamping = islandSpringDamping(isLandscape)
+    val expandStiffness = animSpeed.stiffness(islandSpringStiffness(isLandscape, springPreset))
+    val expandDamping = islandSpringDamping(isLandscape, springPreset)
     // A close started by the idle circle, in both orientations.
     val idlePressLatch = remember { BooleanArray(1) }
     if (expanded) idlePressLatch[0] = false else if (idleClosing) idlePressLatch[0] = true
     val idlePressClose = idlePressLatch[0]
     // The close is step 1 of the two-step sequence: its springs are sized so the shell has settled when the pill may leave.
     val idleSequence = remember(animSpeed) { com.agupta07505.smartisland.model.IdleCloseSequence.plan(animSpeed) }
+    // A physical motion preset also drives the close (except the idle-circle sequence, which is timed as a whole).
+    val presetCloses = springPreset.isPhysical && !idlePressClose
     val closeStiffness = if (idlePressClose) {
         animSpeed.systemStiffness(idleSequence.closeStiffness)
+    } else if (presetCloses) {
+        animSpeed.stiffness(springPreset.stiffness)
     } else {
         animSpeed.stiffness(com.agupta07505.smartisland.model.CollapseMotion.STIFFNESS)
     }
-    val closeWidthDamping = com.agupta07505.smartisland.model.CollapseMotion.closeWidthDamping(idlePressClose)
+    val closeWidthDamping = if (presetCloses) springPreset.dampingRatio
+        else com.agupta07505.smartisland.model.CollapseMotion.closeWidthDamping(idlePressClose)
+    val closeSettleDamping = if (presetCloses) springPreset.dampingRatio
+        else com.agupta07505.smartisland.model.CollapseMotion.SETTLE_DAMPING
     val collapseWidthSpec = spring<androidx.compose.ui.unit.Dp>(dampingRatio = closeWidthDamping, stiffness = closeStiffness)
     val collapseSettleSpec = spring<androidx.compose.ui.unit.Dp>(
-        dampingRatio = com.agupta07505.smartisland.model.CollapseMotion.SETTLE_DAMPING,
+        dampingRatio = closeSettleDamping,
         stiffness = closeStiffness
     )
     val collapseWidthSpecFloat = spring<Float>(dampingRatio = closeWidthDamping, stiffness = closeStiffness)
     val collapseSettleSpecFloat = spring<Float>(
-        dampingRatio = com.agupta07505.smartisland.model.CollapseMotion.SETTLE_DAMPING,
+        dampingRatio = closeSettleDamping,
         stiffness = closeStiffness
     )
 
@@ -638,6 +650,12 @@ internal fun rememberIslandLayout(
         derivedStateOf { widthState.value + (settings.width * PILL_PULSE_WIDTH_FRACTION * pulse.value).dp }
     }
 
+    // The faint glow that flares while the island moves fast (Rule_Book 2.3), from the shell's own size springs.
+    val glowRadiusState = rememberKineticGlow(
+        enabled = settings.kineticGlow,
+        widthDp = { widthState.value.value },
+        heightDp = { heightState.value.value }
+    )
     return IslandLayout(
         miniPillWidth = miniPillWidth,
         circleSize = circleSize,
@@ -675,7 +693,8 @@ internal fun rememberIslandLayout(
         originX = originX,
         originY = originY,
         expandProgressState = expandProgressState,
-        hidingAlphaState = hidingAlphaState
+        hidingAlphaState = hidingAlphaState,
+        glowRadiusState = glowRadiusState
     )
 }
 

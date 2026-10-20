@@ -157,6 +157,11 @@ class SmartIslandSettingsRepository(private val context: Context) {
         val BuddyVisits = stringPreferencesKey("buddy_visits")
         val BuddyReacts = booleanPreferencesKey("buddy_reacts")
         val BuddyHidesWhenIdle = booleanPreferencesKey("buddy_hides_when_idle")
+        val SpringPreset = stringPreferencesKey("spring_preset")
+        val KineticGlow = booleanPreferencesKey("kinetic_glow")
+        val AodEnabled = booleanPreferencesKey("aod_enabled")
+        val BackdropBlur = booleanPreferencesKey("backdrop_blur")
+        val SecureAppPackages = stringSetPreferencesKey("secure_app_packages")
         val LandscapeShape = stringPreferencesKey("landscape_shape")
         val LandscapeWidth = floatPreferencesKey("landscape_width")
         val LandscapeHeight = floatPreferencesKey("landscape_height")
@@ -473,6 +478,11 @@ class SmartIslandSettingsRepository(private val context: Context) {
                 buddyVisits = MascotVisitFrequency.fromId(prefs[Keys.BuddyVisits]).id,
                 buddyReacts = prefs[Keys.BuddyReacts] ?: defaults.buddyReacts,
                 buddyHidesWhenIdle = prefs[Keys.BuddyHidesWhenIdle] ?: defaults.buddyHidesWhenIdle,
+                springPreset = com.agupta07505.smartisland.ui.SpringPreset.fromId(prefs[Keys.SpringPreset]).id,
+                kineticGlow = prefs[Keys.KineticGlow] ?: defaults.kineticGlow,
+                aodEnabled = prefs[Keys.AodEnabled] ?: defaults.aodEnabled,
+                backdropBlur = prefs[Keys.BackdropBlur] ?: defaults.backdropBlur,
+                secureAppPackages = prefs[Keys.SecureAppPackages] ?: defaults.secureAppPackages,
                 landscapeShape = prefs[Keys.LandscapeShape]?.takeIf { it in VALID_LANDSCAPE_SHAPES } ?: defaults.landscapeShape,
                 landscapeWidth = validDimension(prefs[Keys.LandscapeWidth], defaults.landscapeWidth, SmartIslandSettings.MIN_WIDTH, SmartIslandSettings.MAX_WIDTH),
                 landscapeHeight = validDimension(prefs[Keys.LandscapeHeight], defaults.landscapeHeight, SmartIslandSettings.MIN_HEIGHT, SmartIslandSettings.MAX_HEIGHT),
@@ -1351,6 +1361,21 @@ class SmartIslandSettingsRepository(private val context: Context) {
     suspend fun setBuddyVisits(value: String) = editSafely { it[Keys.BuddyVisits] = MascotVisitFrequency.fromId(value).id }
     suspend fun setBuddyReacts(value: Boolean) = editSafely { it[Keys.BuddyReacts] = value }
     suspend fun setBuddyHidesWhenIdle(value: Boolean) = editSafely { it[Keys.BuddyHidesWhenIdle] = value }
+    suspend fun setSpringPreset(value: String) = editSafely { it[Keys.SpringPreset] = com.agupta07505.smartisland.ui.SpringPreset.fromId(value).id }
+    suspend fun setKineticGlow(value: Boolean) = editSafely { it[Keys.KineticGlow] = value }
+    suspend fun setAodEnabled(value: Boolean) = editSafely { it[Keys.AodEnabled] = value }
+    suspend fun setBackdropBlur(value: Boolean) = editSafely { it[Keys.BackdropBlur] = value }
+    suspend fun setSecureAppPackages(packages: Set<String>) = editSafely { it[Keys.SecureAppPackages] = packages }
+    suspend fun addSecureAppPackage(packageName: String) = editSafely {
+        val current = it[Keys.SecureAppPackages]?.toMutableSet() ?: mutableSetOf()
+        current.add(packageName)
+        it[Keys.SecureAppPackages] = current
+    }
+    suspend fun removeSecureAppPackage(packageName: String) = editSafely {
+        val current = it[Keys.SecureAppPackages]?.toMutableSet() ?: mutableSetOf()
+        current.remove(packageName)
+        it[Keys.SecureAppPackages] = current
+    }
     suspend fun setLandscapeCirclePosition(value: String) = editSafely {
         it[Keys.LandscapeCirclePosition] = if (value in VALID_LANDSCAPE_POSITIONS) value else SmartIslandSettings.Default.landscapeCirclePosition
     }
@@ -1576,6 +1601,11 @@ class SmartIslandSettingsRepository(private val context: Context) {
         prefs[Keys.BuddyVisits] = MascotVisitFrequency.fromId(settings.buddyVisits).id
         prefs[Keys.BuddyReacts] = settings.buddyReacts
         prefs[Keys.BuddyHidesWhenIdle] = settings.buddyHidesWhenIdle
+        prefs[Keys.SpringPreset] = com.agupta07505.smartisland.ui.SpringPreset.fromId(settings.springPreset).id
+        prefs[Keys.KineticGlow] = settings.kineticGlow
+        prefs[Keys.AodEnabled] = settings.aodEnabled
+        prefs[Keys.BackdropBlur] = settings.backdropBlur
+        prefs[Keys.SecureAppPackages] = settings.secureAppPackages
         prefs[Keys.LandscapeShape] = settings.landscapeShape.takeIf { it in VALID_LANDSCAPE_SHAPES }
             ?: SmartIslandSettings.Default.landscapeShape
         prefs[Keys.LandscapeWidth] = settings.landscapeWidth

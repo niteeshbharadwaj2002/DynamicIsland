@@ -944,6 +944,7 @@ internal fun clampCardHeightForMode(mode: IslandMode?, height: Dp): Dp = when (m
     IslandMode.AudioRecording -> height.coerceIn(72.dp, 130.dp)
     IslandMode.Timer -> height.coerceIn(72.dp, 130.dp)
     IslandMode.Stopwatch -> height.coerceIn(72.dp, 130.dp)
+    IslandMode.Alarm, IslandMode.PrivacyIndicator -> height.coerceIn(100.dp, 170.dp)
     else -> height.coerceIn(80.dp, 160.dp)
 }
 
@@ -961,6 +962,8 @@ internal fun cardAccentColor(notification: IslandNotification, settings: SmartIs
         IslandMode.ScreenRecording, IslandMode.AudioRecording -> Color(settings.screenRecordingColor)
         IslandMode.Timer -> Color(settings.timerColor)
         IslandMode.Stopwatch -> Color(settings.stopwatchColor)
+        IslandMode.Alarm -> com.agupta07505.smartisland.ui.NotchPalette.warning
+        IslandMode.PrivacyIndicator -> PrivacyColors.camera
         else -> Color(settings.notificationDotColor)
     }
 
@@ -1180,11 +1183,32 @@ internal fun ExpandedCardPage(
                     onCollapse = onCollapse,
                     settings = settings
                 )
-                IslandMode.Empty -> EmptyExpanded(
-                    settings = settings,
+                IslandMode.Alarm -> AlarmExpanded(
+                    notification = notification,
+                    bottomPadding = bottomPadding,
+                    onCollapse = onCollapse
+                )
+                IslandMode.PrivacyIndicator -> PrivacyIndicatorExpanded(
+                    notification = notification,
+                    bottomPadding = bottomPadding,
+                    onCollapse = onCollapse
+                )
+                // The idle surface (Decision D2): NotchIQ's dashboard (search, status, quick controls) hosting upstream's
+                // launcher pager (pinned apps, recents, utilities) as its app area.
+                IslandMode.Empty -> IdleDashboard(
                     apps = launcherApps,
                     onLaunchApp = onLaunchApp,
-                    onAppAction = onAppAction
+                    onCollapse = onCollapse,
+                    onInputStateChanged = onReplyStateChanged,
+                    launcher = {
+                        EmptyExpanded(
+                            settings = settings,
+                            apps = launcherApps,
+                            onLaunchApp = onLaunchApp,
+                            onAppAction = onAppAction,
+                            padding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+                        )
+                    }
                 )
             }
         }
@@ -1220,14 +1244,16 @@ private fun EmptyExpanded(
     settings: SmartIslandSettings,
     apps: List<LaunchableApp>?,
     onLaunchApp: (String) -> Unit,
-    onAppAction: (String, AppShortcutAction) -> Unit
+    onAppAction: (String, AppShortcutAction) -> Unit,
+    padding: androidx.compose.foundation.layout.PaddingValues =
+        androidx.compose.foundation.layout.PaddingValues(start = 18.dp, top = 16.dp, end = 18.dp, bottom = 12.dp)
 ) {
     val context = LocalContext.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight(unbounded = true)
-            .padding(start = 18.dp, top = 16.dp, end = 18.dp, bottom = 12.dp),
+            .padding(padding),
         verticalArrangement = Arrangement.Center
     ) {
         val loadedApps = apps

@@ -1,0 +1,295 @@
+/*
+ * Smart Island (2026)
+ * Copyright Animesh Gupta — github.com/agupta07505
+ * Licensed under the GNU GPL v3 License
+ */
+
+package com.agupta07505.smartisland.alert
+
+import com.agupta07505.smartisland.model.IslandMode
+import com.agupta07505.smartisland.model.IslandNotification
+import com.agupta07505.smartisland.util.NavigationParser
+import com.agupta07505.smartisland.util.RingingAlarm
+import com.agupta07505.smartisland.util.TimerStopwatchParser
+
+/**
+ * Which tier of the island's rulebook an alert belongs to.
+ *
+ *  - [Critical]: alarms (a ringing [IslandMode.Alarm], or any `alarm`-category alert), a ringing timer, battery
+ *    at 5% or less. Persists until the user acts, and outranks everything.
+ *  - [Persistent] (Tier 1): calls, navigation and rides, screen and audio recording, timers, stopwatches, the camera /
+ *    microphone privacy indicator. Persists until ended and owns the island; nothing displaces it for good.
+ *  - [Background] (Tier 2): music, live activities, hotspot, transfers. Persists while active, and steps
+ *    aside (to the companion bubble, or out of sight) for a Persistent task or an Ephemeral interruption.
+ *  - [Ephemeral] (Tier 3): messages and other alerts, battery, Bluetooth, flashlight. Interrupts for a few
+ *    seconds (see [AlertEngine]) and then hands the island back.
+ *  - [Passive]: app updates, likes, promos. Never reaches the island.
+ */
+enum class AlertTier { Critical, Persistent, Background, Ephemeral, Passive }
+
+/** Pure classification of an alert into an [AlertTier]; no Android state, so it is unit-testable. */
+object AlertClassifier {
+    /** Battery at or below this percentage is critical. */
+    const val CRITICAL_BATTERY_PERCENT = 5
+
+    private val passiveCategories = setOf("promo", "recommendation", "social")
+    private val passivePackages = setOf("com.android.vending")
+
+    fun classify(notification: IslandNotification): AlertTier {
+        val category = notification.category?.lowercase()
+        return when (notification.mode) {
+            IslandMode.IncomingCall, IslandMode.Navigation, IslandMode.ScreenRecording,
+            IslandMode.Stopwatch, IslandMode.AudioRecording, IslandMode.PrivacyIndicator -> AlertTier.Persistent
+            IslandMode.Alarm -> AlertTier.Critical
+            IslandMode.Timer ->
+                if (category == "alarm" || TimerStopwatchParser.isFinishedTimerText(notification.title, notification.text)) {
+                    AlertTier.Critical
+                } else AlertTier.Persistent
+            IslandMode.Music, IslandMode.LiveActivity, IslandMode.Hotspot,
+            IslandMode.DownloadUpload, IslandMode.Empty -> AlertTier.Background
+            IslandMode.Battery ->
+                if (isCriticalBattery(notification)) AlertTier.Critical else AlertTier.Ephemeral
+            IslandMode.Bluetooth, IslandMode.Flashlight -> AlertTier.Ephemeral
+            IslandMode.Notification -> classifyNotification(notification, category)
+        }
+    }
+
+    private fun classifyNotification(notification: IslandNotification, category: String?): AlertTier = when {
+        // The in-app preview always shows what you ask for.
+        notification.key.startsWith("demo_") -> AlertTier.Ephemeral
+        // An alarm is Critical only while it can still ring: "Upcoming" / "Snoozed until 7:10" is a passing note.
+        category == "alarm" ->
+            if (RingingAlarm.saysNotRinging(notification.title, notification.text)) AlertTier.Ephemeral else AlertTier.Critical
+        category == "call" -> AlertTier.Persistent
+        // A reply box means a person is waiting, even from an app that also posts "social" noise.
+        notification.actionIntents.any { it.isQuickReply } -> AlertTier.Ephemeral
+        category in passiveCategories || notification.packageName in passivePackages -> AlertTier.Passive
+        // Uncategorised alerts are shown: hiding every app that never sets a category would be worse.
+        else -> AlertTier.Ephemeral
+    }
+
+    /**
+     * A live Uber / Ola / Rapido ride (Rule_Book 4.14). Persistent like navigation, and it ranks above Maps
+     * directions (and every other Persistent task but a call) when both are active.
+     */
+    fun isRide(notification: IslandNotification): Boolean =
+        notification.mode == IslandMode.Navigation && NavigationParser.isRideApp(notification.packageName)
+
+    private fun isCriticalBattery(notification: IslandNotification): Boolean {
+        if (notification.title.contains("charging", ignoreCase = true)) return false
+        val percent = Regex("(\\d{1,3})\\s*%").find(notification.text)?.groupValues?.get(1)?.toIntOrNull()
+            ?: return false
+        return percent <= CRITICAL_BATTERY_PERCENT
+    }
+}
+
+/**
+ * The rules engine between the raw alert list and the island.
+ *
+ * Feed it the full list on every change with [evaluate]; it returns what the island should show, and when
+ * the list next needs re-evaluating:
+ *  - Passive alerts are dropped.
+ *  - At most [MAX_ACTIVE] states are returned: the first is the main pill, the second the companion bubble.
+ *    A third is hidden (it stays alive in the shade and comes back when a slot frees up).
+ *  - Order: Critical, then Persistent (a call first, then a ride, then the most recently started), then Ephemeral
+ *    (newest first), then Background (newest first). So a call keeps the island over a message, and a
+ *    message hijacks a music pill for its few seconds, after which the music returns.
+ *  - Ephemeral alerts leave after [communicationTimeoutMs] (messages) or [transientTimeoutMs] (battery,
+ *    Bluetooth, flashlight), restart on a touch ([touch]) and, for those three, restart when their state
+ *    changes (a new title).
+ *  - Messages from the same app group fold into one counted entry; a new message restarts the group's clock.
+ *  - While [immersive] only Critical alerts and an incoming call show; while [biometricHold] only a ringing
+ *    call or alarm does.
+ *  - While locked, secret messages are dropped and private ones are masked (see [LockscreenPrivacy]).
+ *
+ * It is deliberately free of Android and coroutines: the caller owns the clock and the scheduling.
+ */
+class AlertEngine(
+    val communicationTimeoutMs: Long = DEFAULT_COMMUNICATION_TIMEOUT_MS,
+    val transientTimeoutMs: Long = DEFAULT_TRANSIENT_TIMEOUT_MS,
+    /**
+     * Slots returned; [MAX_ACTIVE] is the rulebook's. Only tests widen it, to exercise the view model's card
+     * machinery (sibling picker, event cycling) without the rules in between.
+     */
+    private val maxActive: Int = MAX_ACTIVE,
+    /** False keeps every message as its own entry. Rulebook: true. Tests only, see [maxActive]. */
+    private val foldGroups: Boolean = true
+) {
+
+    class Evaluation(val visible: List<IslandNotification>, val nextExpiryAtMs: Long?)
+
+    private val firstSeenAt = HashMap<String, Long>()
+    private val stateOf = HashMap<String, String>()
+    private val expired = HashSet<String>()
+    private var lastTouchAt = Long.MIN_VALUE
+
+    /**
+     * A full-screen app has hidden the status bar (Rule_Book 10.1): the island is SUPPRESSED and only what
+     * [breaksSuppression] allows (alarms, a ringing timer, critical battery, an incoming call) still shows.
+     * Everything else keeps its clocks running, so a message that arrives mid-video times out unseen.
+     */
+    var immersive: Boolean = false
+
+    /**
+     * The face-unlock window on the lock screen (Rule_Book 8.2): the island holds IDLE (the hardware mask
+     * only) so it never sits on top of the system's camera indicator. Nothing shows, not even a critical alert,
+     * except what woke the screen and must be answered from the lockscreen: a ringing call or a ringing alarm
+     * (§4.7, §4.10; see [breaksBiometricHold]).
+     */
+    var biometricHold: Boolean = false
+
+    /**
+     * Alerts imported from the shade (not new arrivals): messages among them are treated as already seen, so they
+     * do not hijack the island for seven seconds. Keys the engine already tracks are left alone.
+     */
+    fun adoptQuietly(keys: Collection<String>) {
+        for (key in keys) {
+            if (key !in firstSeenAt) {
+                firstSeenAt[key] = Long.MIN_VALUE / 2
+                expired += key
+            }
+        }
+    }
+
+    /**
+     * While the card is open the clocks are held: nothing expires and no expiry is scheduled. Closing it
+     * ([touch]) restarts every ephemeral clock (Rule_Book 3.3).
+     */
+    var held: Boolean = false
+
+    /** The user interacted with the island: every ephemeral alert starts its timeout over. */
+    fun touch(nowMs: Long) {
+        lastTouchAt = nowMs
+    }
+
+    /**
+     * [isLocked] applies the lockscreen privacy rules ([LockscreenPrivacy]): secret messages are left out and
+     * private ones come back stripped to the app icon and a count.
+     */
+    fun evaluate(raw: List<IslandNotification>, nowMs: Long, isLocked: Boolean = false): Evaluation {
+        val live = raw.mapTo(HashSet()) { it.key }
+        firstSeenAt.keys.retainAll(live)
+        stateOf.keys.retainAll(live)
+        expired.retainAll(live)
+
+        val critical = ArrayList<IslandNotification>()
+        val persistent = ArrayList<IslandNotification>()
+        val background = ArrayList<IslandNotification>()
+        val messages = LinkedHashMap<String, MutableList<IslandNotification>>()
+        val transients = ArrayList<IslandNotification>()
+        for (notification in raw) {
+            // A secret alert holds no slot (and starts no clock) until the phone is unlocked.
+            if (isLocked && LockscreenPrivacy.isHiddenWhenLocked(notification)) continue
+            val tier = AlertClassifier.classify(notification)
+            if (tier == AlertTier.Passive) continue
+            firstSeenAt.getOrPut(notification.key) { nowMs }
+            when (tier) {
+                AlertTier.Critical -> critical += notification
+                AlertTier.Persistent -> persistent += notification
+                AlertTier.Background -> background += notification
+                AlertTier.Ephemeral ->
+                    if (notification.mode == IslandMode.Notification) {
+                        if (notification.key !in expired) {
+                            messages.getOrPut(groupOf(notification)) { ArrayList() } += notification
+                        }
+                    } else {
+                        // A new state (Charging -> Low battery) is a new interruption.
+                        if (stateOf.put(notification.key, notification.title).let { it != null && it != notification.title }) {
+                            firstSeenAt[notification.key] = nowMs
+                            expired -= notification.key
+                        }
+                        if (notification.key !in expired) transients += notification
+                    }
+                AlertTier.Passive -> Unit
+            }
+        }
+
+        var nextExpiry: Long? = null
+        fun consider(startedAt: Long, timeoutMs: Long): Boolean {
+            if (held || timeoutMs == NEVER) return true
+            val expiresAt = maxOf(startedAt, lastTouchAt) + timeoutMs
+            if (nowMs >= expiresAt) return false
+            nextExpiry = nextExpiry?.let { minOf(it, expiresAt) } ?: expiresAt
+            return true
+        }
+
+        val ephemeral = ArrayList<Pair<Long, IslandNotification>>()
+        for (members in messages.values) {
+            val startedAt = members.maxOf { firstSeenAt.getValue(it.key) }
+            if (consider(startedAt, communicationTimeoutMs)) {
+                ephemeral += startedAt to fold(members)
+            } else {
+                members.forEach { expired += it.key }
+            }
+        }
+        for (notification in transients) {
+            val startedAt = firstSeenAt.getValue(notification.key)
+            if (consider(startedAt, transientTimeoutMs)) {
+                ephemeral += startedAt to notification
+            } else {
+                expired += notification.key
+            }
+        }
+
+        val ordered = critical.sortedByDescending { firstSeenAt.getValue(it.key) } +
+            persistent.sortedWith(
+                compareByDescending<IslandNotification> { it.mode == IslandMode.IncomingCall }
+                    .thenByDescending { AlertClassifier.isRide(it) }
+                    .thenByDescending { firstSeenAt.getValue(it.key) }
+            ) +
+            ephemeral.sortedByDescending { it.first }.map { it.second } +
+            background.sortedByDescending { firstSeenAt.getValue(it.key) }
+
+        val shown = when {
+            biometricHold -> ordered.filter(::breaksBiometricHold)
+            immersive -> ordered.filter(::breaksSuppression)
+            else -> ordered
+        }
+        val visible = shown.take(maxActive)
+        return Evaluation(if (isLocked) visible.map(LockscreenPrivacy::mask) else visible, nextExpiry)
+    }
+
+    /** Tier 0 alerts and an incoming call bypass immersive suppression; they are a prefix of the order. */
+    private fun breaksSuppression(notification: IslandNotification): Boolean =
+        notification.mode == IslandMode.IncomingCall || AlertClassifier.classify(notification) == AlertTier.Critical
+
+    private fun groupOf(notification: IslandNotification): String =
+        if (foldGroups) notification.packageName + "|" + (notification.groupId ?: "") else notification.key
+
+    private fun fold(members: List<IslandNotification>): IslandNotification {
+        val latest = members.maxByOrNull { it.timeMillis } ?: members.last()
+        if (members.size == 1) return latest
+        return latest.copy(
+            groupCount = members.size,
+            // The most private member decides how much of the group the lockscreen may show.
+            lockscreenVisibility = members.minOf { it.lockscreenVisibility },
+            memberKeys = members.map { it.key },
+            groupIcons = members.sortedBy { it.timeMillis }
+                .mapNotNull { it.largeIcon ?: it.icon }
+                .takeLast(MAX_STACKED_ICONS)
+        )
+    }
+
+    companion object {
+        /**
+         * A ringing call or a ringing alarm shows (and stays touchable) through the face-unlock hold: Accept,
+         * Decline, Snooze and Stop must work from the lockscreen at once (Rule_Book §4.7, §4.10, §8.2).
+         */
+        fun breaksBiometricHold(notification: IslandNotification): Boolean =
+            (notification.mode == IslandMode.IncomingCall && notification.isCallRinging) ||
+                notification.mode == IslandMode.Alarm
+
+        /** A timeout value that never runs out (tests of the view model's card machinery). */
+        const val NEVER = Long.MAX_VALUE
+
+        /** Messages: exactly seven seconds. */
+        const val DEFAULT_COMMUNICATION_TIMEOUT_MS = 7_000L
+
+        /** Battery, Bluetooth, flashlight: inside the rulebook's three-to-seven-second window. */
+        const val DEFAULT_TRANSIENT_TIMEOUT_MS = 5_000L
+
+        /** The main pill plus the companion bubble. */
+        const val MAX_ACTIVE = 2
+        const val MAX_STACKED_ICONS = 3
+    }
+}

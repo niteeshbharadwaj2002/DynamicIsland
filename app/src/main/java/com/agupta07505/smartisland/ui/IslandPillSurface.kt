@@ -158,6 +158,8 @@ internal fun Modifier.islandPillSurface(
                 Modifier.islandShellShadow({ layout.safeRadius }, squareTop, activeMainShadow, { layout.singleShadowAlpha })
             } else Modifier
         )
+        // The kinetic glow sits outside the shell, so it goes before the clip like the shadow.
+        .then(if (twoIslandsDrawn || layout.isHiding) Modifier else Modifier.kineticGlow({ layout.glowRadius }, { layout.safeRadius }))
         // Two separate islands draw (and shadow) themselves; clipping here would cut their shadows.
         .then(if (twoIslandsDrawn) Modifier else Modifier.islandShellClip({ layout.safeRadius }, squareTop))
         .then(

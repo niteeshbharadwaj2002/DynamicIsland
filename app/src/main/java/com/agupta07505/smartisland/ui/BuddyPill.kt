@@ -42,15 +42,21 @@ internal class BuddyPillState(
  * overrides "Hide when idle" (it tucks itself away after a while instead). The same object when nothing changes.
  * Applied once, in [IslandViewModel.displaySettings], so the overlay view, the window and the touch region agree.
  */
-internal fun SmartIslandSettings.withBuddyPill(
+internal fun SmartIslandSettings.withPillLayout(
     holeWidthDp: Float?,
+    active: com.agupta07505.smartisland.model.IslandNotification?,
     notificationCount: Int,
     tucked: Boolean,
-    isLandscape: Boolean
+    isLandscape: Boolean,
+    maxAlertWidthDp: Float = PillLayout.MAX_ALERT_PILL_WIDTH_DP
 ): SmartIslandSettings {
-    if (!buddyEnabled || isLandscape) return this
-    val widthDp = PillLayout.effectiveWidthDp(this, holeWidthDp, notificationCount, tucked)
-    return if (widthDp == width && !hideWhenIdle) this else copy(width = widthDp, hideWhenIdle = false)
+    // Landscape has its own pill geometry (upstream's landscape layout); neither the buddy nor an alert's text widens it.
+    if (isLandscape) return this
+    val wing = PillLayout.contentWingDp(active)
+    if (!buddyEnabled && wing <= 0f) return this
+    val widthDp = PillLayout.effectiveWidthDp(this, holeWidthDp, notificationCount, tucked, wing, maxAlertWidthDp)
+    val hide = if (buddyEnabled) false else hideWhenIdle
+    return if (widthDp == width && hide == hideWhenIdle) this else copy(width = widthDp, hideWhenIdle = hide)
 }
 
 @Composable

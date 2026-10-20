@@ -97,7 +97,7 @@ object NotificationFilter {
             )
         // A CallStyle call keeps the caller in its person extra and may leave title and text empty.
         val isCallWithPerson = mode == IslandMode.IncomingCall && CallStyleExtras.callerName(notification) != null
-        if (!hasStyledContent && !isCallWithPerson && title.isNullOrBlank() && text.isNullOrBlank() && mode != IslandMode.Stopwatch && mode != IslandMode.Timer && mode != IslandMode.ScreenRecording && mode != IslandMode.AudioRecording) return "empty-title-and-text"
+        if (!hasStyledContent && !isCallWithPerson && title.isNullOrBlank() && text.isNullOrBlank() && mode != IslandMode.Stopwatch && mode != IslandMode.Timer && mode != IslandMode.ScreenRecording && mode != IslandMode.AudioRecording && mode != IslandMode.Alarm) return "empty-title-and-text"
 
         // The island manages the torch itself through CameraManager.TorchCallback.
         val titleText = "$title $text".lowercase()
@@ -124,7 +124,7 @@ object NotificationFilter {
                 (notification.extras?.getInt(Notification.EXTRA_PROGRESS_MAX, 0) ?: 0) > 0
             )
             val isAlarmNotification = TimerStopwatchParser.isAlarm(notification, packageName)
-            if (!isProgressNotification && !isAlarmNotification && mode != IslandMode.IncomingCall && mode != IslandMode.Music && mode != IslandMode.LiveActivity && mode != IslandMode.Navigation && mode != IslandMode.DownloadUpload && mode != IslandMode.Hotspot && mode != IslandMode.ScreenRecording && mode != IslandMode.AudioRecording && mode != IslandMode.Timer && mode != IslandMode.Stopwatch) {
+            if (!isProgressNotification && !isAlarmNotification && mode != IslandMode.IncomingCall && mode != IslandMode.Music && mode != IslandMode.LiveActivity && mode != IslandMode.Navigation && mode != IslandMode.DownloadUpload && mode != IslandMode.Hotspot && mode != IslandMode.ScreenRecording && mode != IslandMode.AudioRecording && mode != IslandMode.Alarm && mode != IslandMode.Timer && mode != IslandMode.Stopwatch) {
                 return "ongoing-not-a-live-card"
             }
         }
@@ -234,6 +234,11 @@ fun Notification.toIslandMode(
         return IslandMode.Timer
     }
 
+    // A ringing alarm (Rule_Book §4.10); upcoming / snoozed alarm notifications stay ordinary alerts.
+    if (RingingAlarm.isRinging(this, packageName)) {
+        return IslandMode.Alarm
+    }
+
     // A voice recorder's cloud backup would read as a recording in progress, so it is classified as a transfer first.
     val recorderHasProgress = (extras?.getInt(Notification.EXTRA_PROGRESS_MAX, 0) ?: 0) > 0
     if (TransferClassifier.isRecorderTransfer(packageName, titleText, recorderHasProgress)) {
@@ -287,7 +292,7 @@ fun Notification.toIslandMode(
     }
 
     if (navigationEnabled && sbn != null) {
-        if (NavigationParser.parse(sbn) != null) {
+        if (NavigationParser.parseRide(sbn) != null || NavigationParser.parse(sbn) != null) {
             return IslandMode.Navigation
         }
     }

@@ -40,6 +40,8 @@ import android.os.Build
 import android.os.SystemClock
 import android.provider.Settings
 import android.service.notification.NotificationListenerService
+import android.service.notification.NotificationListenerService.Ranking
+import com.agupta07505.smartisland.alert.LockscreenPrivacy
 import android.service.notification.NotificationListenerService.RankingMap
 import android.service.notification.StatusBarNotification
 import androidx.core.graphics.drawable.toBitmap
@@ -1033,7 +1035,8 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
                     pendingIntent = action.actionIntent,
                     isQuickReply = isReply,
                     remoteInputKey = remoteInput?.resultKey ?: "key_text_reply",
-                    icon = if (mode == IslandMode.Music) loadActionIcon(action, sbn.packageName) else null
+                    icon = if (mode == IslandMode.Music) loadActionIcon(action, sbn.packageName) else null,
+                    semanticAction = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) action.semanticAction else 0
                 )
             }
         }.orEmpty().let { base ->
@@ -1577,6 +1580,8 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
                 stopwatchChronometerBase = stopwatchChronometerBase,
                 timerRemainingSeconds = timerRemainingSeconds,
                 exactClock = isShadeFixCard && mode == IslandMode.Timer,
+                groupId = notification.group,
+                lockscreenVisibility = lockscreenVisibilityOf(sbn),
                 transferKind = if (mode == IslandMode.DownloadUpload) {
                     notification.transferKind(sbn.packageName)
                 } else {
@@ -1792,6 +1797,26 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
             (getSystemService(android.content.Context.NOTIFICATION_SERVICE) as? NotificationManager)?.notificationPolicy
         } ?: return false
         return (policy.suppressedVisualEffects and NotificationManager.Policy.SUPPRESSED_EFFECT_NOTIFICATION_LIST) != 0
+    }
+
+    /**
+     * How much of [sbn] the lockscreen may show: the app's own visibility, tightened by the user's per-channel choice
+     * (Android 12+) and the system's "show notifications on the lock screen" switch (Rule_Book 8.1).
+     */
+    private fun lockscreenVisibilityOf(sbn: StatusBarNotification): Int {
+        val channelVisibility = runCatchingLogged(TAG, "Reading channel visibility failed") {
+            val ranking = Ranking()
+            // The resolved lockscreen override is only exposed from Android 12; older versions use the app's value.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && currentRanking?.getRanking(sbn.key, ranking) == true) {
+                ranking.lockscreenVisibilityOverride.takeIf { it != Ranking.VISIBILITY_NO_OVERRIDE }
+            } else {
+                null
+            }
+        }
+        val osShowsNotifications = runCatchingLogged(TAG, "Reading lockscreen setting failed") {
+            Settings.Secure.getInt(contentResolver, LOCK_SCREEN_SHOW_NOTIFICATIONS, 1) != 0
+        } ?: true
+        return LockscreenPrivacy.effectiveVisibility(sbn.notification.visibility, channelVisibility, osShowsNotifications)
     }
 
     internal fun isBlockedByDoNotDisturb(
@@ -2388,6 +2413,7 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
         var isSystemConnected: Boolean = false
             private set
 
+        private const val LOCK_SCREEN_SHOW_NOTIFICATIONS = "lock_screen_show_notifications"
         private const val TAG = "SmartIslandNotificationListener"
         private const val VOIP_CARD_KEY = "voip_call_audio"
         private const val ICON_BITMAP_SIZE = 96

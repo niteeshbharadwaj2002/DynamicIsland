@@ -99,6 +99,9 @@ internal fun calculateExpandedWidth(
     }
 }
 
+/** Air kept below the notch / status bar when the expanded island sits under them in notch mode. */
+internal const val NOTCH_MODE_EXPANDED_CLEARANCE_DP = 8f
+
 internal fun calculateExpandedTopOffset(
     enableNotchMode: Boolean,
     hasCompanion: Boolean,
@@ -109,7 +112,7 @@ internal fun calculateExpandedTopOffset(
     isLandscape: Boolean = false
 ): Float {
     val offset = if (enableNotchMode) {
-        maxOf(statusBarHeightDp, notchHeightDp) + 8f
+        maxOf(statusBarHeightDp, notchHeightDp) + NOTCH_MODE_EXPANDED_CLEARANCE_DP
     } else if (hasCompanion) {
         maxOf(statusBarHeightDp, circleSizeDp + compactGapDp)
     } else {
@@ -160,8 +163,15 @@ internal const val SECONDARY_RETURN_MS = com.agupta07505.smartisland.model.SECON
 internal val MERGE_IN_EASING = androidx.compose.animation.core.CubicBezierEasing(0.55f, 0.05f, 0.35f, 1f)
 internal val MERGE_OUT_EASING = androidx.compose.animation.core.CubicBezierEasing(0.25f, 0.1f, 0.25f, 1f)
 
-internal fun islandSpringDamping(isLandscape: Boolean): Float = if (isLandscape) 0.86f else 0.8f
-internal fun islandSpringStiffness(isLandscape: Boolean): Float = if (isLandscape) 280f else 400f
+/**
+ * The island's size springs. A physical [SpringPreset] (Bouncy, Snappy, Critical, Loose; Rule_Book 2.2) replaces the
+ * orientation tuning; Standard keeps it. The animation-speed scale multiplies the result at the call sites, so a
+ * preset and the speed setting compose.
+ */
+internal fun islandSpringDamping(isLandscape: Boolean, preset: SpringPreset = SpringPreset.Standard): Float =
+    if (preset.isPhysical) preset.dampingRatio else if (isLandscape) 0.86f else 0.8f
+internal fun islandSpringStiffness(isLandscape: Boolean, preset: SpringPreset = SpringPreset.Standard): Float =
+    if (preset.isPhysical) preset.stiffness else if (isLandscape) 280f else 400f
 
 internal enum class CompactNotificationShape { MiniPill, Circle }
 
@@ -175,6 +185,7 @@ internal fun defaultEstimatedHeightForMode(mode: IslandMode?): Dp {
         IslandMode.DownloadUpload, IslandMode.Hotspot -> 160.dp
         IslandMode.Bluetooth, IslandMode.Flashlight, IslandMode.ScreenRecording, IslandMode.AudioRecording,
         IslandMode.Timer, IslandMode.Stopwatch -> 115.dp
+        IslandMode.Alarm, IslandMode.PrivacyIndicator -> 135.dp
         IslandMode.Empty, null -> 135.dp
     }
 }

@@ -30,6 +30,18 @@ import androidx.lifecycle.viewModelScope
 @OptIn(ExperimentalCoroutinesApi::class)
 class IslandViewModelTest {
 
+    /**
+     * These tests cover the view model's card machinery (selection, sibling picker, event cycling, idle timeout),
+     * which is upstream's. The rulebook's slot cap, message folding and 7 s expiry sit in the alert engine and are
+     * tested in AlertEngineTest and IslandViewModelAlertRulesTest, so here the engine lets everything through.
+     */
+    private fun transparentEngine() = com.agupta07505.smartisland.alert.AlertEngine(
+        communicationTimeoutMs = com.agupta07505.smartisland.alert.AlertEngine.NEVER,
+        transientTimeoutMs = com.agupta07505.smartisland.alert.AlertEngine.NEVER,
+        maxActive = Int.MAX_VALUE,
+        foldGroups = false
+    )
+
     private val testDispatcher = StandardTestDispatcher()
 
     @Before
@@ -46,7 +58,7 @@ class IslandViewModelTest {
     fun testMusicPillHidesInForegroundAndReappearsInBackground() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
 
         val musicNotif = IslandNotification(
             key = "music_1",
@@ -88,7 +100,7 @@ class IslandViewModelTest {
     fun everyLiveCardOfTheForegroundAppHidesButCallsAndOtherAppsStay() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         fun card(key: String, pkg: String, mode: IslandMode) = IslandNotification(
             key = key, packageName = pkg, appName = pkg, title = key, text = key,
             mode = mode, mediaIsPlaying = mode == IslandMode.Music, timeMillis = System.currentTimeMillis()
@@ -123,7 +135,7 @@ class IslandViewModelTest {
     @Test
     fun swipeDownGoesThroughEveryStepOfACardWithSeveralPicturesAndSwipeUpWalksBack() = runTest {
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(mockk<SmartIslandSettingsRepository>(relaxed = true), notifRepo)
+        val viewModel = IslandViewModel(mockk<SmartIslandSettingsRepository>(relaxed = true), notifRepo, transparentEngine())
         notifRepo.postNotification(pictureCard("a", 3))
         testDispatcher.scheduler.runCurrent()
         viewModel.expand()
@@ -165,7 +177,7 @@ class IslandViewModelTest {
     @Test
     fun aCardWithOnePictureSkipsThePreview() = runTest {
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(mockk<SmartIslandSettingsRepository>(relaxed = true), notifRepo)
+        val viewModel = IslandViewModel(mockk<SmartIslandSettingsRepository>(relaxed = true), notifRepo, transparentEngine())
         notifRepo.postNotification(pictureCard("a", 1))
         testDispatcher.scheduler.runCurrent()
         viewModel.expand()
@@ -186,7 +198,7 @@ class IslandViewModelTest {
     @Test
     fun aCardWithoutPicturesOrALongTextHasNoDeeperStepAndACollapseStartsOverAtTheFirstState() = runTest {
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(mockk<SmartIslandSettingsRepository>(relaxed = true), notifRepo)
+        val viewModel = IslandViewModel(mockk<SmartIslandSettingsRepository>(relaxed = true), notifRepo, transparentEngine())
         notifRepo.postNotification(chat("a", "short"))
         testDispatcher.scheduler.runCurrent()
         viewModel.expand()
@@ -208,7 +220,7 @@ class IslandViewModelTest {
     fun testInputActivePausesAutoCollapseAndCollapseResetsInputActive() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
 
         // A card to show (an expanded island with nothing in it closes by itself)
         notifRepo.postNotification(chat("a", "first"))
@@ -248,7 +260,7 @@ class IslandViewModelTest {
     fun testExplicitCollapseResetsInputActive() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(chat("a", "first"))
         testDispatcher.scheduler.runCurrent()
 
@@ -270,7 +282,7 @@ class IslandViewModelTest {
             com.agupta07505.smartisland.data.SmartIslandSettings(autoExpandOnNotification = true)
         )
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         testDispatcher.scheduler.runCurrent()
 
         val notif = IslandNotification(
@@ -297,7 +309,7 @@ class IslandViewModelTest {
             com.agupta07505.smartisland.data.SmartIslandSettings(autoExpandOnNotification = false)
         )
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         testDispatcher.scheduler.runCurrent()
 
         val notif = IslandNotification(
@@ -491,7 +503,7 @@ class IslandViewModelTest {
     fun staticNotificationsRevertToIdleAfterTheIdleTimeout() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(chat("a"))
         testDispatcher.scheduler.runCurrent()
         assertEquals(1, viewModel.visibleNotifications.value.size)
@@ -513,7 +525,7 @@ class IslandViewModelTest {
     fun otherActiveElementsKeepStaticNotificationsOnTheIsland() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(chat("a"))
         notifRepo.postNotification(
             IslandNotification(
@@ -537,7 +549,7 @@ class IslandViewModelTest {
     fun pausedMediaRevertsToIdleAfterTenSecondsAndResumeBringsItBack() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(music(playing = false))
         testDispatcher.scheduler.runCurrent()
         assertEquals(1, viewModel.visibleNotifications.value.size)
@@ -564,7 +576,7 @@ class IslandViewModelTest {
     fun pausedLiveCardsIdleOutButRunningOnesKeepTheIsland() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         fun stopwatch(paused: Boolean) = IslandNotification(
             key = "sw", packageName = "com.clock", appName = "Clock", title = "Stopwatch", text = "0:12",
             mode = IslandMode.Stopwatch, recordingPaused = paused, timeMillis = 1L
@@ -586,7 +598,7 @@ class IslandViewModelTest {
     fun aRunningCardKeepsPausedMediaOnTheIsland() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(music(playing = false))
         notifRepo.postNotification(
             IslandNotification(
@@ -604,7 +616,7 @@ class IslandViewModelTest {
     fun updatedStaticNotificationReappearsAfterIdleTimeout() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(chat("a", "first"))
         testDispatcher.scheduler.runCurrent()
         testDispatcher.scheduler.advanceTimeBy(11_100L)
@@ -620,7 +632,7 @@ class IslandViewModelTest {
     fun tappingTheIdleCutoutPutsAwayEveryCardLiveOnesIncluded() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         fun nav(text: String) = IslandNotification(
             key = "nav", packageName = "com.maps", appName = "Maps", title = "Turn left", text = text,
             mode = IslandMode.Navigation, timeMillis = 1L
@@ -648,7 +660,7 @@ class IslandViewModelTest {
     fun tappingTheIdleCutoutAgainBringsEveryStoredCardBack() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(music(playing = true))
         notifRepo.postNotification(chat("a", "first"))
         testDispatcher.scheduler.runCurrent()
@@ -667,7 +679,7 @@ class IslandViewModelTest {
     fun liveCardsBroughtBackByATapGetNoAutoTimer() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(music(playing = true))
         testDispatcher.scheduler.runCurrent()
 
@@ -690,7 +702,7 @@ class IslandViewModelTest {
     fun aLiveCardThatArrivesByItselfGoesBackToTheIdleCutoutAfterTheTimer() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(music(playing = true))
         testDispatcher.scheduler.runCurrent()
         assertEquals(1, viewModel.visibleNotifications.value.size)
@@ -717,7 +729,7 @@ class IslandViewModelTest {
     fun theAutoCollapseWaitsWhileAFingerHoldsTheFloatingWindowPullAndRestartsOnRelease() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(chat("a", "first"))
         testDispatcher.scheduler.runCurrent()
         viewModel.expand()
@@ -746,7 +758,7 @@ class IslandViewModelTest {
     fun theLiveTimerWaitsWhileTheIslandIsExpanded() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(music(playing = true))
         testDispatcher.scheduler.runCurrent()
         viewModel.expand()
@@ -763,7 +775,7 @@ class IslandViewModelTest {
     fun callsNeverTimeOut() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(
             IslandNotification(
                 key = "call", packageName = "com.dialer", appName = "Phone", title = "Ann", text = "Ongoing call",
@@ -780,7 +792,7 @@ class IslandViewModelTest {
     fun theOpenShadeHidesEveryEventAndComesBackWhenItCloses() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(music(playing = true))
         notifRepo.postNotification(chat("a", "first"))
         testDispatcher.scheduler.runCurrent()
@@ -806,7 +818,7 @@ class IslandViewModelTest {
             com.agupta07505.smartisland.data.SmartIslandSettings(autoExpandOnNotification = true)
         )
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         testDispatcher.scheduler.runCurrent()
         viewModel.setShadeOpen(true)
         testDispatcher.scheduler.runCurrent()
@@ -837,7 +849,7 @@ class IslandViewModelTest {
             )
         )
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         testDispatcher.scheduler.runCurrent()
 
         notifRepo.postNotification(chat("a", "hello"), autoExpand = true)
@@ -855,7 +867,7 @@ class IslandViewModelTest {
     fun aManualExpandIsNotAutoExpandedAndCollapseClearsTheFlag() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(chat("a", "hello"))
         testDispatcher.scheduler.runCurrent()
 
@@ -875,7 +887,7 @@ class IslandViewModelTest {
     fun expandAndToggleDoNothingUnderTheShadeOrWithoutACard() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         testDispatcher.scheduler.runCurrent()
 
         // No card at all: opening by tap or swipe must not give an empty island.
@@ -896,7 +908,7 @@ class IslandViewModelTest {
     fun anExpandedIslandWhoseListBecomesEmptyClosesAfterAShortWait() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(chat("a", "first"))
         testDispatcher.scheduler.runCurrent()
         viewModel.expand()
@@ -914,7 +926,7 @@ class IslandViewModelTest {
     fun tappingTheIdleCutoutWhileExpandedCollapsesAndPutsEverythingAway() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(music(playing = true))
         testDispatcher.scheduler.runCurrent()
         viewModel.expand()
@@ -932,7 +944,7 @@ class IslandViewModelTest {
     fun tappingTheIdleCutoutWhileExpandedClosesInTwoSteps() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(music(playing = true))
         testDispatcher.scheduler.runCurrent()
         viewModel.expand()
@@ -971,7 +983,7 @@ class IslandViewModelTest {
     fun anIslandOpenedAgainDuringStepOneKeepsItsCards() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(music(playing = true))
         testDispatcher.scheduler.runCurrent()
         viewModel.expand()
@@ -993,7 +1005,7 @@ class IslandViewModelTest {
     fun tappingTheIdleCutoutWithACollapsedCardLeavesAtOnceOnTheExitSpring() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(music(playing = true))
         testDispatcher.scheduler.runCurrent()
 
@@ -1008,7 +1020,7 @@ class IslandViewModelTest {
     fun revealingStoredCardsRaisesTheTapFlagForTheOpeningOnly() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(music(playing = true))
         testDispatcher.scheduler.runCurrent()
         viewModel.onIdleDotTapped()
@@ -1029,7 +1041,7 @@ class IslandViewModelTest {
     fun anEventSwipeRevealDoesNotRaiseTheTapFlag() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(music(playing = true))
         testDispatcher.scheduler.runCurrent()
         viewModel.onIdleDotTapped()
@@ -1051,7 +1063,7 @@ class IslandViewModelTest {
     fun pausedDownloadsAndUploadsIdleOutAndActiveOnesWaitForTheLiveTimer() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         val kinds = com.agupta07505.smartisland.model.TransferKind.DOWNLOAD to com.agupta07505.smartisland.model.TransferKind.UPLOAD
         val active = com.agupta07505.smartisland.model.TransferState.ACTIVE
         val paused = com.agupta07505.smartisland.model.TransferState.PAUSED
@@ -1076,7 +1088,7 @@ class IslandViewModelTest {
     fun tappingIdleCutoutBringsStoredCardsBackAndTheyIdleOutAgain() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(chat("a"))
         testDispatcher.scheduler.runCurrent()
         assertFalse(viewModel.hasIdleStoredCards.value)
@@ -1101,7 +1113,7 @@ class IslandViewModelTest {
     fun newNotificationPopsIntoPrimaryForOnePointEightSecondsThenPriorityReturns() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
 
         notifRepo.postNotification(
             IslandNotification(
@@ -1199,7 +1211,7 @@ class IslandViewModelTest {
     fun switchNotificationSkipsSiblingsAndSwitchSiblingStaysInTheApp() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(appCard("a1", "app.a"))
         notifRepo.postNotification(appCard("a2", "app.a"))
         notifRepo.postNotification(appCard("b1", "app.b"))
@@ -1227,7 +1239,7 @@ class IslandViewModelTest {
     fun siblingPickerOpensOnlyWhenExpandedWithSiblingsAndSelectionClosesIt() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(appCard("a1", "app.a"))
         notifRepo.postNotification(appCard("a2", "app.a"))
         notifRepo.postNotification(appCard("b1", "app.b"))
@@ -1263,7 +1275,7 @@ class IslandViewModelTest {
     fun siblingPickerClosesWhenTheSelectedCardChangesOrLosesItsSiblings() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(appCard("a1", "app.a"))
         notifRepo.postNotification(appCard("a2", "app.a"))
         notifRepo.postNotification(appCard("b1", "app.b"))
@@ -1300,7 +1312,7 @@ class IslandViewModelTest {
     fun autoCollapseWaitsWhileTheSiblingPickerIsOpen() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(appCard("a1", "app.a"))
         notifRepo.postNotification(appCard("a2", "app.a"))
         testDispatcher.scheduler.runCurrent()
@@ -1325,7 +1337,7 @@ class IslandViewModelTest {
     fun siblingPickerDoesNotOpenWhileAReplyIsBeingTyped() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(appCard("a1", "app.a"))
         notifRepo.postNotification(appCard("a2", "app.a"))
         testDispatcher.scheduler.runCurrent()
@@ -1342,7 +1354,7 @@ class IslandViewModelTest {
     fun collapsingClosesTheSiblingPicker() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(appCard("a1", "app.a"))
         notifRepo.postNotification(appCard("a2", "app.a"))
         testDispatcher.scheduler.runCurrent()
@@ -1359,7 +1371,7 @@ class IslandViewModelTest {
     fun autoCollapseWaitsWhileAMessageIsExpandedThenStartsAgain() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(chat("a", "a long message"))
         testDispatcher.scheduler.runCurrent()
 
@@ -1400,7 +1412,7 @@ class IslandViewModelTest {
     fun anAutoExpandEventDoesNotTakeTheCardWhileTypingAndNeverTakesItLater() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(chat("a"))
         testDispatcher.scheduler.runCurrent()
         viewModel.expand()
@@ -1424,7 +1436,7 @@ class IslandViewModelTest {
             com.agupta07505.smartisland.data.SmartIslandSettings(autoExpandOnNotification = true)
         )
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(chat("a"))
         testDispatcher.scheduler.runCurrent()
         viewModel.expand()
@@ -1444,7 +1456,7 @@ class IslandViewModelTest {
             com.agupta07505.smartisland.data.SmartIslandSettings(autoExpandOnNotification = true)
         )
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(chat("a"))
         testDispatcher.scheduler.runCurrent()
         viewModel.expand()
@@ -1459,7 +1471,7 @@ class IslandViewModelTest {
     fun aRingingCallTakesTheCardWhileTypingAndTypingResumesWhenItIsAnswered() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(chat("a"))
         testDispatcher.scheduler.runCurrent()
         viewModel.expand()
@@ -1493,7 +1505,7 @@ class IslandViewModelTest {
     fun typingResumesWhenTheCallIsDeclined() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(chat("a"))
         testDispatcher.scheduler.runCurrent()
         viewModel.expand()
@@ -1516,7 +1528,7 @@ class IslandViewModelTest {
     fun typingDoesNotResumeWhileTheCallIsStillRinging() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(chat("a"))
         testDispatcher.scheduler.runCurrent()
         viewModel.expand()
@@ -1536,7 +1548,7 @@ class IslandViewModelTest {
     fun typingDoesNotResumeWhenTheRepliedToNotificationIsGone() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(chat("a"))
         testDispatcher.scheduler.runCurrent()
         viewModel.expand()
@@ -1563,7 +1575,7 @@ class IslandViewModelTest {
             com.agupta07505.smartisland.data.SmartIslandSettings(autoExpandOnNotification = true, autoExpandOnLockScreen = false)
         )
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         testDispatcher.scheduler.runCurrent()
 
         viewModel.isLocked.value = true
@@ -1585,7 +1597,7 @@ class IslandViewModelTest {
             com.agupta07505.smartisland.data.SmartIslandSettings(autoExpandOnNotification = true, autoExpandOnLockScreen = true)
         )
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         testDispatcher.scheduler.runCurrent()
 
         viewModel.isLocked.value = true
@@ -1601,7 +1613,7 @@ class IslandViewModelTest {
             com.agupta07505.smartisland.data.SmartIslandSettings(autoExpandOnNotification = true, autoExpandOnLockScreen = false)
         )
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         testDispatcher.scheduler.runCurrent()
 
         viewModel.isLocked.value = true
@@ -1633,7 +1645,7 @@ class IslandViewModelTest {
             com.agupta07505.smartisland.data.SmartIslandSettings(autoExpandOnNotification = true)
         )
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(chat("old"))
         testDispatcher.scheduler.runCurrent()
 
@@ -1651,7 +1663,7 @@ class IslandViewModelTest {
     fun anOpenCardTheUserIsReadingStaysWhenAnotherCardEnds() = runTest {
         val settingsRepo = mockk<SmartIslandSettingsRepository>(relaxed = true)
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         notifRepo.postNotification(chat("a"))
         notifRepo.postNotification(batteryCard("battery_plugged_in"))
         testDispatcher.scheduler.runCurrent()
@@ -1675,7 +1687,7 @@ class IslandViewModelTest {
             com.agupta07505.smartisland.data.SmartIslandSettings(autoExpandOnNotification = true)
         )
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         testDispatcher.scheduler.runCurrent()
 
         notifRepo.postNotification(appCard("quiet", "com.news", silent = true), autoExpand = true)
@@ -1694,7 +1706,7 @@ class IslandViewModelTest {
             com.agupta07505.smartisland.data.SmartIslandSettings(autoExpandPackages = setOf("com.news"))
         )
         val onNotifs = SmartIslandNotificationRepository()
-        val onVm = IslandViewModel(on, onNotifs)
+        val onVm = IslandViewModel(on, onNotifs, transparentEngine())
         testDispatcher.scheduler.runCurrent()
         onNotifs.postNotification(appCard("quiet", "com.news", silent = true), autoExpand = true)
         testDispatcher.scheduler.runCurrent()
@@ -1705,7 +1717,7 @@ class IslandViewModelTest {
             com.agupta07505.smartisland.data.SmartIslandSettings(noAutoExpandPackages = setOf("com.news"))
         )
         val offNotifs = SmartIslandNotificationRepository()
-        val offVm = IslandViewModel(off, offNotifs)
+        val offVm = IslandViewModel(off, offNotifs, transparentEngine())
         testDispatcher.scheduler.runCurrent()
         offNotifs.postNotification(appCard("loud", "com.news", silent = false), autoExpand = true)
         testDispatcher.scheduler.runCurrent()
@@ -1719,7 +1731,7 @@ class IslandViewModelTest {
             com.agupta07505.smartisland.data.SmartIslandSettings(noAutoExpandEvents = setOf("battery_plugged_in"))
         )
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         testDispatcher.scheduler.runCurrent()
 
         notifRepo.postNotification(batteryCard("battery_plugged_in"), autoExpand = true)
@@ -1742,7 +1754,7 @@ class IslandViewModelTest {
             )
         )
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         testDispatcher.scheduler.runCurrent()
         notifRepo.postNotification(call(ringing = true), autoExpand = true)
         testDispatcher.scheduler.runCurrent()
@@ -1760,7 +1772,7 @@ class IslandViewModelTest {
             )
 
         val notifRepo = SmartIslandNotificationRepository()
-        val viewModel = IslandViewModel(settingsRepo, notifRepo)
+        val viewModel = IslandViewModel(settingsRepo, notifRepo, transparentEngine())
         testDispatcher.scheduler.runCurrent()
 
         notifRepo.postNotification(

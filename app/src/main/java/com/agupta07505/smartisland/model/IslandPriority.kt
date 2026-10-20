@@ -10,13 +10,14 @@ package com.agupta07505.smartisland.model
 /** Which card owns the primary cutout and which goes to the secondary round cutout. */
 object IslandPriority {
     fun rank(mode: IslandMode): Int = when (mode) {
-        IslandMode.IncomingCall -> 0
+        IslandMode.IncomingCall, IslandMode.Alarm -> 0
         IslandMode.Navigation -> 10
         IslandMode.LiveActivity,
         IslandMode.Timer,
         IslandMode.Stopwatch,
         IslandMode.ScreenRecording,
         IslandMode.AudioRecording,
+        IslandMode.PrivacyIndicator,
         IslandMode.Hotspot,
         IslandMode.Flashlight -> 20
         IslandMode.Music -> 30

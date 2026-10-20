@@ -79,9 +79,19 @@ import com.agupta07505.smartisland.model.IslandMode
 import com.agupta07505.smartisland.model.IslandNotification
 import com.agupta07505.smartisland.data.SmartIslandSettings
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.togetherWith
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+
+/** What one slot of the collapsed pill shows; [key] identifies "the same alert" across updates. */
+private data class CollapsedSlot(val mode: IslandMode, val notification: IslandNotification?) {
+    val key: Pair<IslandMode, String?> = mode to when (mode) {
+        // Every message from one app shares a slot, so a growing group refreshes instead of fading.
+        IslandMode.Notification -> notification?.packageName
+        else -> notification?.key
+    }
+}
 
 @Composable
 fun IslandCollapsedContent(
@@ -112,7 +122,34 @@ fun IslandCollapsedContent(
     val translationXLeft = translationProgress * maxTranslationPx
     val translationXRight = -translationProgress * maxTranslationPx
 
-    Box(modifier = modifier.fillMaxSize()) {
+    // A new message folded into the group gives the whole pill a small spring "pulse" (1.05x and back)
+    // instead of redrawing it.
+    val groupCount = notification?.groupCount ?: 1
+    val pulse = remember { androidx.compose.animation.core.Animatable(1f) }
+    var lastGroupCount by remember { mutableStateOf(groupCount) }
+    LaunchedEffect(groupCount) {
+        if (groupCount > lastGroupCount) {
+            pulse.animateTo(1.05f, androidx.compose.animation.core.spring(dampingRatio = 0.6f, stiffness = 900f))
+            pulse.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.45f, stiffness = 400f))
+        }
+        lastGroupCount = groupCount
+    }
+    val appContext = androidx.compose.ui.platform.LocalContext.current
+    val holeDp = remember(appContext) {
+        com.agupta07505.smartisland.util.CameraCutoutDetector.detect(appContext)
+            .let { if (it.hasHardwareCutout) it.rawWidthDp else 28f }
+    }
+
+    androidx.compose.foundation.layout.BoxWithConstraints(
+        modifier = modifier
+            .fillMaxSize()
+            .graphicsLayer {
+                scaleX = pulse.value
+                scaleY = pulse.value
+            }
+    ) {
+        // What is left of the right-hand wing for text, after the hole, the end padding, the dot and the gap.
+        val alertTextMax = ((maxWidth - holeDp.dp) / 2f - RIGHT_SLOT_PADDING_END_DP.dp - 14.dp).coerceAtLeast(24.dp)
         Box(
             modifier = Modifier
                 .align(Alignment.CenterStart)
@@ -123,8 +160,29 @@ fun IslandCollapsedContent(
                 },
             contentAlignment = Alignment.Center
         ) {
+            androidx.compose.animation.AnimatedContent(
+                targetState = CollapsedSlot(mode, notification),
+                // Updates to the same alert (or more messages from the same app) refresh in place; only a
+                // different alert or mode crossfades, e.g. a message taking over a music pill and handing it back.
+                contentKey = { it.key },
+                transitionSpec = {
+                    val spec = androidx.compose.animation.core.spring<Float>(
+                        stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
+                    )
+                    androidx.compose.animation.fadeIn(spec) togetherWith androidx.compose.animation.fadeOut(spec)
+                },
+                contentAlignment = Alignment.Center,
+                label = "collapsedSlot"
+            ) { slot ->
+            val mode = slot.mode
+            val notification = slot.notification
             when (mode) {
-                IslandMode.Notification -> NotificationGlyph(notification = notification, settings = settings)
+                IslandMode.Notification ->
+                    if (notification != null && notification.groupCount > 1) {
+                        StackedAlertBadges(notification = notification, color = Color(settings.notificationDotColor))
+                    } else {
+                        NotificationGlyph(notification = notification, settings = settings)
+                    }
                 IslandMode.IncomingCall -> {
                     val icon = notification?.largeIcon ?: notification?.icon
                     if (icon != null) {
@@ -151,15 +209,16 @@ fun IslandCollapsedContent(
                             bitmap = androidx.compose.runtime.remember(artwork) { artwork.asImageBitmap() },
                             contentDescription = null,
                             filterQuality = androidx.compose.ui.graphics.FilterQuality.High,
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                             modifier = Modifier
-                                .size(22.dp)
-                                .clip(CircleShape)
+                                .size(24.dp)
+                                .clip(RoundedCornerShape(7.dp))
                         )
                     } else {
                         Box(
                             modifier = Modifier
-                                .size(22.dp)
-                                .clip(CircleShape)
+                                .size(24.dp)
+                                .clip(RoundedCornerShape(7.dp))
                                 .background(Color(settings.musicVisualizerColor)),
                             contentAlignment = Alignment.Center
                         ) {
@@ -232,7 +291,10 @@ fun IslandCollapsedContent(
                 IslandMode.Stopwatch -> {
                     StopwatchCollapsedGlyph(notification = notification, settings = settings)
                 }
+                IslandMode.Alarm -> com.agupta07505.smartisland.ui.expanded.AlarmCollapsedGlyph()
+                IslandMode.PrivacyIndicator -> com.agupta07505.smartisland.ui.expanded.PrivacyIndicatorCollapsedGlyph(notification)
                 IslandMode.Empty -> IdleWidgetSlot(idleWidget, right = false)
+            }
             }
         }
 
@@ -247,14 +309,34 @@ fun IslandCollapsedContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
         Box(contentAlignment = Alignment.Center) {
+            androidx.compose.animation.AnimatedContent(
+                targetState = CollapsedSlot(mode, notification),
+                // Updates to the same alert (or more messages from the same app) refresh in place; only a
+                // different alert or mode crossfades, e.g. a message taking over a music pill and handing it back.
+                contentKey = { it.key },
+                transitionSpec = {
+                    val spec = androidx.compose.animation.core.spring<Float>(
+                        stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
+                    )
+                    androidx.compose.animation.fadeIn(spec) togetherWith androidx.compose.animation.fadeOut(spec)
+                },
+                contentAlignment = Alignment.Center,
+                label = "collapsedSlot"
+            ) { slot ->
+            val mode = slot.mode
+            val notification = slot.notification
             when (mode) {
                 IslandMode.Notification -> {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .clip(CircleShape)
-                            .background(Color(settings.notificationDotColor))
-                    )
+                    if (notification != null && (notification.title.isNotBlank() || notification.text.isNotBlank())) {
+                        AlertPillText(notification = notification, maxTextWidth = alertTextMax)
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(Color(settings.notificationDotColor))
+                        )
+                    }
                 }
                 IslandMode.IncomingCall -> {
                     if (notification?.isCallRinging == true || notification?.isCallConnecting == true) {
@@ -270,9 +352,13 @@ fun IslandCollapsedContent(
                     }
                 }
                 IslandMode.Music -> {
-                    AudioVisualizer(
+                    com.agupta07505.smartisland.ui.expanded.MusicWaveform(
                         isPlaying = notification?.mediaIsPlaying == true,
-                        color = Color(settings.musicVisualizerColor)
+                        color = Color(settings.musicVisualizerColor),
+                        barCount = 7,
+                        barWidth = 2.dp,
+                        gap = 1.5.dp,
+                        height = 16.dp
                     )
                 }
                 IslandMode.Battery -> {
@@ -324,7 +410,10 @@ fun IslandCollapsedContent(
                 IslandMode.Stopwatch -> {
                     StopwatchTimer(notification = notification, color = Color(settings.stopwatchColor))
                 }
+                IslandMode.Alarm -> com.agupta07505.smartisland.ui.expanded.AlarmCollapsedRight()
+                IslandMode.PrivacyIndicator -> com.agupta07505.smartisland.ui.expanded.PrivacyIndicatorCollapsedRight(notification)
                 IslandMode.Empty -> IdleWidgetSlot(idleWidget, right = true)
+            }
             }
         }
         }

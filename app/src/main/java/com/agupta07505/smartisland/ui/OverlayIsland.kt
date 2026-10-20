@@ -201,6 +201,12 @@ fun OverlayIsland(
                 pickerOnLeft = pickerOnLeft
             )
     ) {
+    val ambientMode by viewModel.ambientMode.collectAsState()
+    val burnInShiftX by viewModel.burnInShiftX.collectAsState()
+    val burnInShiftY by viewModel.burnInShiftY.collectAsState()
+    // Screen off halts every looping animation and ticker below (Rule_Book 4.3, 5).
+    val screenOn by viewModel.isScreenOn.collectAsState()
+    androidx.compose.runtime.CompositionLocalProvider(LocalScreenOn provides screenOn) {
     IslandOverlayView(
         settings = settings,
         expanded = expanded && !quiet,
@@ -270,7 +276,13 @@ fun OverlayIsland(
         widgetIslandSnap = widgetIslandSnap,
         modifier = modifier.graphicsLayer {
             alpha = com.agupta07505.smartisland.model.RotationVeil.alpha(veilVisible.value)
+            // Ambient (AOD) mode drifts the island a few dp now and then against OLED burn-in (AmbientIslandController).
+            if (ambientMode) {
+                translationX = burnInShiftX * density
+                translationY = burnInShiftY * density
+            }
         }
     )
+    }
     }
 }

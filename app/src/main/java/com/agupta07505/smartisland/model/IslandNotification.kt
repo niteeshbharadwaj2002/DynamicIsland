@@ -74,7 +74,22 @@ data class IslandNotification(
      * Timer cards from a Google / AOSP / third-party clock: [timeMillis] and [recordingFrozenMs] are exact and shown
      * like the shade; false for OEM clocks, which keep their rounding.
      */
-    val exactClock: Boolean = false
+    val exactClock: Boolean = false,
+    /** The app's own group id (`Notification.getGroup()`), or null; alerts sharing one are folded together. */
+    val groupId: String? = null,
+    /** How many alerts this entry stands for; above 1 only on a grouped entry built by the alert engine. */
+    val groupCount: Int = 1,
+    /** Keys of every alert folded into this entry (empty for a plain, ungrouped alert). */
+    val memberKeys: List<String> = emptyList(),
+    /** Up to three sender avatars or app icons of the folded alerts, newest last, for the stacked pill. */
+    val groupIcons: List<Bitmap> = emptyList(),
+    /**
+     * The app's lockscreen visibility (`Notification.visibility`), one of [LockscreenVisibility]. Internal
+     * alerts (battery, Bluetooth, flashlight, demos) are public.
+     */
+    val lockscreenVisibility: Int = LockscreenVisibility.PUBLIC,
+    /** True on a copy the alert engine stripped for the lockscreen: title is a fallback, text is empty. */
+    val isMasked: Boolean = false
 ) {
     /**
      * Not silent (importance DEFAULT or higher); live and system cards count as loud. Loud cards keep auto-expanding
@@ -109,5 +124,14 @@ data class IslandNotificationAction(
     /** The button's own icon; only read for media cards, so their extra buttons look like the app's. */
     val icon: android.graphics.Bitmap? = null,
     /** True when [pendingIntent] is the island's proxy for a button in the notification's custom view. */
-    val viaView: Boolean = false
+    val viaView: Boolean = false,
+    /** `Notification.Action.getSemanticAction()` (0 when the app gave none); see `SemanticAction`. */
+    val semanticAction: Int = 0
 )
+
+/** Mirrors `Notification.VISIBILITY_*` so the alert engine can stay free of Android. */
+object LockscreenVisibility {
+    const val PUBLIC = 1
+    const val PRIVATE = 0
+    const val SECRET = -1
+}
