@@ -10,9 +10,16 @@ The format is inspired by Keep a Changelog, and this project uses the GNU Genera
 - The app is renamed to **NotchIQ**. `app_name` is updated in all six locales (en, es, ja, pt-BR, zh-CN and the default), and the launcher label, the master switch, the About screen titles and the accessibility service label all show NotchIQ. Issue [#6](https://github.com/niteeshbharadwaj2002/NotchIQ/issues/6).
 - The home header's status pill (Active / Ready / Setup needed) now sits below the app name and subtitle instead of beside them, so a longer name or a larger font no longer crowds it.
 - New `homeStatus()` helper decides the pill state: setup needed wins, then Active or Ready. Covered by `HomeStatusTest` (3 tests).
+- Layout screen settings now share one grouped style. Groups appear in this order: Quick presets, Exempt apps, Size and position, Camera cutout, Shadow, Motion physics, Kinetic glow, then Backdrop blur, Animation speed, Cutout merge style and Idle widgets. Issue [#7](https://github.com/niteeshbharadwaj2002/NotchIQ/issues/7).
+- Explanatory description text is removed from the Layout screen.
+- Settings search indexes every Layout group by its title.
+- New shared widgets `CollapsibleGroup` and `SegmentedChoiceRow` build the Layout groups and rows.
+- Compact Pill / Notch is a segmented control above Quick presets.
 
 ### Known follow-up
 - Many descriptive strings still call the feature "Smart Island" (for example the accessibility service description and the app description). Renaming them is a separate change.
+- The new `layout_group_*` strings have no translations yet and fall back to English.
+- The Landscape tab and the Exempt apps rows still use hardcoded English labels.
 
 ## [7.6.0-personal] - 2026-10-20
 
