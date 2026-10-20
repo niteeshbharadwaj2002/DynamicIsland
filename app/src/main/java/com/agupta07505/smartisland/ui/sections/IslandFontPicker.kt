@@ -65,7 +65,9 @@ internal fun IslandFontPicker(
     title: String? = null,
     description: String? = null,
     /** A first row that stands for "no font of its own" (selected = ""): label and note. Null = no such row. */
-    inheritRow: Pair<String, String>? = null
+    inheritRow: Pair<String, String>? = null,
+    /** Flat list for a grouped card: no tinted background, no description, no hint, no per-font notes. */
+    compact: Boolean = false
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -96,24 +98,30 @@ internal fun IslandFontPicker(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-            .padding(vertical = 8.dp)
+            .then(
+                if (compact) Modifier else Modifier
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    .padding(vertical = 8.dp)
+            )
     ) {
         Text(
             text = title ?: stringResource(R.string.island_font_title),
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(horizontal = 16.dp)
+            modifier = Modifier.padding(horizontal = if (compact) 0.dp else 16.dp)
         )
-        Text(
-            text = description ?: stringResource(R.string.island_font_desc),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 6.dp)
-        )
+        if (!compact) {
+            Text(
+                text = description ?: stringResource(R.string.island_font_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 6.dp)
+            )
+        }
         inheritRow?.let { (label, note) ->
             FontRow(
+                showNote = !compact,
                 label = label,
                 note = note,
                 family = androidx.compose.ui.text.font.FontFamily.Default,
@@ -123,6 +131,7 @@ internal fun IslandFontPicker(
         }
         IslandFontOptions.forEach { option ->
             FontRow(
+                showNote = !compact,
                 label = option.label,
                 note = option.note,
                 family = option.family,
@@ -143,6 +152,7 @@ internal fun IslandFontPicker(
                 val id = CustomFonts.idFor(fileName)
                 val family = remember(id) { islandFontFamily(context, id) }
                 FontRow(
+                    showNote = !compact,
                     label = CustomFonts.labelOf(fileName),
                     note = fileName.substringAfterLast('.').uppercase(),
                     family = family,
@@ -171,12 +181,14 @@ internal fun IslandFontPicker(
                 modifier = Modifier.padding(start = 8.dp)
             )
         }
-        Text(
-            text = stringResource(R.string.island_font_add_hint),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 6.dp)
-        )
+        if (!compact) {
+            Text(
+                text = stringResource(R.string.island_font_add_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 6.dp)
+            )
+        }
     }
 }
 
@@ -187,7 +199,8 @@ private fun FontRow(
     family: androidx.compose.ui.text.font.FontFamily,
     isSelected: Boolean,
     onClick: () -> Unit,
-    onRemove: (() -> Unit)? = null
+    onRemove: (() -> Unit)? = null,
+    showNote: Boolean = true
 ) {
     Row(
         modifier = Modifier
@@ -204,16 +217,18 @@ private fun FontRow(
                 fontSize = 18.sp,
                 color = MaterialTheme.colorScheme.onSurface
             )
-            Text(
-                text = note,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (showNote && note.isNotEmpty()) {
+                Text(
+                    text = note,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
         if (isSelected) {
             Icon(
                 imageVector = Icons.Rounded.Check,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.motion_selected),
                 tint = MaterialTheme.colorScheme.primary
             )
         }

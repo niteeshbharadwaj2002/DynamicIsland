@@ -10,16 +10,8 @@ package com.agupta07505.smartisland.ui.sections
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Air
 import androidx.compose.material.icons.rounded.Alarm
@@ -32,14 +24,6 @@ import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material.icons.rounded.WbTwilight
-import androidx.compose.material3.Button
-import com.agupta07505.smartisland.ui.glass.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -47,17 +31,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.agupta07505.smartisland.R
+import com.agupta07505.smartisland.ui.Dimens
+import com.agupta07505.smartisland.ui.components.GroupedRow
+import com.agupta07505.smartisland.ui.components.GroupedSection
+import com.agupta07505.smartisland.ui.components.SegmentedChoiceRow
 import com.agupta07505.smartisland.data.SmartIslandSettings
 import com.agupta07505.smartisland.data.SmartIslandSettingsRepository
 import com.agupta07505.smartisland.model.IdleSlots
@@ -97,129 +80,78 @@ fun IdleWidgetsSection(
         if (weatherOn && locationGranted) withContext(Dispatchers.IO) { IdleWeather.captureLocation(context) }
     }
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .searchAnchor("layout.idle_widgets"),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(16.dp)
-                .animateContentSize(),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.idle_widgets_title),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            Text(
-                text = stringResource(R.string.idle_widgets_desc),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+    // One grouped card: the title row opens Settings > Idle widgets; the display options follow while a switch is on.
+    GroupedSection(modifier = Modifier.searchAnchor("layout.idle_widgets").animateContentSize()) {
+        GroupedRow(
+            title = stringResource(R.string.idle_widgets_title),
+            onClick = onOpenSettings
+        )
+
+        if (anyEnabled) {
+            SegmentedChoiceRow(
+                title = stringResource(R.string.idle_widgets_island_close_title),
+                options = ISLAND_CLOSE_CHOICES.map { seconds ->
+                    seconds to if (seconds == WidgetIslandTimer.NEVER) {
+                        stringResource(R.string.idle_widgets_island_never)
+                    } else {
+                        stringResource(R.string.idle_widgets_seconds, seconds)
+                    }
+                },
+                selected = settings.widgetIslandCloseSeconds,
+                onSelect = { scope.launch { repository.setWidgetIslandCloseSeconds(it) } }
             )
 
-            OutlinedButton(onClick = onOpenSettings, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.idle_widgets_open_settings))
-            }
+            SegmentedChoiceRow(
+                title = stringResource(R.string.idle_widgets_glyph_scale_title),
+                options = IdleSlots.GLYPH_SCALES.map { it to "$it%" },
+                selected = settings.idleGlyphScale,
+                onSelect = { scope.launch { repository.setIdleGlyphScale(it) } }
+            )
 
-            if (anyEnabled) {
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-
-                ChoiceBlock(title = stringResource(R.string.idle_widgets_island_close_title)) {
-                    ISLAND_CLOSE_CHOICES.forEach { seconds ->
-                        ChoiceChip(
-                            label = if (seconds == WidgetIslandTimer.NEVER) {
-                                stringResource(R.string.idle_widgets_island_never)
-                            } else {
-                                stringResource(R.string.idle_widgets_seconds, seconds)
-                            },
-                            selected = settings.widgetIslandCloseSeconds == seconds,
-                            modifier = Modifier.weight(1f),
-                            onClick = { scope.launch { repository.setWidgetIslandCloseSeconds(seconds) } }
-                        )
-                    }
-                }
-                NoteText(stringResource(R.string.idle_widgets_island_close_desc))
-
-                ChoiceBlock(title = stringResource(R.string.idle_widgets_glyph_scale_title)) {
-                    IdleSlots.GLYPH_SCALES.forEach { percent ->
-                        ChoiceChip(
-                            label = "$percent%",
-                            selected = settings.idleGlyphScale == percent,
-                            modifier = Modifier.weight(1f),
-                            onClick = { scope.launch { repository.setIdleGlyphScale(percent) } }
-                        )
-                    }
-                }
+            Box(modifier = Modifier.padding(horizontal = Dimens.RowHorizontal, vertical = Dimens.RowVertical)) {
                 IslandFontPicker(
                     selected = settings.idleGlyphFont,
                     onSelected = { scope.launch { repository.setIdleGlyphFont(it) } },
                     title = stringResource(R.string.idle_widgets_glyph_font_title),
-                    description = stringResource(R.string.idle_widgets_glyph_font_desc),
-                    inheritRow = stringResource(R.string.idle_widgets_glyph_font_same) to stringResource(R.string.idle_widgets_glyph_font_same_note)
+                    inheritRow = stringResource(R.string.idle_widgets_glyph_font_same) to "",
+                    compact = true
                 )
+            }
 
-                if (IdleWidgetKind.Battery in selected) {
-                    ChoiceBlock(title = stringResource(R.string.idle_widgets_battery_metric_title)) {
-                        listOf(
-                            WidgetIslandContent.BATTERY_WATT to stringResource(R.string.idle_widgets_battery_metric_watt),
-                            WidgetIslandContent.BATTERY_VOLT to stringResource(R.string.idle_widgets_battery_metric_volt)
-                        ).forEach { (id, label) ->
-                            ChoiceChip(
-                                label = label,
-                                selected = settings.widgetIslandBatteryMetric == id,
-                                modifier = Modifier.weight(1f),
-                                onClick = { scope.launch { repository.setWidgetIslandBatteryMetric(id) } }
-                            )
-                        }
-                    }
-                    NoteText(stringResource(R.string.idle_widgets_battery_metric_desc))
+            if (IdleWidgetKind.Battery in selected) {
+                SegmentedChoiceRow(
+                    title = stringResource(R.string.idle_widgets_battery_metric_title),
+                    options = listOf(
+                        WidgetIslandContent.BATTERY_WATT to stringResource(R.string.idle_widgets_battery_metric_watt),
+                        WidgetIslandContent.BATTERY_VOLT to stringResource(R.string.idle_widgets_battery_metric_volt)
+                    ),
+                    selected = settings.widgetIslandBatteryMetric,
+                    onSelect = { scope.launch { repository.setWidgetIslandBatteryMetric(it) } }
+                )
+            }
+
+            if (IdleWidgetKind.Weather in selected || IdleWidgetKind.Wind in selected) {
+                SegmentedChoiceRow(
+                    title = stringResource(R.string.idle_widgets_unit_title),
+                    options = listOf(
+                        IdleWidgets.UNIT_AUTO to stringResource(R.string.idle_widgets_unit_auto),
+                        IdleWidgets.UNIT_CELSIUS to stringResource(R.string.idle_widgets_unit_c),
+                        IdleWidgets.UNIT_FAHRENHEIT to stringResource(R.string.idle_widgets_unit_f)
+                    ),
+                    selected = settings.idleWidgetTempUnit,
+                    onSelect = { scope.launch { repository.setIdleWidgetTempUnit(it) } }
+                )
+                // Only the action is shown (no explanation): the button's own label says what it does.
+                val needsLocation = settings.allowNetworkChecks &&
+                    settings.weatherLocationSource != com.agupta07505.smartisland.model.WeatherConfig.SOURCE_MANUAL &&
+                    settings.weatherLocationSource != com.agupta07505.smartisland.model.WeatherConfig.SOURCE_LAST_KNOWN &&
+                    !locationGranted
+                if (needsLocation) {
+                    GroupedRow(
+                        title = stringResource(R.string.idle_widgets_allow_location),
+                        onClick = { permissionLauncher.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION) }
+                    )
                 }
-
-                if (IdleWidgetKind.Weather in selected || IdleWidgetKind.Wind in selected) {
-                    ChoiceBlock(title = stringResource(R.string.idle_widgets_unit_title)) {
-                        listOf(
-                            IdleWidgets.UNIT_AUTO to stringResource(R.string.idle_widgets_unit_auto),
-                            IdleWidgets.UNIT_CELSIUS to stringResource(R.string.idle_widgets_unit_c),
-                            IdleWidgets.UNIT_FAHRENHEIT to stringResource(R.string.idle_widgets_unit_f)
-                        ).forEach { (id, label) ->
-                            ChoiceChip(
-                                label = label,
-                                selected = settings.idleWidgetTempUnit == id,
-                                modifier = Modifier.weight(1f),
-                                onClick = { scope.launch { repository.setIdleWidgetTempUnit(id) } }
-                            )
-                        }
-                    }
-                    when {
-                        !settings.allowNetworkChecks -> NoteText(stringResource(R.string.idle_widgets_weather_needs_network))
-                        settings.weatherLocationSource == com.agupta07505.smartisland.model.WeatherConfig.SOURCE_MANUAL ->
-                            NoteText(stringResource(R.string.idle_widgets_weather_manual_note))
-                        settings.weatherLocationSource == com.agupta07505.smartisland.model.WeatherConfig.SOURCE_LAST_KNOWN ->
-                            NoteText(stringResource(R.string.idle_widgets_weather_last_known_note))
-                        locationGranted -> NoteText(stringResource(R.string.idle_widgets_weather_location_ok))
-                        else -> {
-                            NoteText(stringResource(R.string.idle_widgets_weather_no_location))
-                            Button(
-                                onClick = { permissionLauncher.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION) }
-                            ) {
-                                Text(stringResource(R.string.idle_widgets_allow_location))
-                            }
-                        }
-                    }
-                }
-
-                NoteText(stringResource(R.string.idle_widgets_landscape_note))
             }
         }
     }
@@ -281,53 +213,4 @@ internal fun kindDesc(kind: IdleWidgetKind): Int = when (kind) {
     IdleWidgetKind.DayMoments -> R.string.idle_widget_daymoments_desc
     IdleWidgetKind.Notifications -> R.string.idle_widget_notifications_desc
     IdleWidgetKind.Modes -> R.string.idle_widget_modes_desc
-}
-
-@Composable
-private fun ChoiceBlock(title: String, content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                .padding(3.dp),
-            horizontalArrangement = Arrangement.spacedBy(3.dp),
-            content = content
-        )
-    }
-}
-
-@Composable
-private fun ChoiceChip(label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(9.dp))
-            .background(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent)
-            .clickable(onClick = onClick)
-            .padding(vertical = 8.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-            color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-private fun NoteText(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
 }

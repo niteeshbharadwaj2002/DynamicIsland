@@ -32,6 +32,7 @@ import com.agupta07505.smartisland.R
 import com.agupta07505.smartisland.model.IslandEvent
 import com.agupta07505.smartisland.ui.FeatureDetailSection
 import com.agupta07505.smartisland.ui.StudioTab
+import com.agupta07505.smartisland.ui.sections.LayoutGroup
 import com.agupta07505.smartisland.ui.sections.eventSearchKey
 import com.agupta07505.smartisland.ui.sections.iconFor
 
@@ -143,17 +144,68 @@ internal fun buildSettingsSearchIndex(str: (Int) -> String): List<SettingsSearch
     )
     add(
         "layout.notch_mode", str(R.string.notch_mode_card_title), SearchTarget.Tab(StudioTab.Position, false),
-        layout, Icons.Rounded.Tune, str(R.string.notch_mode_card_desc), listOf("notch", "iphone", "cutout", "pill")
+        layout, Icons.Rounded.Tune, str(R.string.notch_mode_card_desc), listOf("notch", "iphone", "cutout", "pill", "compact"),
+        "layout.notch_mode"
     )
     add(
         "layout.circle_position", str(R.string.circle_position_card_title), SearchTarget.Tab(StudioTab.Position, false),
         layout, Icons.Rounded.Tune, str(R.string.circle_position_card_desc),
-        listOf("secondary", "companion", "left", "right", "cutout")
+        listOf("secondary", "companion", "left", "right", "cutout"), "layout.circle_position"
+    )
+    // The groups of the Layout screen (portrait), in screen order. Both orientations have an Exempt apps group.
+    add(
+        "layout.presets", str(LayoutGroup.QuickPresets.titleRes), SearchTarget.Tab(StudioTab.Position, false),
+        layout, Icons.Rounded.Tune, "",
+        listOf("preset", "presets", "layout", "center", "wide", "left", "right", "corner", "island"),
+        LayoutGroup.QuickPresets.searchKey
     )
     add(
-        "layout.size_position", str(R.string.precision_tuning_title), SearchTarget.Tab(StudioTab.Position, false),
+        "layout.exempt_portrait", str(LayoutGroup.ExemptApps.titleRes), SearchTarget.Tab(StudioTab.Position, false),
         layout, Icons.Rounded.Tune, "",
-        listOf("width", "height", "offset", "corner", "radius", "size", "position", "move", "pill", "portrait")
+        listOf("exempt", "exclude", "apps", "off", "static", "hide", "game", "video", "portrait"),
+        LayoutGroup.ExemptApps.searchKey
+    )
+    add(
+        "layout.exempt_landscape", str(LayoutGroup.ExemptApps.titleRes), SearchTarget.Tab(StudioTab.Position, true),
+        layout, Icons.Rounded.Tune, "",
+        listOf("exempt", "exclude", "apps", "off", "hide", "game", "video", "landscape"),
+        LayoutGroup.ExemptApps.searchKey
+    )
+    add(
+        "layout.size_position", str(LayoutGroup.SizeAndPosition.titleRes), SearchTarget.Tab(StudioTab.Position, false),
+        layout, Icons.Rounded.Tune, "",
+        listOf("width", "height", "offset", "corner", "radius", "size", "position", "move", "pill", "portrait", "precision", "tuning"),
+        LayoutGroup.SizeAndPosition.searchKey
+    )
+    add(
+        "layout.camera_cutout", str(LayoutGroup.CameraCutout.titleRes), SearchTarget.Tab(StudioTab.Position, false),
+        layout, Icons.Rounded.Tune, str(R.string.camera_cutout_summary),
+        listOf("camera", "cutout", "hole", "manual", "punch", "area", "detect"),
+        LayoutGroup.CameraCutout.searchKey
+    )
+    add(
+        "layout.shadow", str(LayoutGroup.Shadow.titleRes), SearchTarget.Tab(StudioTab.Position, false),
+        layout, Icons.Rounded.Tune, str(R.string.toggle_drop_shadow_desc),
+        listOf("shadow", "drop shadow", "elevation", "depth", "glow"),
+        LayoutGroup.Shadow.searchKey
+    )
+    add(
+        "layout.motion", str(LayoutGroup.MotionPhysics.titleRes), SearchTarget.Tab(StudioTab.Position, false),
+        layout, Icons.Rounded.Tune, "",
+        listOf("motion", "physics", "spring", "bouncy", "snappy", "critical", "loose", "standard", "stiffness", "damping"),
+        LayoutGroup.MotionPhysics.searchKey
+    )
+    add(
+        "layout.kinetic_glow", str(LayoutGroup.KineticGlow.titleRes), SearchTarget.Tab(StudioTab.Position, false),
+        layout, Icons.Rounded.Tune, str(R.string.motion_glow_desc),
+        listOf("glow", "kinetic", "light", "speed", "motion"),
+        LayoutGroup.KineticGlow.searchKey
+    )
+    add(
+        "layout.backdrop_blur", str(LayoutGroup.BackdropBlur.titleRes), SearchTarget.Tab(StudioTab.Position, false),
+        layout, Icons.Rounded.Tune, str(R.string.motion_blur_desc),
+        listOf("blur", "backdrop", "glass", "background", "idle dashboard"),
+        LayoutGroup.BackdropBlur.searchKey
     )
     add(
         "layout.show_landscape", str(R.string.toggle_show_in_landscape_title), SearchTarget.Tab(StudioTab.Position, true),
