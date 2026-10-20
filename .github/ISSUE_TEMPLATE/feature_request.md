@@ -1,6 +1,6 @@
 ---
 name: Feature Request
-about: Suggest a new feature or improvement for Smart Island
+about: Suggest a new feature or improvement for NotchIQ
 title: "[Feature] "
 labels: enhancement
 assignees: ''

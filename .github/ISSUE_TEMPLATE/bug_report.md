@@ -1,6 +1,6 @@
 ---
 name: Bug Report
-about: Report a bug to help improve Smart Island
+about: Report a bug to help improve NotchIQ
 title: "[Bug] "
 labels: bug
 assignees: ''
@@ -28,7 +28,7 @@ assignees: ''
 |-------|-------|
 | Device | e.g. Pixel 8 Pro |
 | Android version | e.g. Android 15 |
-| Smart Island version | e.g. 1.0 |
+| NotchIQ version | e.g. 1.0 |
 | Install type | Release APK / debug APK / local build |
 | OEM skin | e.g. Pixel UI / One UI / MIUI / OxygenOS |
 

@@ -1,6 +1,6 @@
 ---
 name: App Review / Feedback
-about: Share your experience, rating, and feedback on using Smart Island
+about: Share your experience, rating, and feedback on using NotchIQ
 title: "[Review] "
 labels: feedback
 assignees: ''
@@ -16,7 +16,7 @@ assignees: ''
 
 ## Your Review
 
-<!-- How has Smart Island worked for notifications, calls, media playback, or daily use? -->
+<!-- How has NotchIQ worked for notifications, calls, media playback, or daily use? -->
 
 ## Favorite Features
 
@@ -39,7 +39,7 @@ assignees: ''
 |-------|-------|
 | Device |  |
 | Android version |  |
-| Smart Island version |  |
+| NotchIQ version |  |
 | OEM skin |  |
 
 ## Additional Feedback

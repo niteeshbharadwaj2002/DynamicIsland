@@ -1,10 +1,11 @@
 # Release Signing With GitHub Actions
 
-This project can build a signed release APK in GitHub Actions without committing the keystore. The workflow lives at `.github/workflows/android.yml`.
+NotchIQ builds its release APK in `.github/workflows/release.yml`. The keystore is never committed: the
+workflow decodes it from a repository secret into the runner's temporary folder, signs with it, and discards it.
 
 ## 1. Keep Signing Files Private
 
-Never commit these files:
+Never commit these files (they are listed in `.gitignore`):
 
 - `*.jks`
 - `*.keystore`
@@ -12,31 +13,36 @@ Never commit these files:
 - `keystore.properties`
 - passwords, aliases, tokens, or secret notes
 
-They are ignored by `.gitignore`.
+## 2. Create The Keystore (once)
 
-## 2. Generate The Base64 Secret File
+If you do not have a keystore yet, create one with the JDK `keytool`:
 
-From the project root on Windows:
+```bash
+keytool -genkeypair -v -keystore notchiq.jks -keyalg RSA -keysize 2048 -validity 10000 -alias notchiq
+```
+
+Keep at least two secure backups of the `.jks` file and its password. If you lose the signing key, you cannot
+publish updates that install over builds signed with it.
+
+## 3. Generate The Base64 Secret
+
+Encode the keystore as a single line of base64 text.
+
+Windows (PowerShell), using the helper in `scripts/`:
 
 ```powershell
-.\scripts\export-keystore-base64.ps1 -KeystorePath .\smartIsland.jks
+.\scripts\export-keystore-base64.ps1 -KeystorePath .\notchiq.jks
 ```
 
-This creates:
+macOS / Linux:
 
-```text
-smartIsland_base64.txt
+```bash
+base64 -i notchiq.jks | tr -d '\n' > notchiq_base64.txt
 ```
 
-Open that file locally and copy the full single-line content into a GitHub repository secret named:
+Open the resulting file locally and copy its full content. Do not commit it.
 
-```text
-ANDROID_KEYSTORE_BASE64
-```
-
-Do not commit `smartIsland_base64.txt`.
-
-## 3. Add GitHub Repository Secrets
+## 4. Add The GitHub Repository Secrets
 
 In GitHub, open:
 
@@ -44,55 +50,49 @@ In GitHub, open:
 Repository -> Settings -> Secrets and variables -> Actions -> New repository secret
 ```
 
-Add these secrets:
+Add these two secrets:
 
 | Secret name | Value |
 | --- | --- |
-| `ANDROID_KEYSTORE_BASE64` | Full content of `smartIsland_base64.txt` |
-| `ANDROID_KEYSTORE_PASSWORD` | Keystore/store password |
+| `ANDROID_KEYSTORE_BASE64` | Full content of the base64 file from step 3 |
+| `ANDROID_KEYSTORE_PASSWORD` | The keystore password (also used as the key password) |
 
-The workflow detects the key alias from `smartIsland.jks` automatically and uses `ANDROID_KEYSTORE_PASSWORD` as the key password.
+The workflow detects the key alias from the keystore automatically.
 
-## 4. Build A Release
+## 5. What Happens Without The Secrets
 
-Manual release build:
+Signing is optional. The release workflow checks both secrets before building:
 
-1. Go to the repository on GitHub.
-2. Open `Actions`.
-3. Select `Build Android APK`.
-4. Click `Run workflow`.
+- **Both secrets set:** the release APK is signed and the workflow verifies the signature with `apksigner`.
+- **Either secret missing:** the workflow prints a warning and builds an **unsigned** APK named
+  `NotchIQ-vX.Y.Z-personal-unsigned.apk`. Unsigned APKs cannot be installed over a signed build, and the
+  GitHub release says so.
 
-Tag release:
+## 6. Build A Release
+
+Manual build (no GitHub release is published):
+
+1. Open the repository on GitHub and go to `Actions`.
+2. Select `Release`.
+3. Click `Run workflow`.
+
+Tagged release: the tag must match `versionName` in `app/build.gradle.kts`, otherwise the run fails.
 
 ```bash
-git tag v3.2.1
-git push origin v3.2.1
+git tag v7.6.0-personal
+git push origin v7.6.0-personal
 ```
 
-When a tag starting with `v` is pushed, the workflow builds signed artifacts and publishes them to a GitHub release. Direct pushes to `main` and `dev` never build or publish releases under any circumstances.
+A tag starting with `v` builds the APK and publishes it to a GitHub release. Pushes to `main` and `update`
+only run the build and test workflow and never publish a release.
 
-## What Is `RUNNER_TEMP`?
+## 7. Outputs
 
-`RUNNER_TEMP` is a GitHub Actions temporary folder path that exists only during a workflow run. The workflow decodes your `ANDROID_KEYSTORE_BASE64` secret into:
+The workflow uploads one release APK, named from `versionName`:
 
 ```text
-$RUNNER_TEMP/smartIsland.jks
+NotchIQ-v7.6.0-personal.apk            (signed)
+NotchIQ-v7.6.0-personal-unsigned.apk   (no signing secrets)
 ```
 
-That file is created inside GitHub's temporary runner environment, used for signing, and then discarded after the job finishes. It does not need to exist in your repository.
-
-## 5. Outputs
-
-The workflow uploads one signed release APK:
-
-```text
-SmartIsland-v3.0.apk
-```
-
-The version part comes from `versionName` in `app/build.gradle.kts`.
-
-Artifacts are also available from the workflow run summary.
-
-## Important Backup Note
-
-Keep multiple secure backups of your keystore and passwords. If you lose the signing key, you may not be able to publish updates signed with the same identity.
+The APK is also available as the `NotchIQ-release` artifact in the workflow run.
