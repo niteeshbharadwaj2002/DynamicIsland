@@ -784,8 +784,9 @@ class SmartIslandOverlayService : AccessibilityService() {
                 setContent {
                     val touchRegion by isTouchableRegionSupported.collectAsState()
                     val anchored by landscapeAnchored.collectAsState()
+                    val isExpanded by this@SmartIslandOverlayService.viewModel.expanded.collectAsState()
                     // Docked in landscape the window is only as wide as the pill, so the content centres in it.
-                    val fullWidth = touchRegion && !anchored
+                    val fullWidth = (touchRegion || isExpanded) && !anchored
                     val suppressed by this@SmartIslandOverlayService.viewModel.isSuppressed.collectAsState()
                     OverlayIsland(
                         viewModel = this@SmartIslandOverlayService.viewModel,
@@ -806,7 +807,7 @@ class SmartIslandOverlayService : AccessibilityService() {
                 attachCutoutInsetsListener(this)
             }
             val added = guardWindowCall("windowManager.addView failed") {
-                val params = getStaticWindowLayoutParams().also { lastParams = it }
+                val params = getCollapsedLayoutParams(viewModel.settings.value).also { lastParams = it }
                 windowManager.addView(islandView, params)
             }
             if (added) {
@@ -950,7 +951,32 @@ class SmartIslandOverlayService : AccessibilityService() {
         }
     }
 
-    private fun getStaticWindowLayoutParams(): WindowManager.LayoutParams {
+    private fun getCollapsedLayoutParams(settings: SmartIslandSettings): WindowManager.LayoutParams {
+        val density = resources.displayMetrics.density
+        val screenWidthPx = DisplayBounds.widthPx(this).toFloat()
+        val isSplitMode = (if (::viewModel.isInitialized) viewModel.visibleNotifications.value.size >= 2 else false) && !settings.enableNotchMode
+        val isCircleLeft = settings.circlePosition == SmartIslandSettings.CIRCLE_POSITION_LEFT
+        val mainWidthPx = PillLayout.effectiveWidthDp(settings, cutoutHoleWidthDp(), visibleCount(), MascotRuntime.controller.tucked.value, contentWingDp(), AlertWidthBudget.maxAlertPillWidthDp(this, settings)) * density
+        val circleSizePx = settings.height * density
+        val compactGapPx = 8f * density
+        val edgePaddingPx = 8f * density
+        val groupWidthPx = mainWidthPx + if (isSplitMode) compactGapPx + circleSizePx else 0f
+        
+        val desiredMainLeftPx = screenWidthPx / 2f + settings.xOffset * density - mainWidthPx / 2f
+        val (minMainLeftPx, maxMainLeftPx) = when {
+            !isSplitMode -> edgePaddingPx to (screenWidthPx - edgePaddingPx - mainWidthPx).coerceAtLeast(edgePaddingPx)
+            isCircleLeft -> (edgePaddingPx + circleSizePx + compactGapPx) to (screenWidthPx - edgePaddingPx - mainWidthPx).coerceAtLeast(edgePaddingPx + circleSizePx + compactGapPx)
+            else -> edgePaddingPx to (screenWidthPx - edgePaddingPx - groupWidthPx).coerceAtLeast(edgePaddingPx)
+        }
+        val mainLeftPx = desiredMainLeftPx.coerceIn(minMainLeftPx, maxMainLeftPx)
+        val groupStartPx = if (isCircleLeft && isSplitMode) mainLeftPx - compactGapPx - circleSizePx else mainLeftPx
+        val groupEndPx = if (!isCircleLeft && isSplitMode) mainLeftPx + mainWidthPx + compactGapPx + circleSizePx else mainLeftPx + mainWidthPx
+        val groupCenterPx = (groupStartPx + groupEndPx) / 2f
+        val windowXPx = (groupCenterPx - screenWidthPx / 2f).toInt()
+
+        val isTouchableRegion = isTouchableRegionSupported.value
+        val w = if (isTouchableRegion) WindowManager.LayoutParams.MATCH_PARENT else (groupWidthPx + 32f * density).toInt()
+        val h = if (isTouchableRegion) WindowManager.LayoutParams.MATCH_PARENT else ((settings.height + 16f) * density).toInt()
         val currentFlags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
             (guards?.extraWindowFlags() ?: 0) or
             WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
@@ -960,15 +986,15 @@ class SmartIslandOverlayService : AccessibilityService() {
             WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
 
         return WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.MATCH_PARENT,
+            w,
+            h,
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
             currentFlags,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.TOP or Gravity.START
-            x = 0
-            y = 0
+            gravity = if (isTouchableRegion) Gravity.TOP or Gravity.START else Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            x = if (isTouchableRegion) 0 else windowXPx
+            y = if (isTouchableRegion) 0 else (if (settings.enableNotchMode) 0 else settings.yOffset.dpToPx())
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             }
@@ -979,6 +1005,7 @@ class SmartIslandOverlayService : AccessibilityService() {
         if (destroyed || !::windowManager.isInitialized || !::viewModel.isInitialized) return
         val view = islandView ?: return
         val density = resources.displayMetrics.density
+        val screenWidthPx = DisplayBounds.widthPx(this).toFloat()
         
         val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
         val isLocked = keyguardManager?.isKeyguardLocked == true
@@ -994,6 +1021,60 @@ class SmartIslandOverlayService : AccessibilityService() {
         if (view.visibility != targetVisibility) {
             view.visibility = targetVisibility
         }
+
+        val isSplitMode = (viewModel.visibleNotifications.value.size >= 2) && !settings.enableNotchMode
+        val isCircleLeft = settings.circlePosition == SmartIslandSettings.CIRCLE_POSITION_LEFT
+        val mainWidthPx = PillLayout.effectiveWidthDp(settings, cutoutHoleWidthDp(), visibleCount(), MascotRuntime.controller.tucked.value, contentWingDp(), AlertWidthBudget.maxAlertPillWidthDp(this, settings)) * density
+        val circleSizePx = settings.height * density
+        val compactGapPx = 8f * density
+        val edgePaddingPx = 8f * density
+        val groupWidthPx = mainWidthPx + if (isSplitMode) compactGapPx + circleSizePx else 0f
+        
+        val desiredMainLeftPx = screenWidthPx / 2f + settings.xOffset * density - mainWidthPx / 2f
+        val (minMainLeftPx, maxMainLeftPx) = when {
+            !isSplitMode -> edgePaddingPx to (screenWidthPx - edgePaddingPx - mainWidthPx).coerceAtLeast(edgePaddingPx)
+            isCircleLeft -> (edgePaddingPx + circleSizePx + compactGapPx) to (screenWidthPx - edgePaddingPx - mainWidthPx).coerceAtLeast(edgePaddingPx + circleSizePx + compactGapPx)
+            else -> edgePaddingPx to (screenWidthPx - edgePaddingPx - groupWidthPx).coerceAtLeast(edgePaddingPx)
+        }
+        val mainLeftPx = desiredMainLeftPx.coerceIn(minMainLeftPx, maxMainLeftPx)
+        val groupStartPx = if (isCircleLeft && isSplitMode) mainLeftPx - compactGapPx - circleSizePx else mainLeftPx
+        val groupEndPx = if (!isCircleLeft && isSplitMode) mainLeftPx + mainWidthPx + compactGapPx + circleSizePx else mainLeftPx + mainWidthPx
+        val groupCenterPx = (groupStartPx + groupEndPx) / 2f
+        val windowXPx = (groupCenterPx - screenWidthPx / 2f).toInt()
+
+        // Rule_Book 9.2: sideways, the collapsed pill (and its companion bubble) docks on the lateral cutout.
+        val lateralAnchor = if (isLandscape && !expanded && !settings.enableNotchMode) {
+            CameraCutoutDetector.lateralAnchor(this)
+        } else null
+        val anchoredPosition = lateralAnchor?.let { anchor ->
+            LandscapeAnchoring.windowPosition(
+                anchor = anchor,
+                screenWidthPx = screenWidthPx.toInt(),
+                screenHeightPx = DisplayBounds.heightPx(this),
+                mainWidthPx = mainWidthPx,
+                groupWidthPx = groupWidthPx,
+                mainOffsetInGroupPx = if (isCircleLeft && isSplitMode) circleSizePx + compactGapPx else 0f,
+                pillHeightPx = settings.height * density,
+                windowPaddingPx = 16f * density,
+                marginPx = LANDSCAPE_HOLE_MARGIN_DP * density
+            )
+        }
+        landscapeAnchored.value = anchoredPosition != null
+
+        val isTouchableRegion = isTouchableRegionSupported.value
+        val h = if (expanded || isTouchableRegion) {
+            WindowManager.LayoutParams.MATCH_PARENT
+        } else {
+            ((settings.height + 16f) * density).toInt()
+        }
+        val w = if (expanded || (isTouchableRegion && anchoredPosition == null)) {
+            WindowManager.LayoutParams.MATCH_PARENT
+        } else {
+            (groupWidthPx + 32f * density).toInt()
+        }
+        val currentX = anchoredPosition?.xPx ?: if (expanded || isTouchableRegion) 0 else windowXPx
+        val currentY = anchoredPosition?.yPx ?: if (expanded || isTouchableRegion) 0 else (if (settings.enableNotchMode) 0 else settings.yOffset.dpToPx())
+        val currentGravity = if (anchoredPosition != null) Gravity.TOP or Gravity.LEFT else (if (expanded || isTouchableRegion) Gravity.TOP or Gravity.START else Gravity.TOP or Gravity.CENTER_HORIZONTAL)
 
         val isInput = viewModel.isInputActive.value && expanded
         val focusFlags = if (isInput) 0 else WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
@@ -1019,28 +1100,28 @@ class SmartIslandOverlayService : AccessibilityService() {
 
         val lp = lastParams
         if (lp != null &&
-            lp.width == WindowManager.LayoutParams.MATCH_PARENT &&
-            lp.height == WindowManager.LayoutParams.MATCH_PARENT &&
+            lp.width == w &&
+            lp.height == h &&
             lp.flags == currentFlags &&
             lastBlurRadiusPx == blurRadiusPx &&
-            lp.x == 0 &&
-            lp.y == 0 &&
-            lp.gravity == (Gravity.TOP or Gravity.START) &&
+            lp.x == currentX &&
+            lp.y == currentY &&
+            lp.gravity == currentGravity &&
             lp.softInputMode == currentSoftInputMode
         ) {
             return
         }
 
         val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.MATCH_PARENT,
+            w,
+            h,
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
             currentFlags,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.TOP or Gravity.START
-            x = 0
-            y = 0
+            gravity = currentGravity
+            x = currentX
+            y = currentY
             softInputMode = currentSoftInputMode
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
