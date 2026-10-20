@@ -1,12 +1,12 @@
-# Smart Island (2026)
-# Copyright Animesh Gupta — github.com/agupta07505
+# NotchIQ
+# Based on Smart Island (2026), Copyright Animesh Gupta, github.com/agupta07505
 # Licensed under the GNU GPL v3 License
 
 name: Build Pull Request
 
 on:
   pull_request:
-    branches: [main, dev]
+    branches: [main, update]
     paths-ignore:
       - "**/*.md"
       - "assets/**"
@@ -41,7 +41,9 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-          cache: gradle
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Make Gradle executable
         run: chmod +x ./gradlew
@@ -61,7 +63,7 @@ jobs:
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: SmartIsland-Debug-PR-${{ github.event.number }}
+          name: NotchIQ-Debug-PR-${{ github.event.number }}
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
