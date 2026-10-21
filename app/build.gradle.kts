@@ -31,8 +31,8 @@ android {
         applicationId = "com.niteeshbharadwaj.smartisland.personal"
         minSdk = 26
         targetSdk = 36
-        versionCode = 10
-        versionName = "7.6.0-personal"
+        versionCode = 11
+        versionName = "8.0.0-personal"
     }
 
     androidResources {

@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-7.6.0--personal-6366f1?style=for-the-badge&labelColor=1e1e2e" alt="Version 7.6.0-personal" />
+  <img src="https://img.shields.io/badge/Version-8.0.0--personal-6366f1?style=for-the-badge&labelColor=1e1e2e" alt="Version 8.0.0-personal" />
   <img src="https://img.shields.io/badge/Platform-Android%208.0%2B-3DDC84?style=for-the-badge&labelColor=1e1e2e&logo=android&logoColor=white" alt="Android 8.0+" />
   <img src="https://img.shields.io/badge/License-GNU%20GPLv3-3b82f6?style=for-the-badge&labelColor=1e1e2e&logo=gnu&logoColor=white" alt="GNU GPLv3" />
 </p>

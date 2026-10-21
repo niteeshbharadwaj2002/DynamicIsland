@@ -6,6 +6,10 @@ The format is inspired by Keep a Changelog, and this project uses the GNU Genera
 
 ## [Unreleased]
 
+## [8.0.0-personal] - 2026-10-21
+
+First major release of NotchIQ, a personal fork of Smart Island 7.6.0. It keeps everything in Smart Island 7.6.0 and differs from it by the Buddy mascot, the rebuilt island UI, the HIG-style settings UI and the offline stance (no internet permission, no update checker, no weather). Full release notes: [docs/release-notes/v8.0.0-personal.md](docs/release-notes/v8.0.0-personal.md). Version code 11.
+
 ### Changed
 - The app is renamed to **NotchIQ**. `app_name` is updated in all six locales (en, es, ja, pt-BR, zh-CN and the default), and the launcher label, the master switch, the About screen titles and the accessibility service label all show NotchIQ. Issue [#6](https://github.com/niteeshbharadwaj2002/NotchIQ/issues/6).
 - The home header's status pill (Active / Ready / Setup needed) now sits below the app name and subtitle instead of beside them, so a longer name or a larger font no longer crowds it.
