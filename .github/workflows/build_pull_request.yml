@@ -6,7 +6,7 @@ name: Build Pull Request
 
 on:
   pull_request:
-    branches: [main, update]
+    branches: [main, next-update]
     paths-ignore:
       - "**/*.md"
       - "assets/**"
