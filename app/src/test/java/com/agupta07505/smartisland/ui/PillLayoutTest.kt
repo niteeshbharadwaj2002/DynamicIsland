@@ -125,18 +125,33 @@ class PillLayoutTest {
     }
 
     @Test
-    fun thePrivacyLabelAndTheAlarmClockGetRoomBesideTheHole() {
+    fun thePrivacyDotAndTheAlarmClockGetRoomBesideTheHole() {
         fun privacy(category: String) = com.agupta07505.smartisland.model.IslandNotification(
             key = "system_privacy_indicator", packageName = "p", appName = "", title = "", text = "", timeMillis = 0L,
             category = category, mode = com.agupta07505.smartisland.model.IslandMode.PrivacyIndicator
         )
         val camera = PillLayout.contentWingDp(privacy("privacy_camera"))
         val both = PillLayout.contentWingDp(privacy("privacy_camera_microphone"))
-        assertTrue(camera > 0f)
-        assertTrue(both > camera)
+        // A dot, not a sentence: the wing is the same for every sensor combination (Rule_Book §3.5).
+        assertEquals(PillLayout.ALERT_BADGE_WING_DP, camera, 0f)
+        assertEquals(camera, both, 0f)
         val alarm = privacy("alarm").copy(mode = com.agupta07505.smartisland.model.IslandMode.Alarm)
         assertTrue(PillLayout.contentWingDp(alarm) > 0f)
         // The pill still stops at the alert cap.
         assertTrue(PillLayout.effectiveWidthDp(base, holeWidthDp = 30f, notificationCount = 1, contentWingDp = both) <= PillLayout.MAX_ALERT_PILL_WIDTH_DP)
+    }
+
+    @Test
+    fun anAlertPillWingIsFixedWhateverTheMessageSays() {
+        fun alert(title: String, text: String, groupCount: Int = 1) = com.agupta07505.smartisland.model.IslandNotification(
+            packageName = "p", appName = "Chat", title = title, text = text, timeMillis = 0L,
+            groupCount = groupCount, mode = com.agupta07505.smartisland.model.IslandMode.Notification
+        )
+        val short = PillLayout.contentWingDp(alert("Al", "Hi"))
+        val long = PillLayout.contentWingDp(alert("A very long sender name", "and a message preview that would once have scrolled"))
+        val folded = PillLayout.contentWingDp(alert("", "", groupCount = 7))
+        assertEquals(PillLayout.ALERT_BADGE_WING_DP, short, 0f)
+        assertEquals(short, long, 0f)
+        assertEquals(short, folded, 0f)
     }
 }
