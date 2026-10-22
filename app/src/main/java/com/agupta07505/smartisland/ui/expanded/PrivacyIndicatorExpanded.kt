@@ -25,9 +25,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.PrivacyTip
 import androidx.compose.material.icons.rounded.Videocam
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import com.agupta07505.smartisland.ui.PulsingDot
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -57,24 +64,40 @@ object PrivacyColors {
 }
 
 /**
- * Non-expanded small state (the companion bubble): a solid green dot (camera), orange dot (microphone), or one
- * split green/orange pill when both are on (Rule_Book §4.15, §4.16).
+ * The privacy circle, alone in the companion bubble and on the right of the main pill (Rule_Book §4.15, §4.16):
+ * green for the camera, orange for the microphone, half green and half orange for both. It breathes gently, and
+ * says what is in use to TalkBack because colour alone is not enough.
  */
 @Composable
-fun PrivacyIndicatorDot(notification: IslandNotification?, modifier: Modifier = Modifier) {
-    val sensors = PrivacyIndicatorAlert.sensorsOf(notification)
-    if (sensors.both) {
-        Row(modifier = modifier.clip(RoundedCornerShape(50))) {
-            Box(Modifier.size(width = 8.dp, height = 10.dp).background(PrivacyColors.camera))
-            Box(Modifier.size(width = 8.dp, height = 10.dp).background(PrivacyColors.microphone))
+fun PrivacyIndicatorDot(notification: IslandNotification?, modifier: Modifier = Modifier, size: Dp = 10.dp) {
+    val form = PrivacyIndicatorAlert.dotFormOf(PrivacyIndicatorAlert.sensorsOf(notification))
+    if (form == PrivacyIndicatorAlert.DotForm.None) return
+    val description = when (form) {
+        PrivacyIndicatorAlert.DotForm.Split -> stringResource(R.string.island_camera_and_microphone_in_use)
+        PrivacyIndicatorAlert.DotForm.Microphone -> stringResource(R.string.island_microphone_in_use)
+        else -> stringResource(R.string.island_camera_in_use)
+    }
+    val alpha by rememberInfiniteTransition(label = "privacyDot").animateFloat(
+        initialValue = 0.55f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(900, easing = LinearEasing), RepeatMode.Reverse),
+        label = "privacyDotAlpha"
+    )
+    Canvas(
+        modifier = modifier
+            .size(size)
+            .semantics { contentDescription = description }
+    ) {
+        val camera = PrivacyColors.camera.copy(alpha = alpha)
+        val microphone = PrivacyColors.microphone.copy(alpha = alpha)
+        when (form) {
+            PrivacyIndicatorAlert.DotForm.Split -> {
+                drawArc(camera, startAngle = 90f, sweepAngle = 180f, useCenter = true)
+                drawArc(microphone, startAngle = 270f, sweepAngle = 180f, useCenter = true)
+            }
+            PrivacyIndicatorAlert.DotForm.Microphone -> drawCircle(microphone)
+            else -> drawCircle(camera)
         }
-    } else {
-        Box(
-            modifier = modifier
-                .size(10.dp)
-                .clip(CircleShape)
-                .background(if (sensors.microphone) PrivacyColors.microphone else PrivacyColors.camera)
-        )
     }
 }
 
@@ -102,14 +125,10 @@ fun PrivacyIndicatorCollapsedGlyph(notification: IslandNotification?) {
     }
 }
 
-/** Collapsed pill, right: a pulsing dot in the sensor's colour; the words live in the icons' descriptions and the card. */
+/** Collapsed pill, right: the privacy circle; the words live in its description and the card. */
 @Composable
 fun PrivacyIndicatorCollapsedRight(notification: IslandNotification?) {
-    val sensors = PrivacyIndicatorAlert.sensorsOf(notification)
-    val description = privacyLabel(sensors)
-    Box(modifier = Modifier.semantics { contentDescription = description }) {
-        PulsingDot(color = if (sensors.microphone && !sensors.camera) PrivacyColors.microphone else PrivacyColors.camera)
-    }
+    PrivacyIndicatorDot(notification)
 }
 
 @Composable

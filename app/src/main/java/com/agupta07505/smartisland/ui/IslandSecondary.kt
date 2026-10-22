@@ -453,7 +453,7 @@ internal fun SecondaryBubbleContent(
             StopwatchCollapsedGlyph(notification = notification, settings = settings)
         }
         IslandMode.Alarm -> com.agupta07505.smartisland.ui.expanded.AlarmCollapsedGlyph()
-        IslandMode.PrivacyIndicator -> com.agupta07505.smartisland.ui.expanded.PrivacyIndicatorCollapsedGlyph(notification)
+        IslandMode.PrivacyIndicator -> com.agupta07505.smartisland.ui.expanded.PrivacyIndicatorDot(notification, size = 12.dp)
         IslandMode.Notification -> {
             // A folded group shows its stacked sender badges in the companion bubble.
             if (notification.groupCount > 1) {
