@@ -22,8 +22,8 @@ The island's logic relies on a strict separation of concerns. The engine only de
 *   **Pill Width (`contentWingDp`):** The pill grows symmetrically to keep the camera hole centered. The right-hand wing requires specific spacing based on content:
     *   *Music:* 40dp (waveform only).
     *   *Stopwatch:* 60dp (`STOPWATCH_WING_DP`), room for the live MM:SS.cc readout (§4.11).
-    *   *Messages:* 26dp + ~6.2dp per character of the sender preview (capped at 42 characters).
-    *   *Max Cap:* The pill never exceeds 280dp (`MAX_ALERT_PILL_WIDTH_DP`), and less when the status bar leaves less room (§10.2). Past this, text scrolls sideways with a faded right edge.
+    *   *Messages:* Fixed 34dp (`PillLayout.ALERT_BADGE_WING_DP`), whatever the sender or preview length, since the pill shows symbols only (§3.5).
+    *   *Max Cap:* The pill never exceeds 280dp (`MAX_ALERT_PILL_WIDTH_DP`), and less when the status bar leaves less room (§10.2).
 
 ### 2.2 Physics Engine (Spring-Mass-Damper)
 The island's width, height, corner radius, and offset animate using a 1D Spring-Mass-Damper system of unit mass: `force = -k * (x - target) - d * v`. 
@@ -81,14 +81,36 @@ Timing logic is self-contained in `AlertEngine` via `nowMs`:
 *   **Auto-expand block:** If an Ephemeral alert arrives with auto-expand true, but the current main pill is Critical/Persistent, auto-expand is ignored. It waits safely as the companion bubble. The same happens in landscape (§9.2) and over a `FLAG_SECURE` foreground app (§8.2); all three rules live in `ExpansionPolicy.allowAutoExpand`.
 *   **Tap Behavior:** Tapping the main pill expands it. Tapping the companion bubble swaps it into the main pill slot and expands it.
 
+### 3.5 Symbol-Only Pill
+The collapsed pill and the companion bubble show symbols and short numbers or times only: no words, no status text and no scrolling or marquee text. Words such as "Ringing", "Camera in use", "Flashlight On", "Drop in 5m" or "Active" stay in the expanded card (Medium state), and TalkBack reads the full meaning through content descriptions. Width is therefore fixed per mode (`PillLayout.contentWingDp`), not driven by text length.
+*   **Messages:** App icon (left). Right: the green unread dot, or the message count N for a folded group (`groupCount > 1`). Nothing numeric means the dot alone. The sender and preview are not on the pill.
+*   **Calls:** The phone icon or caller avatar stays on the left. While ringing or connecting (no duration yet) the right is a pulsing dot in the call colour; once connected it is the mm:ss timer.
+*   **Per-mode pill content:**
+
+| Mode | Pill left | Pill right |
+| :--- | :--- | :--- |
+| Message (single) | App icon | Green unread dot |
+| Message (grouped, several apps) | Stacked app icons | Message count N |
+| Locked (masked) message (§8.1) | App icon | Green dot or count |
+| Incoming call, ringing or connecting | Avatar or app icon | Pulsing dot (call colour) |
+| Incoming call, connected | Avatar or app icon | mm:ss call timer |
+| Flashlight on | Flashlight icon | Pulsing yellow dot |
+| Live activity | Activity icon | "N min", a check icon when arrived, else a pulsing dot |
+| Navigation (Maps and rides) | Arrow or app icon | Distance only (e.g. "200 m"), else a pulsing dot |
+| Camera or microphone in use (§4.15, §4.16) | Camera / mic icon | Pulsing dot in the sensor colour (green camera, orange mic) |
+| Alarm, ringing | Bell icon | Current time (a time value is allowed) |
+| Battery, Bluetooth, hotspot, timer, stopwatch, music | Unchanged | Unchanged (already a symbol plus a number, or a waveform) |
+
+*   **Expanded card:** Keeps the full text for every mode above (sender and preview, ride and call details, the sensor's app name, the flashlight's on or off state, the live activity or navigation text). Nothing in the Medium card changes.
+
 ---
 
 ## 4. Feature-Specific Specifications
 
 ### 4.1 Alert Manager (Messages & Notifications)
 *   **Grouping:** Alerts from the same app fold into one entry via group key `packageName + "|" + groupId`.
-*   **Small State (Single):** App Icon (left), Sender (bold), Message preview (gray, scrolling), Status dot (right).
-*   **Small State (Group):** Stacked overlapping badges (left), text reads "N New Messages from App". Triggers a spring pulse (1.05x scale) on new additions instead of redrawing. Actions applied here affect all `memberKeys`.
+*   **Small State (Single):** App Icon (left), status dot (right). No sender or preview text on the pill (§3.5); they show in the Medium card.
+*   **Small State (Group):** Stacked overlapping badges (left), message count N (right). The "N New Messages from App" text is not on the pill (§3.5). Triggers a spring pulse (1.05x scale) on new additions instead of redrawing. Actions applied here affect all `memberKeys`.
 *   **Medium State:** 340dp wide, pure black squircle (32dp corners). Header (app icon, sender, "Now"), up to 3 lines of body, Reply (expands inline field), Mark as Read.
 *   **Large State:** This feature does not use the Large State Island.
 
@@ -126,7 +148,7 @@ Timing logic is self-contained in `AlertEngine` via `nowMs`:
 
 ### 4.7 Incoming Calls (Cellular & VoIP / WhatsApp)
 *   **Classification & Priority:** Classified as Tier 1 (Persistent). Takes absolute precedence within Tier 1 and always claims Slot 1 (Main Pill).
-*   **Small State:** Caller Avatar or App Icon (left), pulsing call indicator icon (right). For WhatsApp/VoIP calls, an overlaid app badge must render at the corner of the avatar.
+*   **Small State:** Caller Avatar or App Icon (left), pulsing dot in the call colour while ringing or the mm:ss timer once answered (right), per §3.5. For WhatsApp/VoIP calls, an overlaid app badge must render at the corner of the avatar.
 *   **Medium State:** 340dp wide, pure black squircle (32dp corners).
     *   *Header:* App icon/label, Caller Name, subtext ("Incoming call...").
     *   *Body/Controls:* Contact avatar, dual action buttons: Decline (red) and Accept (green).
@@ -135,7 +157,7 @@ Timing logic is self-contained in `AlertEngine` via `nowMs`:
     *   *Accept:* Dispatches the accept pending intent. Transitions to Active Call state (Small: duration counter; Medium: duration, Mute, Speaker, End Call).
     *   *Decline:* Triggers decline intent, terminates alert, drops island to IDLE or resumes preempted background alert.
     *   *Keyguard:* Accept/Decline remain actionable directly from the lockscreen without requiring device unlock.
-*   **Implementation:** `ui/expanded/IncomingCallExpanded.kt`. `CallAvatar` (small pill, companion bubble and Medium card) shows the contact photo, the app icon or a phone glyph; a call from anything but the phone's own dialer (`OemDeviceRules.isDialerCall`) gets the app icon as a badge on the photo's corner. The Medium card has the header (app icon + label), the caller and "Incoming call…", and Decline / Accept. Accept keeps the card open; when the call's notification turns ongoing (no Answer action, so `isCallRinging` is false) it becomes the Active Call card: "Ongoing call" + live duration and Mute, Speaker, End Call, each shown only when the notification offers that action (`NotificationActionMatcher`: semantic action first, e.g. `SEMANTIC_ACTION_MUTE`, then whole-word labels). The small pill's right side is a pulsing call icon while ringing and the duration once answered; the duration counts from the call notification's chronometer when it shows one, else from the moment it stopped ringing. Every call control runs through `KeyguardGate` as `GatedAction.CallControl` (never needs unlock), and a ringing call shows and stays touchable through the face-unlock hold (§8.2).
+*   **Implementation:** `ui/expanded/IncomingCallExpanded.kt`. `CallAvatar` (small pill, companion bubble and Medium card) shows the contact photo, the app icon or a phone glyph; a call from anything but the phone's own dialer (`OemDeviceRules.isDialerCall`) gets the app icon as a badge on the photo's corner. The Medium card has the header (app icon + label), the caller and "Incoming call…", and Decline / Accept. Accept keeps the card open; when the call's notification turns ongoing (no Answer action, so `isCallRinging` is false) it becomes the Active Call card: "Ongoing call" + live duration and Mute, Speaker, End Call, each shown only when the notification offers that action (`NotificationActionMatcher`: semantic action first, e.g. `SEMANTIC_ACTION_MUTE`, then whole-word labels). The small pill's right side is a pulsing dot in the call colour while ringing and the mm:ss duration once answered (§3.5); the duration counts from the call notification's chronometer when it shows one, else from the moment it stopped ringing. Every call control runs through `KeyguardGate` as `GatedAction.CallControl` (never needs unlock), and a ringing call shows and stays touchable through the face-unlock hold (§8.2).
 
 ### 4.8 Hotspot (Tethering)
 *   **Classification & Priority:** Tier 2 (Background).
@@ -149,7 +171,7 @@ Timing logic is self-contained in `AlertEngine` via `nowMs`:
 ### 4.9 Flashlight
 *   **Classification & Priority:** Tier 3 (Ephemeral).
 *   **Non Expanded Small State:** Flashlight icon (yellow when on, gray when off).
-*   **Expanded Small State:** Flashlight icon (left), status text "Flashlight On" or "Flashlight Off" (right).
+*   **Expanded Small State:** Flashlight icon (left), pulsing yellow dot while on (right). No "Flashlight On" text on the pill (§3.5); the Medium card keeps the state.
 *   **Medium State:** Flashlight icon, "Flashlight" title, and a large interactive toggle switch to turn it off/on.
 *   **Large State:** This feature does not use the Large State Island.
 *   **Action Rule:** Operates on the 5s `transientTimeoutMs` clock. Expands to announce the state change then dismisses. While ON, the user can manually tap the IDLE pill to invoke the Medium State and turn it off via `CameraManager.setTorchMode()`.
@@ -189,8 +211,8 @@ Timing logic is self-contained in `AlertEngine` via `nowMs`:
 
 ### 4.14 Navigation & Ride-Sharing (Maps, Uber, Ola, Rapido)
 *   **Classification & Priority:** Tier 1 (Persistent).
-*   **Non Expanded Small State:** Directional arrow (Maps) or App Icon (Uber/Ola/Rapido) (left), simple distance/ETA badge (right).
-*   **Expanded Small State:** App Icon/Arrow (left), Next Turn Distance (e.g., "200m") or Ride ETA (e.g., "Drop in 5m") (right).
+*   **Non Expanded Small State:** Directional arrow (Maps) or App Icon (Uber/Ola/Rapido) (left), distance badge (right), or a pulsing dot when no distance is known.
+*   **Expanded Small State:** App Icon/Arrow (left), Next Turn Distance only (e.g., "200m") (right), or a pulsing dot when none. A ride ETA such as "Drop in 5m" is not on the pill (§3.5); it is in the Medium card.
 *   **Medium State:** 340dp wide.
     *   *Maps:* Large directional arrow, Turn-by-turn instruction, ETA, and distance remaining.
     *   *Ride-Sharing:* Driver vehicle graphic/avatar, License Plate number, Driver Name, and live ETA to destination/pickup.
@@ -201,7 +223,7 @@ Timing logic is self-contained in `AlertEngine` via `nowMs`:
 ### 4.15 Camera Privacy Indicator
 *   **Classification & Priority:** Tier 1 (Persistent) - Hardware Security Override.
 *   **Non Expanded Small State:** Static solid green dot (matches native Android privacy indicator color).
-*   **Expanded Small State:** Green camera icon (left), "Camera in use" (right).
+*   **Expanded Small State:** Green camera icon (left), pulsing green dot (right). No "Camera in use" label on the pill (§3.5).
 *   **Medium State:** 340dp wide. Green camera icon, text indicating the active package (e.g., "Instagram is using your camera"), and a shortcut to the OS privacy dashboard.
 *   **Large State:** This feature does not use the Large State Island.
 *   **Action Rule:** Hooks into `AppOpsManager.OnOpActiveChangedListener` (`OPSTR_CAMERA`). If the native camera is opened, the island collapses its Non Expanded Small State to a simple green dot positioned at the extreme right edge of the cutout to mimic native OS behavior.
@@ -209,13 +231,13 @@ Timing logic is self-contained in `AlertEngine` via `nowMs`:
     *   `AppOpsManager.startWatchingActive(OPSTR_CAMERA, OPSTR_RECORD_AUDIO)` on Android 11+, which names the app on privileged/system installations with `WATCH_APPOPS`.
     *   `ShizukuDumpsys` (when Shizuku is authorized): `ShizukuManager.queryActiveAppOps` polls `dumpsys appops` every 3 seconds to identify active `OP_RECORD_AUDIO` and `OP_CAMERA` callers by package name, providing real-time app attribution on non-root devices without signature permissions.
     *   Everywhere else (fallback): `CameraManager.AvailabilityCallback` and `AudioManager.AudioRecordingCallback`. The camera is attributed to the foreground app from accessibility events, and the microphone to "An app".
-    *   `ui/expanded/PrivacyIndicatorExpanded.kt`: the green / orange / split dot is the companion bubble (`PrivacyIndicatorDot`); the main pill shows the icon(s) and "Camera in use" / "Microphone in use" / "Camera & mic in use" (the pill grows for the label, `PillLayout.contentWingDp`); the Medium card names the app(s) and opens the privacy dashboard (`android.intent.action.REVIEW_PERMISSION_USAGE`, else `Settings.ACTION_PRIVACY_SETTINGS`, else Settings; gated `OpenApp` since it leaves the lockscreen).
+    *   `ui/expanded/PrivacyIndicatorExpanded.kt`: the green / orange / split dot is the companion bubble (`PrivacyIndicatorDot`); the main pill shows the icon(s) and a pulsing dot in the sensor colour, with no label (the wing is fixed, `PillLayout.contentWingDp`, §3.5); the Medium card names the app(s) and opens the privacy dashboard (`android.intent.action.REVIEW_PERMISSION_USAGE`, else `Settings.ACTION_PRIVACY_SETTINGS`, else Settings; gated `OpenApp` since it leaves the lockscreen).
     *   *Cutout Edge Alignment:* In the collapsed Non-Expanded Small state, `CameraCutoutDetector.cutoutRightEdgeDp` calculates the right boundary of the physical camera cutout box. `IslandOverlayView` pins `collapsedSecondaryOffset` directly to the cutout's right edge with +6dp padding, seamlessly replicating the native Android OS privacy indicator dot.
 
 ### 4.16 Microphone Privacy Indicator
 *   **Classification & Priority:** Tier 1 (Persistent) - Hardware Security Override.
 *   **Non Expanded Small State:** Static solid orange dot (matches native Android privacy indicator color).
-*   **Expanded Small State:** Orange microphone icon (left), "Microphone in use" (right).
+*   **Expanded Small State:** Orange microphone icon (left), pulsing orange dot (right). No "Microphone in use" label on the pill (§3.5).
 *   **Medium State:** 340dp wide. Orange mic icon, text indicating the active package (e.g., "WhatsApp is using your microphone"), and a shortcut to the OS privacy dashboard.
 *   **Large State:** This feature does not use the Large State Island.
 *   **Action Rule:** Hooks into `AppOpsManager.OnOpActiveChangedListener` (`OPSTR_RECORD_AUDIO`). Behaves identically to the Camera indicator. If both Camera and Mic are active simultaneously, the Non Expanded Small State displays a split Green/Orange pill.
@@ -291,7 +313,7 @@ The `SmartIslandOverlayService` must draw over the lockscreen using `WindowManag
     *   `VISIBILITY_PRIVATE`: The engine must strip the title and text payload. The UI must render only the app icon and a hardcoded fallback string (e.g., "1 New Message") for the Small and Medium states. Media controls and ongoing system tasks remain unmasked.
     *   `VISIBILITY_SECRET`: The `AlertEngine` must completely ignore and drop the notification. It cannot hold a slot in the visible array until the device is unlocked.
 *   **Unlock Transition:** Upon receiving `Intent.ACTION_USER_PRESENT`, the engine must immediately trigger a recomposition to unmask any currently visible `VISIBILITY_PRIVATE` alerts, applying a crossfade animation to reveal the text.
-*   **Implementation:** The overlay service sets `IslandViewModel.setLocked` from `isKeyguardLocked()` (screen on/off, `USER_PRESENT`, window changes) and the view model passes it to `AlertEngine.evaluate(list, now, isLocked)`. `LockscreenPrivacy` holds the rules: only app messages (`IslandMode.Notification`, not `call`/`alarm` categories) are maskable; a masked copy has `isMasked = true`, title "1 New Message" / "N New Messages", empty text, no sender avatar. A folded group takes its most private member's visibility. The listener records each alert's effective visibility: `Notification.visibility`, tightened by the ranking's `lockscreenVisibilityOverride`, and secret when the OS shows no notifications on the lockscreen. The pill (`AlertPillText`) and the Medium card crossfade (220ms) when `isMasked` flips. The older "App icon only" privacy setting still applies on top.
+*   **Implementation:** The overlay service sets `IslandViewModel.setLocked` from `isKeyguardLocked()` (screen on/off, `USER_PRESENT`, window changes) and the view model passes it to `AlertEngine.evaluate(list, now, isLocked)`. `LockscreenPrivacy` holds the rules: only app messages (`IslandMode.Notification`, not `call`/`alarm` categories) are maskable; a masked copy has `isMasked = true`, title "1 New Message" / "N New Messages", empty text, no sender avatar. A folded group takes its most private member's visibility. The listener records each alert's effective visibility: `Notification.visibility`, tightened by the ranking's `lockscreenVisibilityOverride`, and secret when the OS shows no notifications on the lockscreen. The Medium card crossfades (220ms) when `isMasked` flips. The pill has no text (§3.5), so a masked alert keeps its app icon and its status dot or count. The older "App icon only" privacy setting still applies on top.
 
 ### 8.2 Secure Window Bypassing & Biometric Clearance
 As a `TYPE_APPLICATION_OVERLAY`, the island runs the risk of occluding critical system trust layers or leaking data during screen captures.

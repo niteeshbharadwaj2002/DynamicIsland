@@ -6,6 +6,12 @@ The format is inspired by Keep a Changelog, and this project uses the GNU Genera
 
 ## [Unreleased]
 
+### Changed
+- The collapsed pill and companion bubble show symbols and short values only, with no words and no scrolling text. Issue [#10](https://github.com/niteeshbharadwaj2002/NotchIQ/issues/10).
+- Calls show the phone icon on the left and the call time on the right. While ringing or connecting, a pulsing dot replaces the "Ringing" / "Calling" words.
+- Messages show the app icon with the unread dot, or the message count for a grouped pill. The message pill is a fixed width instead of growing per character.
+- Flashlight, live activity, navigation and camera or microphone pills show dots or numbers instead of words. Full text stays in the expanded card and in TalkBack.
+
 ## [8.0.0-personal] - 2026-10-21
 
 First major release of NotchIQ, a personal fork of Smart Island 7.6.0. It keeps everything in Smart Island 7.6.0 and differs from it by the Buddy mascot, the rebuilt island UI, the HIG-style settings UI and the offline stance (no internet permission, no update checker, no weather). Full release notes: [docs/release-notes/v8.0.0-personal.md](docs/release-notes/v8.0.0-personal.md). Version code 11.

@@ -46,10 +46,8 @@ object PillLayout {
     /** Air the idle pill keeps around the camera hole on each side, so the pill always encloses it. */
     const val HOLE_MARGIN_DP = 4f
 
-    /** Room the end padding, the dot and the gap between them take on the right-hand side. */
-    private const val ALERT_FIXED_WING_DP = 12f + 8f + 6f
-    private const val ALERT_TEXT_DP_PER_CHAR = 6.2f
-    private const val ALERT_MAX_CHARS = 42
+    /** Room the end padding and a dot or a one- or two-digit count take on the right-hand side. */
+    const val ALERT_BADGE_WING_DP = 12f + 14f + 8f
 
     /**
      * Free space the active alert's right-hand pill content needs on each side of the camera hole, so
@@ -59,22 +57,10 @@ object PillLayout {
         active == null -> 0f
         active.mode == com.agupta07505.smartisland.model.IslandMode.Music -> MUSIC_WING_DP
         active.mode == com.agupta07505.smartisland.model.IslandMode.Stopwatch -> STOPWATCH_WING_DP
-        active.mode == com.agupta07505.smartisland.model.IslandMode.Notification &&
-            (active.title.isNotBlank() || active.text.isNotBlank()) -> {
-            val (strong, soft) = alertPillLabel(active)
-            val chars = (strong.length + (if (soft.isBlank()) 0 else 2 + soft.length)).coerceAtMost(ALERT_MAX_CHARS)
-            ALERT_FIXED_WING_DP + chars * ALERT_TEXT_DP_PER_CHAR
-        }
-        // "Camera in use" / "Microphone in use" / "Camera & mic in use" (Rule_Book §4.15, §4.16).
-        active.mode == com.agupta07505.smartisland.model.IslandMode.PrivacyIndicator -> {
-            val sensors = com.agupta07505.smartisland.util.PrivacyIndicatorAlert.sensorsOf(active)
-            val chars = when {
-                sensors.both -> PRIVACY_BOTH_CHARS
-                sensors.microphone -> PRIVACY_MICROPHONE_CHARS
-                else -> PRIVACY_CAMERA_CHARS
-            }
-            LABEL_END_PADDING_DP + chars * ALERT_TEXT_DP_PER_CHAR
-        }
+        // The dot or the group count (Rule_Book §3.5, §10.2): a fixed wing, never sized from the text.
+        active.mode == com.agupta07505.smartisland.model.IslandMode.Notification -> ALERT_BADGE_WING_DP
+        // A pulsing dot beside the sensor icons (Rule_Book §4.15, §4.16).
+        active.mode == com.agupta07505.smartisland.model.IslandMode.PrivacyIndicator -> ALERT_BADGE_WING_DP
         // The current time beside the ringing bell ("10:45 PM") (Rule_Book §4.10).
         active.mode == com.agupta07505.smartisland.model.IslandMode.Alarm ->
             LABEL_END_PADDING_DP + ALARM_TIME_CHARS * ALERT_TEXT_DP_PER_CHAR
@@ -82,9 +68,7 @@ object PillLayout {
     }
 
     private const val LABEL_END_PADDING_DP = 12f
-    private const val PRIVACY_CAMERA_CHARS = 13
-    private const val PRIVACY_MICROPHONE_CHARS = 17
-    private const val PRIVACY_BOTH_CHARS = 19
+    private const val ALERT_TEXT_DP_PER_CHAR = 6.2f
     private const val ALARM_TIME_CHARS = 8
 
     /**

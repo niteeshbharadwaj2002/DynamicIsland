@@ -25,6 +25,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.PrivacyTip
 import androidx.compose.material.icons.rounded.Videocam
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import com.agupta07505.smartisland.ui.PulsingDot
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -99,17 +102,14 @@ fun PrivacyIndicatorCollapsedGlyph(notification: IslandNotification?) {
     }
 }
 
-/** Expanded small state, right: "Camera in use" / "Microphone in use" / "Camera & mic in use". */
+/** Collapsed pill, right: a pulsing dot in the sensor's colour; the words live in the icons' descriptions and the card. */
 @Composable
 fun PrivacyIndicatorCollapsedRight(notification: IslandNotification?) {
     val sensors = PrivacyIndicatorAlert.sensorsOf(notification)
-    Text(
-        text = privacyLabel(sensors),
-        color = if (sensors.microphone && !sensors.camera) PrivacyColors.microphone else PrivacyColors.camera,
-        fontSize = 11.sp,
-        fontWeight = FontWeight.Bold,
-        maxLines = 1
-    )
+    val description = privacyLabel(sensors)
+    Box(modifier = Modifier.semantics { contentDescription = description }) {
+        PulsingDot(color = if (sensors.microphone && !sensors.camera) PrivacyColors.microphone else PrivacyColors.camera)
+    }
 }
 
 @Composable

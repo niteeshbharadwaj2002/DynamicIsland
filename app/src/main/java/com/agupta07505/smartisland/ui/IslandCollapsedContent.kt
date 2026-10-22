@@ -35,6 +35,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Navigation
 import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.Call
@@ -140,7 +141,7 @@ fun IslandCollapsedContent(
             .let { if (it.hasHardwareCutout) it.rawWidthDp else 28f }
     }
 
-    androidx.compose.foundation.layout.BoxWithConstraints(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .graphicsLayer {
@@ -148,8 +149,6 @@ fun IslandCollapsedContent(
                 scaleY = pulse.value
             }
     ) {
-        // What is left of the right-hand wing for text, after the hole, the end padding, the dot and the gap.
-        val alertTextMax = ((maxWidth - holeDp.dp) / 2f - RIGHT_SLOT_PADDING_END_DP.dp - 14.dp).coerceAtLeast(24.dp)
         Box(
             modifier = Modifier
                 .align(Alignment.CenterStart)
@@ -327,8 +326,8 @@ fun IslandCollapsedContent(
             val notification = slot.notification
             when (mode) {
                 IslandMode.Notification -> {
-                    if (notification != null && (notification.title.isNotBlank() || notification.text.isNotBlank())) {
-                        AlertPillText(notification = notification, maxTextWidth = alertTextMax)
+                    if (notification != null) {
+                        AlertPillBadge(notification = notification)
                     } else {
                         Box(
                             modifier = Modifier
@@ -339,13 +338,9 @@ fun IslandCollapsedContent(
                     }
                 }
                 IslandMode.IncomingCall -> {
+                    // Ringing or connecting has no duration yet: a pulsing dot, never words (Rule_Book §3.5).
                     if (notification?.isCallRinging == true || notification?.isCallConnecting == true) {
-                        Text(
-                            text = notification?.callStatusText?.takeIf { it.isNotBlank() } ?: "Ringing...",
-                            color = Color(settings.callColor),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        PulsingDot(color = Color(settings.callColor))
                     } else {
                         val time = notification?.timeMillis ?: System.currentTimeMillis()
                         CallTimer(postTimeMillis = time, color = Color(settings.callColor))
@@ -393,14 +388,7 @@ fun IslandCollapsedContent(
                 IslandMode.Bluetooth -> {
                     BluetoothCollapsedRight(notification = notification, settings = settings)
                 }
-                IslandMode.Flashlight -> {
-                    Text(
-                        text = "ON",
-                        color = Color(0xFFFACC15),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                IslandMode.Flashlight -> PulsingDot(color = Color(0xFFFACC15))
                 IslandMode.ScreenRecording, IslandMode.AudioRecording -> {
                     RecordingTimerText(notification = notification, color = Color(settings.screenRecordingColor))
                 }
@@ -669,25 +657,31 @@ private fun LiveActivityCollapsedRight(notification: IslandNotification?, settin
             Color(settings.liveActivityColor)
         }
     }
-    val etaText = remember(notification) {
-        if (notification == null) return@remember "Active"
-        val text = "${notification.title} ${notification.text}"
-        val matcher = java.util.regex.Pattern.compile("(\\d+)\\s*(?:mins?|minutes?|min|m)\\b", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(text)
-        if (matcher.find()) {
-            "${matcher.group(1)} min"
-        } else if (text.lowercase().contains("arrived")) {
-            "Arrived"
-        } else {
-            "Active"
+    // Minutes left, a check when it arrived, otherwise a dot: no status words on the pill (Rule_Book §3.5).
+    val etaMinutes = remember(notification) {
+        notification?.let {
+            java.util.regex.Pattern.compile("(\\d+)\\s*(?:mins?|minutes?|min|m)\\b", java.util.regex.Pattern.CASE_INSENSITIVE)
+                .matcher("${it.title} ${it.text}").takeIf { m -> m.find() }?.group(1)
         }
     }
-
-    Text(
-        text = etaText,
-        color = brandColor,
-        fontSize = 11.sp,
-        fontWeight = FontWeight.Bold
-    )
+    val arrived = remember(notification) {
+        etaMinutes == null && notification?.let { "${it.title} ${it.text}".lowercase().contains("arrived") } == true
+    }
+    when {
+        etaMinutes != null -> Text(
+            text = "$etaMinutes min",
+            color = brandColor,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold
+        )
+        arrived -> Icon(
+            imageVector = Icons.Rounded.Check,
+            contentDescription = "Arrived",
+            tint = brandColor,
+            modifier = Modifier.size(15.dp)
+        )
+        else -> PulsingDot(color = brandColor)
+    }
 }
 
 @Composable
@@ -730,20 +724,23 @@ internal fun NavigationCollapsedGlyph(notification: IslandNotification?, setting
 @Composable
 private fun NavigationCollapsedRight(notification: IslandNotification?, settings: SmartIslandSettings = SmartIslandSettings.Default) {
     val distanceText = remember(notification) {
-        if (notification == null) return@remember "200 m"
-        val title = notification.title
-        val text = notification.text
-        val pattern = java.util.regex.Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*(?:m|km|ft|mi|miles?|meters?)\\b", java.util.regex.Pattern.CASE_INSENSITIVE)
-        val matcher = pattern.matcher("$title $text")
-        if (matcher.find()) matcher.group(0) else "In 200 m"
+        notification?.let {
+            val pattern = java.util.regex.Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*(?:m|km|ft|mi|miles?|meters?)\\b", java.util.regex.Pattern.CASE_INSENSITIVE)
+            val matcher = pattern.matcher("${it.title} ${it.text}")
+            if (matcher.find()) matcher.group(0) else null
+        }
     }
 
-    Text(
-        text = distanceText,
-        color = Color(settings.liveActivityColor),
-        fontSize = 11.sp,
-        fontWeight = FontWeight.Bold
-    )
+    if (distanceText != null) {
+        Text(
+            text = distanceText,
+            color = Color(settings.liveActivityColor),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold
+        )
+    } else {
+        PulsingDot(color = Color(settings.liveActivityColor))
+    }
 }
 
 @Composable
