@@ -11,6 +11,7 @@ The format is inspired by Keep a Changelog, and this project uses the GNU Genera
 - Calls show the phone icon on the left and the call time on the right. While ringing or connecting, a pulsing dot replaces the "Ringing" / "Calling" words.
 - Messages show the app icon with the unread dot, or the message count for a grouped pill. The message pill is a fixed width instead of growing per character.
 - Flashlight, live activity, navigation and camera or microphone pills show dots or numbers instead of words. Full text stays in the expanded card and in TalkBack.
+- The camera and microphone privacy indicator is a pulsing circle: green for the camera, orange for the microphone, half green and half orange when both are in use. The companion bubble shows the circle alone; the main pill shows the camera or microphone icon on the left and the circle on the right. TalkBack says which sensor is in use. Issue [#11](https://github.com/niteeshbharadwaj2002/NotchIQ/issues/11).
 
 ## [8.0.0-personal] - 2026-10-21
 

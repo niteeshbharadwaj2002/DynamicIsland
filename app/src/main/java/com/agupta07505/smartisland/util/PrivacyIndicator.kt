@@ -54,6 +54,16 @@ object PrivacyIndicatorAlert {
         val both: Boolean get() = camera && microphone
     }
 
+    /** Which circle the pill and the companion bubble draw (Rule_Book §4.15). */
+    enum class DotForm { None, Camera, Microphone, Split }
+
+    fun dotFormOf(sensors: Sensors): DotForm = when {
+        sensors.both -> DotForm.Split
+        sensors.camera -> DotForm.Camera
+        sensors.microphone -> DotForm.Microphone
+        else -> DotForm.None
+    }
+
     fun sensorsOf(notification: IslandNotification?): Sensors = when (notification?.category) {
         CATEGORY_BOTH -> Sensors(camera = true, microphone = true)
         CATEGORY_CAMERA -> Sensors(camera = true, microphone = false)
