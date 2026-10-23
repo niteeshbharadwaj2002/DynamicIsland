@@ -92,7 +92,7 @@
     <string name="card_about_app_desc">v%1$s • オープンソース</string>
     <string name="card_about_app_status">オープンソース</string>
     <string name="card_support_requests_title">サポート&amp;コミュニティ</string>
-    <string name="card_support_requests_desc">GitHub、問題とテレグラムコミュニティ</string>
+    <string name="card_support_requests_desc">GitHub、問題とフィードバック</string>
     <string name="detail_title_notifications_privacy">通知とプライバシー</string>
     <string name="detail_title_app_shortcuts">アプリのショートカットランチャー</string>
     <string name="detail_title_notification_history">通知履歴ログ</string>
@@ -413,8 +413,6 @@
     <string name="support_title">サポート&amp;コミュニティ</string>
     <string name="star_on_github">GitHubでスター</string>
     <string name="star_on_github_desc">オープンソース開発をサポート</string>
-    <string name="join_telegram">Telegramコミュニティに参加</string>
-    <string name="join_telegram_desc">開発者とベータテスターとチャット</string>
     <string name="request_feature">特徴を要求して下さい</string>
     <string name="request_feature_desc">新しい島のウィジェットやアニメーションのアイデアを提案</string>
     <string name="report_bug">バグ報告</string>

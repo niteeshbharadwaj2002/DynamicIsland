@@ -577,7 +577,7 @@ internal fun buildSettingsSearchIndex(str: (Int) -> String): List<SettingsSearch
     add(
         "support.screen", supportScreen, detail(FeatureDetailSection.SupportCommunity), supportScreen, Icons.Rounded.People,
         str(R.string.card_support_requests_desc),
-        listOf("support", "telegram", "community", "bug", "issue", "feedback", "feature request", "contact")
+        listOf("support", "bug", "issue", "feedback", "feature request", "contact")
     )
 
     val devScreen = str(R.string.card_developer_options_title)

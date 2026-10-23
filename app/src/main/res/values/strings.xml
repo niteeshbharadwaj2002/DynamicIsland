@@ -98,7 +98,7 @@
     <string name="card_about_app_desc">v%1$s • Open Source</string>
     <string name="card_about_app_status">Open Source</string>
     <string name="card_support_requests_title">Support &amp; Community</string>
-    <string name="card_support_requests_desc">GitHub, issues &amp; Telegram community</string>
+    <string name="card_support_requests_desc">GitHub, issues &amp; feedback</string>
     <string name="detail_title_notifications_privacy">Notifications &amp; Privacy</string>
     <string name="detail_title_app_shortcuts">App Shortcuts Launcher</string>
     <string name="detail_title_notification_history">Notification History Log</string>
@@ -419,8 +419,6 @@
     <string name="support_title">Support &amp; Community</string>
     <string name="star_on_github">Star on GitHub</string>
     <string name="star_on_github_desc">Support open-source development</string>
-    <string name="join_telegram">Join Telegram Community</string>
-    <string name="join_telegram_desc">Chat with the developer &amp; beta testers</string>
     <string name="request_feature">Request a Feature</string>
     <string name="request_feature_desc">Propose new island widgets or animation ideas</string>
     <string name="report_bug">Report a Bug</string>
