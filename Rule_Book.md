@@ -79,7 +79,7 @@ Timing logic is self-contained in `AlertEngine` via `nowMs`:
 
 ### 3.4 Collisions at Arrival
 *   **Auto-expand block:** If an Ephemeral alert arrives with auto-expand true, but the current main pill is Critical/Persistent, auto-expand is ignored. It waits safely as the companion bubble. The same happens in landscape (§9.2) and over a `FLAG_SECURE` foreground app (§8.2); all three rules live in `ExpansionPolicy.allowAutoExpand`.
-*   **Tap Behavior:** Tapping the main pill expands it. Tapping the companion bubble swaps it into the main pill slot and expands it.
+*   **Tap Behavior:** Tapping the main pill expands it. Tapping the companion bubble swaps it into the main pill slot and expands it. With no card on the island and shortcuts enabled, tapping the idle pill opens the control center (§4.5) instead; with a card on the island the tap opens that card as before (`ControlCenterRules.tapOpens`).
 *   **Swipe Down (idle pill):** With no card on the island, a swipe down on the portrait pill expands it onto the Notification Center (§4.17). With a card on the island, the swipe down still expands that card.
 
 ### 3.5 Symbol-Only Pill
@@ -136,10 +136,22 @@ The collapsed pill and the companion bubble show symbols and short numbers or ti
 *   **Large State:** This feature does not use the Large State Island.
 *   **Action Rule:** Reaching 00:00 promotes it from Tier 1 to Critical (Tier 0). `AlertClassifier` treats a Timer as finished when its category is `alarm`, or when its shown title/text says so (`TimerStopwatchParser.isFinishedTimerText`: "Time's up", "Timer finished/expired/ended/done", or a standalone `0:00` / `00:00` / `0:00:00`).
 
-### 4.5 Idle Dashboard
+### 4.5 Control Center (Idle Dashboard)
 *   **Small State:** Hardware camera cutout mask only (Idle).
 *   **Medium State:** This feature does not use the Medium State Island.
-*   **Large State:** 350dp x ~300dp (40dp squircle) containing app shortcuts, system toggles, and search.
+*   **Large State:** ~350dp wide and up to 380dp tall (40dp squircle). The measured-height clamp for this branch is 380dp (it was 260dp).
+*   **Trigger:** A tap on the collapsed idle pill (no card on the island, shortcuts enabled) or a long press. The tap rule is `ControlCenterRules.tapOpens`; the earlier branches (idle widget slots, stored-card reveal, landscape idle dot, hidden-pill reveal) keep priority. It reuses the apps-launcher expansion (`IslandViewModel.openAppsLauncher`).
+*   **Contents:** A search field, battery and Bluetooth status badges, and 2-column quick-control tiles (Wi-Fi, Flashlight, Do Not Disturb, Island Settings). Below them is the launcher pager (pinned apps, recents, and a Utilities page with the toggle grid: Wi-Fi, Bluetooth, mobile data, airplane, hotspot, flashlight, auto-rotate, dark mode, battery saver and the rest of `UtilityType`).
+*   **Toggles:** Wi-Fi, Bluetooth and mobile data open the system panel on Android 16, or toggle directly when Shizuku or `WRITE_SECURE_SETTINGS` is granted (existing `UtilityActions` behaviour).
+*   **Lockscreen:** `IdleDashboard(locked = KeyguardManager.isKeyguardLocked)`. Only the safe tiles show (`ControlCenterRules.LOCK_SAFE_IDS`: Flashlight and Do Not Disturb). Search and the app launcher are hidden until unlock (`ControlCenterRules.visibleIds` and `showsLauncher`).
+*   **Close:** Tap outside, swipe up, or back, the same as the expanded island.
+*   **Not included (follow-ups):** brightness and volume sliders; opening the control center from the expanded card; the landscape corner pill.
+*   **Implementation:**
+    *   `util/ControlCenterRules.kt`: `tapOpens`, `LOCK_SAFE_IDS`, `visibleIds` and `showsLauncher`.
+    *   `ui/expanded/IdleDashboard.kt`: the dashboard, with the `locked` flag and the launcher slot.
+    *   `ui/expanded/IslandExpandedContent.kt`: the empty-island branch draws the `ControlCenter` composable, which hosts the launcher pager as the app area. The height clamp is 380dp.
+    *   `ui/IslandMainGestures.kt`: the idle-pill tap and long press open the control center.
+    *   `ui/IslandViewModel.kt`: `openAppsLauncher()` sets `idlePanel` to `ControlCenter`.
 
 ### 4.6 Bluetooth Connectivity
 *   **Small State:** Device-type icon (e.g., headphones, speaker, or generic Bluetooth logo) (left), overall Battery % (right).
@@ -282,7 +294,7 @@ The collapsed pill and the companion bubble show symbols and short numbers or ti
 
 ## 6. Testing & Debugging
 
-*   **Unit Tests:** Business logic is covered thoroughly in `AlertEngineTest`, the Notification Center grouping, lockscreen masking and swipe routing (§4.17) in `ShadeNotificationsTest`, with the expansion, recovery and lockscreen rules in `ExpansionPolicyTest`, `TimerRecoveryTest` and `KeyguardGateTest`, immersive suppression and the face-unlock hold in `AlertEngineSuppressionTest` and `IslandViewModelSuppressionTest`. The arrival collision rule (§3.4) is covered in `ExpansionPolicyTest`. Overlay guards (FLAG_SECURE / FLAG_NOT_TOUCHABLE flags, capture signals, face-unlock window, secure-app guess, capture displays, foreground-service type) are in `OverlayGuardsTest`, the listener queue in `ListenerEventBufferTest`, ride parsing in `NavigationParserTest`, hotspot AP state in `SystemEventReceiverTest` / `HotspotUtilTest`, OEM panel selection in `OemAutostartUtilTest`, the alarm / call / recorder / privacy-indicator / landscape-docking rules in `IslandAlertParsersTest`, the icon blacklist merge/restore in `StatusBarIconBlacklistTest`, and pill widths (including stopwatch, privacy and alarm wings) in `PillLayoutTest`. The privacy circle's form mapping (camera, microphone, both, live updates) is in `PrivacyDotFormTest`. Run via `./gradlew testDebugUnitTest`. Always update tests before altering Engine behavior.
+*   **Unit Tests:** Business logic is covered thoroughly in `AlertEngineTest`, the Notification Center grouping, lockscreen masking and swipe routing (§4.17) in `ShadeNotificationsTest`, with the expansion, recovery and lockscreen rules in `ExpansionPolicyTest`, `TimerRecoveryTest` and `KeyguardGateTest`, the control center's tap and lockscreen rules (§4.5) in `ControlCenterRulesTest`, the settings search index (every Layout group found by its summary line, §11.3) in `SettingsSearchIndexTest`, immersive suppression and the face-unlock hold in `AlertEngineSuppressionTest` and `IslandViewModelSuppressionTest`. The arrival collision rule (§3.4) is covered in `ExpansionPolicyTest`. Overlay guards (FLAG_SECURE / FLAG_NOT_TOUCHABLE flags, capture signals, face-unlock window, secure-app guess, capture displays, foreground-service type) are in `OverlayGuardsTest`, the listener queue in `ListenerEventBufferTest`, ride parsing in `NavigationParserTest`, hotspot AP state in `SystemEventReceiverTest` / `HotspotUtilTest`, OEM panel selection in `OemAutostartUtilTest`, the alarm / call / recorder / privacy-indicator / landscape-docking rules in `IslandAlertParsersTest`, the icon blacklist merge/restore in `StatusBarIconBlacklistTest`, and pill widths (including stopwatch, privacy and alarm wings) in `PillLayoutTest`. The privacy circle's form mapping (camera, microphone, both, live updates) is in `PrivacyDotFormTest`. Run via `./gradlew testDebugUnitTest`. Always update tests before altering Engine behavior.
 *   **ADB Synthetic Intents:** Debug builds include `DebugAlertReceiver` (declared in `app/src/debug/AndroidManifest.xml`, guarded by `android.permission.DUMP` so only the adb shell or the system can send to it) to bypass the awkwardness of testing real messaging apps. The component is `<applicationId>/<class>`: the applicationId is `com.niteeshbharadwaj.smartisland.personal` (no debug suffix) while the class keeps the source namespace `com.agupta07505.smartisland`.
     *   *Trigger format:* `adb shell "am broadcast -n com.niteeshbharadwaj.smartisland.personal/com.agupta07505.smartisland.debug.DebugAlertReceiver --es kind [TYPE] --es pkg [PKG] --es title [TITLE] --es text '[TEXT]'"`
     *   *`kind`:* `message` (default) | `promo` | `call` | `ongoing_call` | `alarm` (a ringing `Alarm` with Snooze / Stop) | `nav` | `music` | `timer` | `stopwatch` | `record` | `voice` (voice recorder) | `camera` | `mic` | `camera_mic` (the privacy indicator) | `live` | `battery` | `bluetooth` | `flash` | `clear` (removes every alert). Optional extras: `--es app [NAME]`, `--es key [KEY]`, `--es group [GROUP_ID]`, `--ez reply true|false`, `--ez expand true` (auto-expand on arrival).

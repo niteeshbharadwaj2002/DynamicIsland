@@ -45,7 +45,7 @@ These settle the open questions in the issue.
 - [ ] Works in light and dark theme with enough contrast. **Not verified on device.**
 - [ ] TalkBack reads the title and then the summary. **Not checked.**
 - [x] New strings are added for English. Other locales fall back to English (no per-locale `layout_summary_*` strings exist).
-- [ ] Settings search matches summary text and `SettingsSearchIndexTest` is updated. The search index matches summary text in code (`SettingsSearchIndex.kt`), but `SettingsSearchIndexTest` has **not** been extended for summaries.
+- [x] Settings search matches summary text and `SettingsSearchIndexTest` is updated. The search index matches summary text in code (`SettingsSearchIndex.kt`), and `SettingsSearchIndexTest.everyLayoutGroupCanBeFoundByItsSummaryLine` checks that every Layout group is found by its summary line (added with issue #12).
 - [x] `Rule_Book.md` is updated (section 11.3). Unit tests (2066 pass) and lint pass.
 
 ## Files changed

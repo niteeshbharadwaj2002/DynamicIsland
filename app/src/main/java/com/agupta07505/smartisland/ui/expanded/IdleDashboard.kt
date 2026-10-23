@@ -74,6 +74,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
 import com.agupta07505.smartisland.data.AppShortcutProvider
 import com.agupta07505.smartisland.data.LaunchableApp
+import com.agupta07505.smartisland.util.ControlCenterRules
 
 private val DashboardSurface = Color(0xFF222222)
 private val WifiBlue = Color(0xFF3B82F6)
@@ -92,6 +93,8 @@ internal fun IdleDashboard(
     onCollapse: () -> Unit,
     onInputStateChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    /** True on the lockscreen: only the safe tiles show, with no search or app launcher. */
+    locked: Boolean = false,
     /**
      * The app area while the search box is empty: upstream's launcher pager (pinned apps, recents and the Utilities
      * page). Null keeps the four-icon mini launcher below.
@@ -115,7 +118,7 @@ internal fun IdleDashboard(
     }
 
     val controls = listOf(
-        QuickControl("Wi-Fi", Icons.Rounded.Wifi, wifiOn, WifiBlue, Color.White, null) {
+        QuickControl("wifi", "Wi-Fi", Icons.Rounded.Wifi, wifiOn, WifiBlue, Color.White, null) {
             // The in-app Internet panel exists from Android 10; before that, the plain Wi-Fi settings page.
             startSettingsActivity(
                 context,
@@ -129,9 +132,9 @@ internal fun IdleDashboard(
             )
             onCollapse()
         },
-        QuickControl("Flashlight", Icons.Rounded.FlashlightOn, torch.on, FlashAmber, Color(0xFF1A1300),
+        QuickControl("flashlight", "Flashlight", Icons.Rounded.FlashlightOn, torch.on, FlashAmber, Color(0xFF1A1300),
             if (torch.on) "ON" else null) { torch.toggle() },
-        QuickControl("Do Not Disturb", Icons.Rounded.DoNotDisturbOn, dndOn, Color(0xFF6366F1), Color.White, null) {
+        QuickControl("dnd", "Do Not Disturb", Icons.Rounded.DoNotDisturbOn, dndOn, Color(0xFF6366F1), Color.White, null) {
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             if (nm.isNotificationPolicyAccessGranted) {
                 nm.setInterruptionFilter(
@@ -143,14 +146,16 @@ internal fun IdleDashboard(
                 onCollapse()
             }
         },
-        QuickControl("Island Settings", Icons.Rounded.Settings, false, DashboardSurface, Color.White, null) {
+        QuickControl("settings", "Island Settings", Icons.Rounded.Settings, false, DashboardSurface, Color.White, null) {
             onLaunchApp(context.packageName)
         }
     )
 
     val trimmed = query.trim()
-    val shownControls = if (trimmed.isEmpty()) controls
-    else controls.filter { it.label.contains(trimmed, ignoreCase = true) }
+    val lockSafeIds = ControlCenterRules.visibleIds(controls.map { it.id }, locked)
+    val available = controls.filter { it.id in lockSafeIds }
+    val shownControls = if (trimmed.isEmpty()) available
+    else available.filter { it.label.contains(trimmed, ignoreCase = true) }
     val shownApps: List<LaunchableApp> = if (trimmed.isEmpty()) {
         favoriteApps(apps, installed)
     } else {
@@ -168,16 +173,22 @@ internal fun IdleDashboard(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            SearchField(
-                query = query,
-                onQueryChange = { query = it },
-                onFocusChanged = onInputStateChanged,
-                modifier = Modifier.weight(1f)
-            )
+            if (ControlCenterRules.showsLauncher(locked)) {
+                SearchField(
+                    query = query,
+                    onQueryChange = { query = it },
+                    onFocusChanged = onInputStateChanged,
+                    modifier = Modifier.weight(1f)
+                )
+            } else {
+                Spacer(Modifier.weight(1f))
+            }
             StatusBadges()
         }
 
-        if (launcher != null && trimmed.isEmpty()) {
+        if (!ControlCenterRules.showsLauncher(locked)) {
+            // Locked: no launcher.
+        } else if (launcher != null && trimmed.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -223,6 +234,7 @@ internal fun IdleDashboard(
 }
 
 private data class QuickControl(
+    val id: String,
     val label: String,
     val icon: ImageVector,
     val active: Boolean,
