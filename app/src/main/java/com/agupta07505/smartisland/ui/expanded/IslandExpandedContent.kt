@@ -154,7 +154,7 @@ fun IslandExpandedContent(
                 .onSizeChanged {
                     val measuredHeight = with(density) { it.height.toDp() }
                     if (measuredHeight > 0.dp) {
-                        val clamped = measuredHeight.coerceIn(80.dp, 260.dp)
+                        val clamped = measuredHeight.coerceIn(80.dp, 380.dp)
                         onHeightMeasured(clamped)
                     }
                 }
@@ -179,7 +179,14 @@ fun IslandExpandedContent(
             if (idlePanel == IdlePanel.Notifications) {
                 NotificationCenter(onCollapse = onCollapse, onInputStateChanged = onReplyStateChanged)
             } else {
-                EmptyExpanded(settings = settings, apps = launcherApps, onLaunchApp = onLaunchApp, onAppAction = onAppAction)
+                ControlCenter(
+                    settings = settings,
+                    apps = launcherApps,
+                    onLaunchApp = onLaunchApp,
+                    onAppAction = onAppAction,
+                    onCollapse = onCollapse,
+                    onInputStateChanged = onReplyStateChanged
+                )
             }
         }
         return
@@ -1203,6 +1210,7 @@ internal fun ExpandedCardPage(
                 IslandMode.Empty -> if (LocalIdlePanel.current == IdlePanel.Notifications) {
                     NotificationCenter(onCollapse = onCollapse, onInputStateChanged = onReplyStateChanged)
                 } else IdleDashboard(
+                    locked = isDeviceLocked(LocalContext.current),
                     apps = launcherApps,
                     onLaunchApp = onLaunchApp,
                     onCollapse = onCollapse,
@@ -1245,6 +1253,41 @@ private val LAUNCHER_PAGE_EXTRA = 8.dp
 private val LAUNCHER_FOLDER_PANEL_HEIGHT = 108.dp
 
 private const val FOLDER_DWELL_MS = 1500L
+
+/** The device's lock state at the moment the control center opens. */
+private fun isDeviceLocked(context: android.content.Context): Boolean =
+    (context.getSystemService(android.content.Context.KEYGUARD_SERVICE) as android.app.KeyguardManager).isKeyguardLocked
+
+/**
+ * The control center (Rule_Book §4.5): the idle dashboard (search, status, quick controls) hosting the launcher
+ * pager (pinned apps, recents, utilities) as its app area. While locked it shows the safe tiles only.
+ */
+@Composable
+private fun ControlCenter(
+    settings: SmartIslandSettings,
+    apps: List<LaunchableApp>?,
+    onLaunchApp: (String) -> Unit,
+    onAppAction: (String, AppShortcutAction) -> Unit,
+    onCollapse: () -> Unit,
+    onInputStateChanged: (Boolean) -> Unit
+) {
+    IdleDashboard(
+        locked = isDeviceLocked(LocalContext.current),
+        apps = apps,
+        onLaunchApp = onLaunchApp,
+        onCollapse = onCollapse,
+        onInputStateChanged = onInputStateChanged,
+        launcher = {
+            EmptyExpanded(
+                settings = settings,
+                apps = apps,
+                onLaunchApp = onLaunchApp,
+                onAppAction = onAppAction,
+                padding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+            )
+        }
+    )
+}
 
 @Composable
 private fun EmptyExpanded(

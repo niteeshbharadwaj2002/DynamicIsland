@@ -453,8 +453,13 @@ internal fun Modifier.islandMainGestures(
                                         } else if (isLandscape && !settings.enableNotchMode && cb.currentNotifications.isEmpty()) {
                                             cb.currentOnIdleDotTap()
                                         } else if (cb.currentNotifications.isNotEmpty()) {
-                                            // (An empty island does not open the shortcuts on a tap: that is a long press.)
                                             cb.currentOnToggle()
+                                        } else if (com.agupta07505.smartisland.util.ControlCenterRules.tapOpens(
+                                                settings.enableAppShortcuts, cb.currentNotifications.size
+                                            )
+                                        ) {
+                                            // An idle pill: a tap opens the control center (a long press still does too).
+                                            cb.currentOnOpenAppsLauncher()
                                         }
                                     }
                                 }
