@@ -102,6 +102,7 @@ fun IslandOverlayView(
     widgetPill: Boolean = false,
     onIdleDotTap: () -> Unit = {},
     onOpenAppsLauncher: () -> Unit = {},
+    onOpenNotificationCenter: () -> Unit = {},
     idleClosing: Boolean = false,
     /** The expanded island shows the quick-launch grid (Open Apps shortcut) with no card: not a "last card gone" close. */
     appsLauncherOpen: Boolean = false,
@@ -121,6 +122,7 @@ fun IslandOverlayView(
         onRevealIdleCards = onRevealIdleCards,
         onIdleDotTap = onIdleDotTap,
         onOpenAppsLauncher = onOpenAppsLauncher,
+        onOpenNotificationCenter = onOpenNotificationCenter,
         onTogglePillHidden = onTogglePillHidden,
         onDismissNotification = onDismissNotification,
         onDismissAllNotifications = onDismissAllNotifications,

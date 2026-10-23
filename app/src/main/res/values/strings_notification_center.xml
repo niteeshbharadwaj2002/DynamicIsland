@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notification_center_title">Notifications</string>
+    <string name="notification_center_empty">No notifications</string>
+    <string name="notification_center_clear_all">Clear all</string>
+    <string name="notification_center_reply">Reply</string>
+    <string name="notification_center_send">Send</string>
+    <string name="notification_center_dismiss">Dismiss</string>
+    <string name="notification_center_reply_hint">Reply</string>
+    <string name="notification_center_locked_count">%1$d notifications</string>
+</resources>

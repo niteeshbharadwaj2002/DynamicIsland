@@ -6,6 +6,9 @@ The format is inspired by Keep a Changelog, and this project uses the GNU Genera
 
 ## [Unreleased]
 
+### Added
+- Swipe down on the idle portrait pill (no card on the island) opens the Notification Center: the live notifications grouped by app, with open, dismiss, clear all and reply. Locked devices show counts only. Requires pill swipe actions on. Issue [#13](https://github.com/niteeshbharadwaj2002/NotchIQ/issues/13).
+
 ### Changed
 - Every group on the Layout screen shows one gray summary line under its title, in Portrait and Landscape. The line is ellipsized and never wraps. Settings search matches the summary text. Issue [#16](https://github.com/niteeshbharadwaj2002/NotchIQ/issues/16).
 - Support & Feedback, the welcome dialog and the About screen link to NotchIQ only. The Telegram community option is removed. Links come from one object, `ProjectLinks`. The original author's credit links are kept. Issue [#15](https://github.com/niteeshbharadwaj2002/NotchIQ/issues/15).

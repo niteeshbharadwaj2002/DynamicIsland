@@ -23,6 +23,7 @@ internal class IslandCallbacks(
     private val onRevealIdleCards: State<() -> Unit>,
     private val onIdleDotTap: State<() -> Unit>,
     private val onOpenAppsLauncher: State<() -> Unit>,
+    private val onOpenNotificationCenter: State<() -> Unit>,
     private val onTogglePillHidden: State<() -> Unit>,
     private val onDismiss: State<() -> Unit>,
     private val onDismissAll: State<() -> Unit>,
@@ -52,6 +53,7 @@ internal class IslandCallbacks(
     val currentOnRevealIdleCards: () -> Unit get() = onRevealIdleCards.value
     val currentOnIdleDotTap: () -> Unit get() = onIdleDotTap.value
     val currentOnOpenAppsLauncher: () -> Unit get() = onOpenAppsLauncher.value
+    val currentOnOpenNotificationCenter: () -> Unit get() = onOpenNotificationCenter.value
     val currentOnTogglePillHidden: () -> Unit get() = onTogglePillHidden.value
     val currentOnDismiss: () -> Unit get() = onDismiss.value
     val currentOnDismissAll: () -> Unit get() = onDismissAll.value
@@ -84,6 +86,7 @@ internal fun rememberIslandCallbacks(
     onRevealIdleCards: () -> Unit,
     onIdleDotTap: () -> Unit,
     onOpenAppsLauncher: () -> Unit,
+    onOpenNotificationCenter: () -> Unit,
     onTogglePillHidden: () -> Unit,
     onDismissNotification: () -> Unit,
     onDismissAllNotifications: () -> Unit,
@@ -113,6 +116,7 @@ internal fun rememberIslandCallbacks(
     val onRevealIdleCardsState = rememberUpdatedState(onRevealIdleCards)
     val onIdleDotTapState = rememberUpdatedState(onIdleDotTap)
     val onOpenAppsLauncherState = rememberUpdatedState(onOpenAppsLauncher)
+    val onOpenNotificationCenterState = rememberUpdatedState(onOpenNotificationCenter)
     val onTogglePillHiddenState = rememberUpdatedState(onTogglePillHidden)
     val onDismissState = rememberUpdatedState(onDismissNotification)
     val onDismissAllState = rememberUpdatedState(onDismissAllNotifications)
@@ -143,6 +147,7 @@ internal fun rememberIslandCallbacks(
             onRevealIdleCards = onRevealIdleCardsState,
             onIdleDotTap = onIdleDotTapState,
             onOpenAppsLauncher = onOpenAppsLauncherState,
+            onOpenNotificationCenter = onOpenNotificationCenterState,
             onTogglePillHidden = onTogglePillHiddenState,
             onDismiss = onDismissState,
             onDismissAll = onDismissAllState,
