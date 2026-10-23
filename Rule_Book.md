@@ -402,6 +402,7 @@ The primary configuration dashboard serves as the main entry point and must stri
 ### 11.3 Layout & Appearance Dashboard
 The Layout configuration screen must be streamlined and logically grouped to prevent vertical clutter and cognitive overload.
 *   **Semantic Re-grouping:** Settings must never be mixed arbitrarily. They must be strictly separated into distinct inset grouped containers with relevant all-caps headers: Form Factor, Quick Presets, Geometry & Sizing, Aesthetics, Behavior, and Motion Physics.
+*   **Group Summaries (Issue #16):** Every group on the Layout screen, in Portrait and Landscape, shows one short gray summary line under its title, always visible in the collapsed row. The line is one line only: it is ellipsized, never wrapped, and the same wording is used in both orientations. Copy lives in `res/values/strings_layout_rides.xml` as `layout_summary_*` and is kept to 60 characters or fewer with no trailing period (`LayoutGroupTest`). Settings search matches the summary text as well as the title.
 *   **Component Simplification & Decluttering:**
     *   Chunky binary toggle buttons (e.g., Compact Pill vs Notch Mode) must be replaced with compact, iOS-style inline Segmented Controls.
     *   Large grid presets (e.g., the 2x2 Quick Layout Presets) must be converted into a horizontally scrolling row of compact chips.

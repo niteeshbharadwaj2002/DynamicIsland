@@ -48,6 +48,7 @@ fun MotionSettings(
     Column(verticalArrangement = Arrangement.spacedBy(Dimens.SectionSpacing)) {
         CollapsibleGroup(
             title = stringResource(LayoutGroup.MotionPhysics.titleRes),
+            summary = stringResource(LayoutGroup.MotionPhysics.summaryRes),
             stateKey = "pos_motion",
             value = stringResource(presetTitle(selected)),
             searchKey = LayoutGroup.MotionPhysics.searchKey
@@ -86,6 +87,8 @@ fun MotionSettings(
         GroupedSection(modifier = Modifier.searchAnchor(LayoutGroup.KineticGlow.searchKey)) {
             SwitchRow(
                 title = stringResource(R.string.motion_glow_title),
+                subtitle = stringResource(LayoutGroup.KineticGlow.summaryRes),
+                subtitleMaxLines = 1,
                 checked = settings.kineticGlow,
                 onCheckedChange = { scope.launch { repository.setKineticGlow(it) } }
             )
@@ -94,6 +97,8 @@ fun MotionSettings(
             GroupedSection(modifier = Modifier.searchAnchor(LayoutGroup.BackdropBlur.searchKey)) {
                 SwitchRow(
                     title = stringResource(R.string.motion_blur_title),
+                    subtitle = stringResource(LayoutGroup.BackdropBlur.summaryRes),
+                    subtitleMaxLines = 1,
                     checked = settings.backdropBlur,
                     onCheckedChange = { scope.launch { repository.setBackdropBlur(it) } }
                 )

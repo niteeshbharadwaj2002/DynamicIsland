@@ -41,6 +41,7 @@ fun AnimationSpeedSection(
     GroupedSection(modifier = Modifier.searchAnchor("layout.anim_speed")) {
         SegmentedChoiceRow(
             title = stringResource(if (landscape) R.string.anim_speed_title_landscape else R.string.anim_speed_title_portrait),
+            summary = stringResource(R.string.layout_summary_anim_speed),
             options = options,
             selected = selected,
             onSelect = { id ->
@@ -71,6 +72,7 @@ fun MergeStyleSection(
     GroupedSection(modifier = Modifier.searchAnchor("layout.merge_style")) {
         SegmentedChoiceRow(
             title = stringResource(if (landscape) R.string.merge_style_title_landscape else R.string.merge_style_title_portrait),
+            summary = stringResource(R.string.layout_summary_merge_style),
             options = options,
             selected = selected,
             onSelect = { id ->

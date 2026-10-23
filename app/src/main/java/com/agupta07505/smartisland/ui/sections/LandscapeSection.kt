@@ -87,7 +87,7 @@ fun LandscapeSection(
             )
         }
 
-        CollapsibleGroup(title = "Idle cutout", stateKey = "land_idle") {
+        CollapsibleGroup(title = "Idle cutout", stateKey = "land_idle", summary = stringResource(R.string.layout_summary_land_idle)) {
             SegmentedChoiceRow(
                 title = "Position",
                 options = listOf(
@@ -157,7 +157,7 @@ fun LandscapeSection(
             }
         }
 
-        CollapsibleGroup(title = "Cutout with content", stateKey = "land_content") {
+        CollapsibleGroup(title = "Cutout with content", stateKey = "land_content", summary = stringResource(R.string.layout_summary_land_content)) {
             SegmentedChoiceRow(
                 title = "Position",
                 options = listOf(
@@ -243,6 +243,7 @@ fun LandscapeSection(
 
         CollapsibleGroup(
             title = stringResource(LayoutGroup.ExemptApps.titleRes),
+            summary = stringResource(LayoutGroup.ExemptApps.summaryRes),
             stateKey = "land_exempt_apps",
             searchKey = LayoutGroup.ExemptApps.searchKey
         ) {
