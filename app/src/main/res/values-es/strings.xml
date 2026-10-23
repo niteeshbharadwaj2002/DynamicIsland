@@ -92,7 +92,7 @@
     <string name="card_about_app_desc">v%1$s • Fuente abierta</string>
     <string name="card_about_app_status">Fuente abierta</string>
     <string name="card_support_requests_title">Apoyo a la comunidad</string>
-    <string name="card_support_requests_desc">GitHub, problemas " Telegram community</string>
+    <string name="card_support_requests_desc">GitHub, problemas y comentarios</string>
     <string name="detail_title_notifications_privacy">Notificaciones " Privacidad</string>
     <string name="detail_title_app_shortcuts">App Shortcuts Launcher</string>
     <string name="detail_title_notification_history">Historial de notificación</string>
@@ -413,8 +413,6 @@
     <string name="support_title">Apoyo a la comunidad</string>
     <string name="star_on_github">Estrella en GitHub</string>
     <string name="star_on_github_desc">Apoyo al desarrollo de código abierto</string>
-    <string name="join_telegram">Únase a Telegram Community</string>
-    <string name="join_telegram_desc">Chat con los probadores beta del desarrollador</string>
     <string name="request_feature">Solicitar una alimentación</string>
     <string name="request_feature_desc">Proponer nuevos widgets de isla o ideas de animación</string>
     <string name="report_bug">Reportar un error</string>

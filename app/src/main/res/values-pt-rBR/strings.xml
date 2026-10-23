@@ -92,7 +92,7 @@
     <string name="card_about_app_desc">v%1$s • Código aberto</string>
     <string name="card_about_app_status">Abrir o Código</string>
     <string name="card_support_requests_title">Suporte e Comunidade</string>
-    <string name="card_support_requests_desc">GitHub, problemas e comunidade de Telegram</string>
+    <string name="card_support_requests_desc">GitHub, problemas e feedback</string>
     <string name="detail_title_notifications_privacy">Notificações e Privacidade</string>
     <string name="detail_title_app_shortcuts">Lançador de Atalhos de Aplicações</string>
     <string name="detail_title_notification_history">Registo do Histórico de Notificações</string>
@@ -413,8 +413,6 @@
     <string name="support_title">Suporte e Comunidade</string>
     <string name="star_on_github">Estrela no GitHub</string>
     <string name="star_on_github_desc">Apoiar o desenvolvimento de código aberto</string>
-    <string name="join_telegram">Junte-se à Comunidade Telegram</string>
-    <string name="join_telegram_desc">Converse com os programadores e testadores beta</string>
     <string name="request_feature">Solicitar uma Característica</string>
     <string name="request_feature_desc">Propor novos widgets da ilha ou ideias de animação</string>
     <string name="report_bug">Reportar um Erro</string>
