@@ -142,7 +142,8 @@ fun IslandExpandedContent(
     heightCache: CardHeightCache? = null
 ) {
     if (notifications.isEmpty()) {
-        if (!settings.enableAppShortcuts) {
+        val idlePanel = LocalIdlePanel.current
+        if (!settings.enableAppShortcuts && idlePanel != IdlePanel.Notifications) {
             return
         }
         val density = LocalDensity.current
@@ -175,7 +176,11 @@ fun IslandExpandedContent(
                         )
                 )
             }
-            EmptyExpanded(settings = settings, apps = launcherApps, onLaunchApp = onLaunchApp, onAppAction = onAppAction)
+            if (idlePanel == IdlePanel.Notifications) {
+                NotificationCenter(onCollapse = onCollapse, onInputStateChanged = onReplyStateChanged)
+            } else {
+                EmptyExpanded(settings = settings, apps = launcherApps, onLaunchApp = onLaunchApp, onAppAction = onAppAction)
+            }
         }
         return
     }
@@ -1195,7 +1200,9 @@ internal fun ExpandedCardPage(
                 )
                 // The idle surface (Decision D2): NotchIQ's dashboard (search, status, quick controls) hosting upstream's
                 // launcher pager (pinned apps, recents, utilities) as its app area.
-                IslandMode.Empty -> IdleDashboard(
+                IslandMode.Empty -> if (LocalIdlePanel.current == IdlePanel.Notifications) {
+                    NotificationCenter(onCollapse = onCollapse, onInputStateChanged = onReplyStateChanged)
+                } else IdleDashboard(
                     apps = launcherApps,
                     onLaunchApp = onLaunchApp,
                     onCollapse = onCollapse,

@@ -499,6 +499,44 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
         com.agupta07505.smartisland.util.NotificationCountTracker.update(
             com.agupta07505.smartisland.model.NotificationCounts.merge(shade, island)
         )
+        publishShadeItems()
+    }
+
+    /** The shade's notifications for the swipe-down notification center (Rule_Book §4.17). */
+    private fun publishShadeItems() {
+        val items = runCatchingLogged(TAG, "Shade items: reading the shade failed") { activeNotifications?.toList() }
+            .orEmpty()
+            .filter { it.packageName != packageName && (it.notification.flags and Notification.FLAG_GROUP_SUMMARY) == 0 }
+            .map { sbn ->
+                val n = sbn.notification
+                val extras = n.extras
+                val reply = n.actions?.firstNotNullOfOrNull { action ->
+                    val input = action.remoteInputs?.firstOrNull { it.allowFreeFormInput }
+                    val intent = action.actionIntent
+                    if (input != null && intent != null) {
+                        com.agupta07505.smartisland.util.ShadeReply(intent, input.resultKey)
+                    } else null
+                }
+                com.agupta07505.smartisland.util.ShadeItem(
+                    key = sbn.key,
+                    packageName = sbn.packageName,
+                    appLabel = appLabelOf(sbn.packageName),
+                    title = extras?.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty(),
+                    text = extras?.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty(),
+                    postTime = sbn.postTime,
+                    clearable = sbn.isClearable,
+                    reply = reply
+                )
+            }
+        com.agupta07505.smartisland.util.ShadeNotifications.update(items)
+    }
+
+    private fun openShadeNotification(key: String) {
+        val sbn = runCatchingLogged(TAG, "Shade open: reading the shade failed") { activeNotifications?.firstOrNull { it.key == key } } ?: return
+        runCatchingLogged(TAG, "Shade open: sending the content intent failed") { sbn.notification.contentIntent?.send() }
+        if (sbn.isClearable && (sbn.notification.flags and Notification.FLAG_AUTO_CANCEL) != 0) {
+            runCatchingLogged(TAG, "Shade open: auto-cancel failed") { cancelNotification(key) }
+        }
     }
 
     private fun StatusBarNotification.toCountEntry(): com.agupta07505.smartisland.model.CountEntry {
@@ -718,6 +756,13 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
     override fun onListenerConnected() {
         super.onListenerConnected()
         isSystemConnected = true
+        com.agupta07505.smartisland.util.ShadeNotifications.dismiss = { key ->
+            runCatchingLogged(TAG, "Shade dismiss failed") { cancelNotification(key) }
+        }
+        com.agupta07505.smartisland.util.ShadeNotifications.dismissAll = {
+            runCatchingLogged(TAG, "Shade clear all failed") { cancelAllNotifications() }
+        }
+        com.agupta07505.smartisland.util.ShadeNotifications.open = { key -> openShadeNotification(key) }
         scheduleCountRefresh()
         com.agupta07505.smartisland.util.AppLogRecorder.i(
             "ListenerLifecycle",
@@ -873,6 +918,7 @@ class SmartIslandNotificationListenerService : NotificationListenerService() {
     override fun onListenerDisconnected() {
         isSystemConnected = false
         com.agupta07505.smartisland.util.NotificationCountTracker.clear()
+        com.agupta07505.smartisland.util.ShadeNotifications.clear()
         mediaWatcher?.stop()
         mediaWatcher = null
         com.agupta07505.smartisland.util.AppLogRecorder.w(

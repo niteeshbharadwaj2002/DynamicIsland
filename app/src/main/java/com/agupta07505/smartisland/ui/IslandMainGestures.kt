@@ -808,6 +808,11 @@ private fun commitPillSwipe(
     // Up and down (and a sideways swipe on a pill that has cards) keep the pill swipe actions, which are off when
     // only the widgets asked for the swipe.
     if (!settings.enablePillSwipeActions) return
+    // Swipe down on the idle pill (no card on the island) opens the notification center (Rule_Book §4.17).
+    if (com.agupta07505.smartisland.util.ShadeNotifications.opensOnSwipe(direction == PillSwipeDirection.Down, cb.currentNotifications.size)) {
+        cb.currentOnOpenNotificationCenter()
+        return
+    }
     if (sideways && swipeChangesCard(action)) {
         ui.lastCardSwipeMs = System.currentTimeMillis()
         // Swiped left: the old card left to the left, the new one comes from the right (and the other way round).

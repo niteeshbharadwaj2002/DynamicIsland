@@ -40,7 +40,7 @@ Notifications, music, calls, charging, timers, stopwatches, navigation, download
 - **Alerts:** messages open into a card with actions and inline reply. Alerts from the same app fold into one entry, and a card can be dismissed by swiping.
 - **Live activities:** music with album art and a waveform, calls with a duration timer, timers and stopwatches from common clock apps, navigation and ride cards (Uber, Ola, Rapido), and system events such as charging, Bluetooth with earbud batteries, USB, headphones, hotspot and flashlight.
 - **Per-event control:** 32 events, each with its own switch, auto-expand option and lock screen setting, and portrait and landscape can be set separately.
-- **Gestures:** swipes on the collapsed pill, and tap, swipe and hold actions on expanded cards. Each direction can be remapped or turned off.
+- **Gestures:** swipes on the collapsed pill (a swipe down on an idle pill opens the notification center), and tap, swipe and hold actions on expanded cards. Each direction can be remapped or turned off.
 - **Quick launch:** a launcher window with pinned apps, recents and a utilities grid (Wi-Fi, Bluetooth, hotspot, flashlight, timer, recorders and more).
 - **Looks:** Material 3 with Material You colours on Android 12 and later, custom colours and fonts, animation speed presets and a settings search.
 - **Backup and restore** of settings to a file.
