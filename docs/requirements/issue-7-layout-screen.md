@@ -8,11 +8,13 @@ Issue: https://github.com/niteeshbharadwaj2002/NotchIQ/issues/7
 2. Related settings are **grouped** in the order the issue lists: Quick presets, Exempt apps, Size and position, Camera cutout, Shadow, Motion physics, Kinetic glow. Backdrop blur, Animation speed, Cutout merge style and Idle widgets follow the same style. Groups are **collapsed by default**. The Compact Pill / Notch switch sits **above the seven numbered groups**, because the issue listed seven groups and did not place the switch.
 3. **Explanatory description text is removed** from the groups and the settings inside them. Titles only. Values that carry information (selected preset, check mark, toggle state) stay. Settings search still finds each setting by its title.
 
+> **Note (issue #16):** requirement 3 is superseded for the group titles. Each group now shows one short gray summary line under its title. See [issue-16-layout-group-summaries.md](issue-16-layout-group-summaries.md). Descriptions inside the settings are still removed.
+
 ## Acceptance criteria
 
 - [ ] All Layout settings use the same grouped style, with no mixed card, plain-row or highlighted styles. Not visually checked on device.
 - [ ] The seven groups are present, in the stated order, collapsed by default. Not visually checked on device.
-- [ ] No explanatory description or subtitle lines remain on the Layout screen. Not visually checked on device.
+- [ ] No explanatory description or subtitle lines remain on the Layout screen, except the one-line group summaries added by issue #16. Not visually checked on device.
 - [x] Settings search finds these settings by title (`SettingsSearchIndexTest`, unit tests).
 - [ ] Accessibility: removed descriptions are replaced by `contentDescription` or state descriptions where a control needs one. TalkBack not checked.
 - [ ] No overlap or clipping at the largest font size. **Not verified.**

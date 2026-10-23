@@ -159,6 +159,7 @@ fun GroupedRow(
     showChevron: Boolean = true,
     destructive: Boolean = false,
     enabled: Boolean = true,
+    subtitleMaxLines: Int = Int.MAX_VALUE,
     onClick: (() -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null
 ) {
@@ -184,7 +185,9 @@ fun GroupedRow(
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = subtitleMaxLines,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -222,7 +225,8 @@ fun SwitchRow(
     modifier: Modifier = Modifier,
     subtitle: String? = null,
     icon: ImageVector? = null,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    subtitleMaxLines: Int = Int.MAX_VALUE
 ) {
     Row(
         modifier = modifier
@@ -246,7 +250,9 @@ fun SwitchRow(
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = subtitleMaxLines,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -351,6 +357,7 @@ fun CollapsibleGroup(
     stateKey: String,
     modifier: Modifier = Modifier,
     value: String? = null,
+    summary: String? = null,
     searchKey: String? = null,
     initiallyExpanded: Boolean = false,
     content: @Composable () -> Unit
@@ -364,6 +371,8 @@ fun CollapsibleGroup(
     GroupedSection(modifier = modifier.searchAnchor(searchKey).animateContentSize()) {
         GroupedRow(
             title = title,
+            subtitle = summary,
+            subtitleMaxLines = 1,
             modifier = Modifier.semantics { stateDescription = stateText },
             onClick = { expanded = !expanded },
             trailing = {
@@ -402,7 +411,8 @@ fun <T> SegmentedChoiceRow(
     selected: T?,
     onSelect: (T) -> Unit,
     modifier: Modifier = Modifier,
-    title: String? = null
+    title: String? = null,
+    summary: String? = null
 ) {
     Column(
         modifier = modifier
@@ -410,12 +420,25 @@ fun <T> SegmentedChoiceRow(
             .padding(horizontal = Dimens.RowHorizontal, vertical = Dimens.RowVertical),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        if (title != null) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+        if (title != null || summary != null) {
+            Column {
+                if (title != null) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                if (summary != null) {
+                    Text(
+                        text = summary,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
         }
         Row(
             modifier = Modifier

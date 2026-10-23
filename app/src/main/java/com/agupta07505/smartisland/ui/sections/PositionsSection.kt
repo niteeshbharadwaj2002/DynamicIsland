@@ -83,6 +83,7 @@ fun PositionsSection(
         // Form factor: Compact Pill or iPhone Notch Mode.
         GroupedSection(modifier = Modifier.searchAnchor("layout.notch_mode")) {
             SegmentedChoiceRow(
+                summary = stringResource(R.string.layout_summary_form_factor),
                 options = listOf(false to stringResource(R.string.preset_compact_pill), true to stringResource(R.string.notch_mode_card_title)),
                 selected = settings.enableNotchMode,
                 onSelect = { notch ->
@@ -107,6 +108,7 @@ fun PositionsSection(
 
         CollapsibleGroup(
             title = stringResource(LayoutGroup.QuickPresets.titleRes),
+            summary = stringResource(LayoutGroup.QuickPresets.summaryRes),
             stateKey = "pos_presets_$modeKey",
             value = "${screenWidthDp.toInt()} dp",
             searchKey = LayoutGroup.QuickPresets.searchKey
@@ -177,6 +179,7 @@ fun PositionsSection(
 
         CollapsibleGroup(
             title = stringResource(LayoutGroup.ExemptApps.titleRes),
+            summary = stringResource(LayoutGroup.ExemptApps.summaryRes),
             stateKey = "pos_exempt_apps",
             searchKey = LayoutGroup.ExemptApps.searchKey
         ) {
@@ -185,6 +188,7 @@ fun PositionsSection(
 
         CollapsibleGroup(
             title = stringResource(LayoutGroup.SizeAndPosition.titleRes),
+            summary = stringResource(LayoutGroup.SizeAndPosition.summaryRes),
             stateKey = "pos_tuning_$modeKey",
             searchKey = LayoutGroup.SizeAndPosition.searchKey
         ) {
@@ -256,6 +260,7 @@ fun PositionsSection(
         if (!settings.enableNotchMode) {
             CollapsibleGroup(
                 title = stringResource(LayoutGroup.CameraCutout.titleRes),
+                summary = stringResource(LayoutGroup.CameraCutout.summaryRes),
                 stateKey = "pos_camera_cutout",
                 searchKey = LayoutGroup.CameraCutout.searchKey
             ) {
@@ -300,6 +305,7 @@ fun PositionsSection(
 
         CollapsibleGroup(
             title = stringResource(LayoutGroup.Shadow.titleRes),
+            summary = stringResource(LayoutGroup.Shadow.summaryRes),
             stateKey = "pos_look_$modeKey",
             searchKey = LayoutGroup.Shadow.searchKey
         ) {

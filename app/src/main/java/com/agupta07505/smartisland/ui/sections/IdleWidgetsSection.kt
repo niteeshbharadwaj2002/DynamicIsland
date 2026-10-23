@@ -84,6 +84,8 @@ fun IdleWidgetsSection(
     GroupedSection(modifier = Modifier.searchAnchor("layout.idle_widgets").animateContentSize()) {
         GroupedRow(
             title = stringResource(R.string.idle_widgets_title),
+            subtitle = stringResource(R.string.layout_summary_idle_widgets),
+            subtitleMaxLines = 1,
             onClick = onOpenSettings
         )
 

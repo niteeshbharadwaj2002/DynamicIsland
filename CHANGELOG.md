@@ -7,6 +7,7 @@ The format is inspired by Keep a Changelog, and this project uses the GNU Genera
 ## [Unreleased]
 
 ### Changed
+- Every group on the Layout screen shows one gray summary line under its title, in Portrait and Landscape. The line is ellipsized and never wraps. Settings search matches the summary text. Issue [#16](https://github.com/niteeshbharadwaj2002/NotchIQ/issues/16).
 - Support & Feedback, the welcome dialog and the About screen link to NotchIQ only. The Telegram community option is removed. Links come from one object, `ProjectLinks`. The original author's credit links are kept. Issue [#15](https://github.com/niteeshbharadwaj2002/NotchIQ/issues/15).
 - The collapsed pill and companion bubble show symbols and short values only, with no words and no scrolling text. Issue [#10](https://github.com/niteeshbharadwaj2002/NotchIQ/issues/10).
 - Calls show the phone icon on the left and the call time on the right. While ringing or connecting, a pulsing dot replaces the "Ringing" / "Calling" words.
