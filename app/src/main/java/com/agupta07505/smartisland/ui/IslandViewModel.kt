@@ -1250,10 +1250,24 @@ class IslandViewModel(
     fun openAppsLauncher() {
         if (!settings.value.enableAppShortcuts || shadeOpen.value || expanded.value) return
         if (exemptionNow() != ExemptMode.None || widgetIslandHolds()) return
+        idlePanel.value = com.agupta07505.smartisland.ui.expanded.IdlePanel.ControlCenter
         // Landscape, the empty collapsed pill the long press was made on: it stays while the shortcuts are open, so
         // the island grows out of that pill (size, position, opacity) and closes back into it; hiding it swapped it
         // for the small see-through idle circle mid-opening.
         emptyPillJob?.cancel()
+        appsLauncherOpen.value = true
+        expanded.value = true
+    }
+
+    /** Which panel the expanded island shows while it has no card (set by whichever gesture opened it). */
+    val idlePanel = MutableStateFlow(com.agupta07505.smartisland.ui.expanded.IdlePanel.ControlCenter)
+
+    /** Swipe down on the idle pill (Rule_Book §4.17): expands the island onto the notification center. */
+    fun openNotificationCenter() {
+        if (shadeOpen.value || expanded.value || visibleNotifications.value.isNotEmpty()) return
+        if (exemptionNow() != ExemptMode.None || widgetIslandHolds()) return
+        emptyPillJob?.cancel()
+        idlePanel.value = com.agupta07505.smartisland.ui.expanded.IdlePanel.Notifications
         appsLauncherOpen.value = true
         expanded.value = true
     }

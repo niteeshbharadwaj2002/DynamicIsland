@@ -28,4 +28,18 @@
     <string name="layout_group_expanded">Expanded</string>
     <string name="layout_group_collapsed">Collapsed</string>
     <string name="motion_preset_values_short">k %1$d · d %2$s</string>
+    <string name="layout_summary_form_factor">Choose how the island looks around the camera</string>
+    <string name="layout_summary_presets">One-tap sizes for the pill</string>
+    <string name="layout_summary_exempt_apps">Apps where the island stays hidden</string>
+    <string name="layout_summary_size_position">Set the pill\'s width, height and place on screen</string>
+    <string name="layout_summary_camera_cutout">Fit the pill around your camera hole</string>
+    <string name="layout_summary_shadow">Soft shadow behind the pill</string>
+    <string name="layout_summary_motion">How the island springs open and closed</string>
+    <string name="layout_summary_kinetic_glow">A glow that follows the island\'s motion</string>
+    <string name="layout_summary_backdrop_blur">Blur what is behind the expanded island</string>
+    <string name="layout_summary_anim_speed">How fast the island animates</string>
+    <string name="layout_summary_merge_style">How the pill joins the camera cutout</string>
+    <string name="layout_summary_idle_widgets">What the island shows when nothing is happening</string>
+    <string name="layout_summary_land_idle">How the pill sits around the camera when idle</string>
+    <string name="layout_summary_land_content">How the pill grows when something is showing</string>
 </resources>

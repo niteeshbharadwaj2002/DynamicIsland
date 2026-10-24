@@ -7,22 +7,20 @@
 package com.agupta07505.smartisland.ui
 
 import android.graphics.Bitmap
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,32 +28,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.agupta07505.smartisland.model.IslandNotification
-
-/** What the alert pill says: a bold part (sender, or the count) and a regular gray part (preview, or the app). */
-internal fun alertPillLabel(notification: IslandNotification): Pair<String, String> =
-    if (notification.groupCount > 1) {
-        "${notification.groupCount} New Messages" to "from ${notification.appName}"
-    } else {
-        notification.title.ifBlank { notification.appName } to notification.text
-    }
-
-/** How long a masked alert's text takes to fade in on unlock. */
-internal const val LOCK_CROSSFADE_MS = 220
 
 /** The green "unread" dot at the pill's right end. */
 private val AlertDotColor = Color(0xFF34D399)
@@ -81,66 +60,35 @@ internal fun StackedAlertIcons(icons: List<Bitmap>, size: Dp = 22.dp, overlap: D
 }
 
 /**
- * Sender in bold, then the message preview in gray, on one line that scrolls sideways when it does not
- * fit in [maxTextWidth] and fades out at the right edge, followed by the green dot.
+ * The alert pill's right-hand side, symbols only (Rule_Book §3.5): the green unread dot, or the message count
+ * for a folded group. The sender and preview stay in the expanded card; the pill carries no text that scrolls.
  */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
-internal fun AlertPillText(notification: IslandNotification, maxTextWidth: Dp, showDot: Boolean = true) {
-    val (strong, soft) = remember(notification.key, notification.groupCount, notification.title, notification.text) {
-        alertPillLabel(notification)
-    }
-    val label = remember(strong, soft) {
-        buildAnnotatedString {
-            withStyle(SpanStyle(color = Color.White, fontWeight = FontWeight.Bold)) { append(strong) }
-            if (soft.isNotBlank()) {
-                append("  ")
-                withStyle(SpanStyle(color = Color(0xFF9CA3AF), fontWeight = FontWeight.Normal)) { append(soft) }
-            }
-        }
-    }
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        // Unlocking reveals a masked alert's text with a crossfade (Rule_Book §8.1); other updates swap in place.
-        AnimatedContent(
-            targetState = label to notification.isMasked,
-            contentKey = { it.second },
-            transitionSpec = { fadeIn(tween(LOCK_CROSSFADE_MS)) togetherWith fadeOut(tween(LOCK_CROSSFADE_MS)) },
-            label = "alertPillMask"
-        ) { (shown, _) ->
-            Text(
-                text = shown,
-                fontSize = 12.sp,
-                maxLines = 1,
-                softWrap = false,
-                modifier = Modifier
-                    .widthIn(max = maxTextWidth)
-                    .fadingRightEdge(14.dp)
-                    .basicMarquee(iterations = Int.MAX_VALUE, initialDelayMillis = 1_200, velocity = 28.dp)
-            )
-        }
-        if (showDot) {
-            Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(AlertDotColor))
-        }
+internal fun AlertPillBadge(notification: IslandNotification) {
+    if (notification.groupCount > 1) {
+        Text(
+            text = notification.groupCount.toString(),
+            color = AlertDotColor,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1
+        )
+    } else {
+        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(AlertDotColor))
     }
 }
 
-/** Fades the last [edge] of the content to transparent, so clipped text dissolves rather than being cut. */
-internal fun Modifier.fadingRightEdge(edge: Dp): Modifier = this
-    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-    .drawWithContent {
-        drawContent()
-        val width = edge.toPx().coerceAtMost(size.width)
-        if (width > 0f) {
-            drawRect(
-                brush = Brush.horizontalGradient(
-                    colors = listOf(Color.Black, Color.Transparent),
-                    startX = size.width - width,
-                    endX = size.width
-                ),
-                blendMode = BlendMode.DstIn
-            )
-        }
-    }
+/** A small dot that breathes, for a state with no number yet: ringing, connecting, a sensor in use, a torch on. */
+@Composable
+internal fun PulsingDot(color: Color, size: Dp = 8.dp) {
+    val alpha by rememberInfiniteTransition(label = "pillDot").animateFloat(
+        initialValue = 0.35f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(800, easing = LinearEasing), RepeatMode.Reverse),
+        label = "pillDotAlpha"
+    )
+    Box(modifier = Modifier.size(size).clip(CircleShape).background(color.copy(alpha = alpha)))
+}
 
 /**
  * The folded group's left-hand badge: the stacked icons when the alerts brought bitmaps, otherwise

@@ -155,55 +155,55 @@ internal fun buildSettingsSearchIndex(str: (Int) -> String): List<SettingsSearch
     // The groups of the Layout screen (portrait), in screen order. Both orientations have an Exempt apps group.
     add(
         "layout.presets", str(LayoutGroup.QuickPresets.titleRes), SearchTarget.Tab(StudioTab.Position, false),
-        layout, Icons.Rounded.Tune, "",
+        layout, Icons.Rounded.Tune, str(LayoutGroup.QuickPresets.summaryRes),
         listOf("preset", "presets", "layout", "center", "wide", "left", "right", "corner", "island"),
         LayoutGroup.QuickPresets.searchKey
     )
     add(
         "layout.exempt_portrait", str(LayoutGroup.ExemptApps.titleRes), SearchTarget.Tab(StudioTab.Position, false),
-        layout, Icons.Rounded.Tune, "",
+        layout, Icons.Rounded.Tune, str(LayoutGroup.ExemptApps.summaryRes),
         listOf("exempt", "exclude", "apps", "off", "static", "hide", "game", "video", "portrait"),
         LayoutGroup.ExemptApps.searchKey
     )
     add(
         "layout.exempt_landscape", str(LayoutGroup.ExemptApps.titleRes), SearchTarget.Tab(StudioTab.Position, true),
-        layout, Icons.Rounded.Tune, "",
+        layout, Icons.Rounded.Tune, str(LayoutGroup.ExemptApps.summaryRes),
         listOf("exempt", "exclude", "apps", "off", "hide", "game", "video", "landscape"),
         LayoutGroup.ExemptApps.searchKey
     )
     add(
         "layout.size_position", str(LayoutGroup.SizeAndPosition.titleRes), SearchTarget.Tab(StudioTab.Position, false),
-        layout, Icons.Rounded.Tune, "",
+        layout, Icons.Rounded.Tune, str(LayoutGroup.SizeAndPosition.summaryRes),
         listOf("width", "height", "offset", "corner", "radius", "size", "position", "move", "pill", "portrait", "precision", "tuning"),
         LayoutGroup.SizeAndPosition.searchKey
     )
     add(
         "layout.camera_cutout", str(LayoutGroup.CameraCutout.titleRes), SearchTarget.Tab(StudioTab.Position, false),
-        layout, Icons.Rounded.Tune, str(R.string.camera_cutout_summary),
+        layout, Icons.Rounded.Tune, str(LayoutGroup.CameraCutout.summaryRes),
         listOf("camera", "cutout", "hole", "manual", "punch", "area", "detect"),
         LayoutGroup.CameraCutout.searchKey
     )
     add(
         "layout.shadow", str(LayoutGroup.Shadow.titleRes), SearchTarget.Tab(StudioTab.Position, false),
-        layout, Icons.Rounded.Tune, str(R.string.toggle_drop_shadow_desc),
+        layout, Icons.Rounded.Tune, str(LayoutGroup.Shadow.summaryRes),
         listOf("shadow", "drop shadow", "elevation", "depth", "glow"),
         LayoutGroup.Shadow.searchKey
     )
     add(
         "layout.motion", str(LayoutGroup.MotionPhysics.titleRes), SearchTarget.Tab(StudioTab.Position, false),
-        layout, Icons.Rounded.Tune, "",
+        layout, Icons.Rounded.Tune, str(LayoutGroup.MotionPhysics.summaryRes),
         listOf("motion", "physics", "spring", "bouncy", "snappy", "critical", "loose", "standard", "stiffness", "damping"),
         LayoutGroup.MotionPhysics.searchKey
     )
     add(
         "layout.kinetic_glow", str(LayoutGroup.KineticGlow.titleRes), SearchTarget.Tab(StudioTab.Position, false),
-        layout, Icons.Rounded.Tune, str(R.string.motion_glow_desc),
+        layout, Icons.Rounded.Tune, str(LayoutGroup.KineticGlow.summaryRes),
         listOf("glow", "kinetic", "light", "speed", "motion"),
         LayoutGroup.KineticGlow.searchKey
     )
     add(
         "layout.backdrop_blur", str(LayoutGroup.BackdropBlur.titleRes), SearchTarget.Tab(StudioTab.Position, false),
-        layout, Icons.Rounded.Tune, str(R.string.motion_blur_desc),
+        layout, Icons.Rounded.Tune, str(LayoutGroup.BackdropBlur.summaryRes),
         listOf("blur", "backdrop", "glass", "background", "idle dashboard"),
         LayoutGroup.BackdropBlur.searchKey
     )
@@ -577,7 +577,7 @@ internal fun buildSettingsSearchIndex(str: (Int) -> String): List<SettingsSearch
     add(
         "support.screen", supportScreen, detail(FeatureDetailSection.SupportCommunity), supportScreen, Icons.Rounded.People,
         str(R.string.card_support_requests_desc),
-        listOf("support", "telegram", "community", "bug", "issue", "feedback", "feature request", "contact")
+        listOf("support", "bug", "issue", "feedback", "feature request", "contact")
     )
 
     val devScreen = str(R.string.card_developer_options_title)

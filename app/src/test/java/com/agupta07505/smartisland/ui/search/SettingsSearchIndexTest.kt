@@ -162,4 +162,13 @@ class SettingsSearchIndexTest {
             assertEquals(SearchTarget.Tab(StudioTab.Position, false), entry.target)
         }
     }
+
+    @Test
+    fun everyLayoutGroupCanBeFoundByItsSummaryLine() {
+        LayoutGroup.entries.forEach { group ->
+            val entries = index.filter { it.rowKey == group.searchKey }
+            assertTrue(group.searchKey, entries.isNotEmpty())
+            entries.forEach { assertEquals("s${group.summaryRes}", it.item.subtitle) }
+        }
+    }
 }

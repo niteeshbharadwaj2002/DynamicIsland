@@ -7,6 +7,7 @@
 
 package com.agupta07505.smartisland.ui.sections
 
+import com.agupta07505.smartisland.util.ProjectLinks
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -137,7 +138,7 @@ fun AboutSection(
                         value = "—",
                         tint = MaterialTheme.colorScheme.primary,
                         onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/agupta07505/SmartIsland"))
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(ProjectLinks.REPO))
                             context.startActivity(intent)
                         }
                     )
@@ -147,7 +148,7 @@ fun AboutSection(
                         value = "—",
                         tint = MaterialTheme.colorScheme.primary,
                         onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/agupta07505/SmartIsland/fork"))
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(ProjectLinks.FORK))
                             context.startActivity(intent)
                         }
                     )
@@ -157,7 +158,7 @@ fun AboutSection(
                         value = "—",
                         tint = MaterialTheme.colorScheme.primary,
                         onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/agupta07505/SmartIsland/issues"))
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(ProjectLinks.ISSUES))
                             context.startActivity(intent)
                         }
                     )
@@ -167,7 +168,7 @@ fun AboutSection(
                         value = "GPL-3.0",
                         tint = MaterialTheme.colorScheme.primary,
                         onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/agupta07505/SmartIsland/blob/main/LICENSE"))
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(ProjectLinks.LICENSE))
                             context.startActivity(intent)
                         }
                     )
@@ -231,7 +232,7 @@ fun AboutSection(
                 subtitle = stringResource(R.string.privacy_policy_desc),
                 icon = Icons.Rounded.Lock,
                 onClick = {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/agupta07505/SmartIsland/blob/main/PRIVACY.md"))
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(ProjectLinks.PRIVACY))
                     runCatchingLogged("AboutSection", "Failed to open Privacy Policy") {
                         context.startActivity(intent)
                     } ?: Toast.makeText(context, "Cannot open link", Toast.LENGTH_SHORT).show()
@@ -243,7 +244,7 @@ fun AboutSection(
                 subtitle = stringResource(R.string.license_title),
                 icon = Icons.Rounded.Description,
                 onClick = {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/agupta07505/SmartIsland/blob/main/TERMS.md"))
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(ProjectLinks.TERMS))
                     runCatchingLogged("AboutSection", "Failed to open Terms of Use") {
                         context.startActivity(intent)
                     } ?: Toast.makeText(context, "Cannot open link", Toast.LENGTH_SHORT).show()
@@ -255,7 +256,7 @@ fun AboutSection(
                 subtitle = stringResource(R.string.star_on_github),
                 icon = Icons.Rounded.Code,
                 onClick = {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/agupta07505/SmartIsland"))
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(ProjectLinks.REPO))
                     runCatchingLogged("AboutSection", "Failed to open Open Source link") {
                         context.startActivity(intent)
                     } ?: Toast.makeText(context, "Cannot open link", Toast.LENGTH_SHORT).show()

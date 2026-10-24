@@ -40,6 +40,7 @@ fun OverlayIsland(
     val widgetIslandOpen by viewModel.widgetIslandOpen.collectAsState()
     val widgetIslandSnap by viewModel.widgetIslandSnap.collectAsState()
     val appsLauncherOpen by viewModel.appsLauncherOpen.collectAsState()
+    val idlePanel by viewModel.idlePanel.collectAsState()
     val notifications by viewModel.visibleNotifications.collectAsState()
     val selectedIndex by viewModel.selectedIndex.collectAsState()
     val isLocked by viewModel.isLocked.collectAsState()
@@ -206,7 +207,10 @@ fun OverlayIsland(
     val burnInShiftY by viewModel.burnInShiftY.collectAsState()
     // Screen off halts every looping animation and ticker below (Rule_Book 4.3, 5).
     val screenOn by viewModel.isScreenOn.collectAsState()
-    androidx.compose.runtime.CompositionLocalProvider(LocalScreenOn provides screenOn) {
+    androidx.compose.runtime.CompositionLocalProvider(
+        LocalScreenOn provides screenOn,
+        com.agupta07505.smartisland.ui.expanded.LocalIdlePanel provides idlePanel
+    ) {
     IslandOverlayView(
         settings = settings,
         expanded = expanded && !quiet,
@@ -264,6 +268,7 @@ fun OverlayIsland(
         // One tick when the tap did something (a glyph-free pill centre or the landscape idle circle), none when it did nothing:
         // that tells the owner whether the tap counted.
         onOpenAppsLauncher = { viewModel.openAppsLauncher() },
+        onOpenNotificationCenter = { viewModel.openNotificationCenter() },
         onIdleDotTap = {
             if (viewModel.onIdleDotTapped() != com.agupta07505.smartisland.model.IdleDotTap.None) stepTapHaptic()
         },

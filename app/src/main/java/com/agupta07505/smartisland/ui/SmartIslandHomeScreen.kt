@@ -7,6 +7,7 @@
 
 package com.agupta07505.smartisland.ui
 
+import com.agupta07505.smartisland.util.ProjectLinks
 import androidx.compose.material.icons.rounded.Security
 import android.Manifest
 import android.annotation.SuppressLint
@@ -1491,7 +1492,7 @@ private fun WelcomeDialog(
                 Button(
                     onClick = {
                         runCatchingLogged("WelcomeDialog", "Failed to open GitHub link") {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/agupta07505/SmartIsland")))
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(ProjectLinks.REPO)))
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -1514,31 +1515,6 @@ private fun WelcomeDialog(
                             stringResource(R.string.star_on_github),
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSecondary
-                        )
-                    }
-                }
-
-                OutlinedButton(
-                    onClick = {
-                        runCatchingLogged("WelcomeDialog", "Failed to open Telegram link") {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://telegram.me/SmartIslandApp")))
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.People,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Text(
-                            stringResource(R.string.join_telegram),
-                            fontWeight = FontWeight.Bold
                         )
                     }
                 }

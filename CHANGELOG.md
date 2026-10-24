@@ -6,6 +6,23 @@ The format is inspired by Keep a Changelog, and this project uses the GNU Genera
 
 ## [Unreleased]
 
+## [8.1.0] - 2026-10-24
+
+Full release notes: [docs/release-notes/v8.1.0.md](docs/release-notes/v8.1.0.md). Version code 12.
+
+### Added
+- Tap the idle pill (no card on the island, shortcuts on) to open the control center: a search field, battery and Bluetooth badges, quick tiles for Wi-Fi, Flashlight, Do Not Disturb and Island Settings, and the app launcher with a Utilities page. A long press still opens it. The lockscreen shows only the Flashlight and Do Not Disturb tiles. Issue [#12](https://github.com/niteeshbharadwaj2002/NotchIQ/issues/12).
+- Swipe down on the idle portrait pill (no card on the island) opens the Notification Center: the live notifications grouped by app, with open, dismiss, clear all and reply. Locked devices show counts only. Requires pill swipe actions on. Issue [#13](https://github.com/niteeshbharadwaj2002/NotchIQ/issues/13).
+
+### Changed
+- Every group on the Layout screen shows one gray summary line under its title, in Portrait and Landscape. The line is ellipsized and never wraps. Settings search matches the summary text. Issue [#16](https://github.com/niteeshbharadwaj2002/NotchIQ/issues/16).
+- Support & Feedback, the welcome dialog and the About screen link to NotchIQ only. The Telegram community option is removed. Links come from one object, `ProjectLinks`. The original author's credit links are kept. Issue [#15](https://github.com/niteeshbharadwaj2002/NotchIQ/issues/15).
+- The collapsed pill and companion bubble show symbols and short values only, with no words and no scrolling text. Issue [#10](https://github.com/niteeshbharadwaj2002/NotchIQ/issues/10).
+- Calls show the phone icon on the left and the call time on the right. While ringing or connecting, a pulsing dot replaces the "Ringing" / "Calling" words.
+- Messages show the app icon with the unread dot, or the message count for a grouped pill. The message pill is a fixed width instead of growing per character.
+- Flashlight, live activity, navigation and camera or microphone pills show dots or numbers instead of words. Full text stays in the expanded card and in TalkBack.
+- The camera and microphone privacy indicator is a pulsing circle: green for the camera, orange for the microphone, half green and half orange when both are in use. The companion bubble shows the circle alone; the main pill shows the camera or microphone icon on the left and the circle on the right. TalkBack says which sensor is in use. Issue [#11](https://github.com/niteeshbharadwaj2002/NotchIQ/issues/11).
+
 ## [8.0.0-personal] - 2026-10-21
 
 First major release of NotchIQ, a personal fork of Smart Island 7.6.0. It keeps everything in Smart Island 7.6.0 and differs from it by the Buddy mascot, the rebuilt island UI, the HIG-style settings UI and the offline stance (no internet permission, no update checker, no weather). Full release notes: [docs/release-notes/v8.0.0-personal.md](docs/release-notes/v8.0.0-personal.md). Version code 11.

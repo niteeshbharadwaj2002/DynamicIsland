@@ -92,7 +92,7 @@
     <string name="card_about_app_desc">v%1$s • 开源</string>
     <string name="card_about_app_status">开源</string>
     <string name="card_support_requests_title">支持和社区</string>
-    <string name="card_support_requests_desc">GitHub, 问题和Telegram社区</string>
+    <string name="card_support_requests_desc">GitHub, 问题和反馈</string>
     <string name="detail_title_notifications_privacy">通知和隐私</string>
     <string name="detail_title_app_shortcuts">应用快捷键启动器</string>
     <string name="detail_title_notification_history">通知历史日志</string>
@@ -413,8 +413,6 @@
     <string name="support_title">支持和社区</string>
     <string name="star_on_github">GitHub 上的恒星</string>
     <string name="star_on_github_desc">支持开源开发</string>
-    <string name="join_telegram">加入电讯社区</string>
-    <string name="join_telegram_desc">与开发者和β测试者聊天( B)</string>
     <string name="request_feature">请求特性</string>
     <string name="request_feature_desc">提出新的岛屿部件或动画构想</string>
     <string name="report_bug">报告错误</string>
