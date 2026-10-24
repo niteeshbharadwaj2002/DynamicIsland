@@ -6,6 +6,10 @@ The format is inspired by Keep a Changelog, and this project uses the GNU Genera
 
 ## [Unreleased]
 
+## [8.1.0] - 2026-10-24
+
+Full release notes: [docs/release-notes/v8.1.0.md](docs/release-notes/v8.1.0.md). Version code 12.
+
 ### Added
 - Tap the idle pill (no card on the island, shortcuts on) to open the control center: a search field, battery and Bluetooth badges, quick tiles for Wi-Fi, Flashlight, Do Not Disturb and Island Settings, and the app launcher with a Utilities page. A long press still opens it. The lockscreen shows only the Flashlight and Do Not Disturb tiles. Issue [#12](https://github.com/niteeshbharadwaj2002/NotchIQ/issues/12).
 - Swipe down on the idle portrait pill (no card on the island) opens the Notification Center: the live notifications grouped by app, with open, dismiss, clear all and reply. Locked devices show counts only. Requires pill swipe actions on. Issue [#13](https://github.com/niteeshbharadwaj2002/NotchIQ/issues/13).
